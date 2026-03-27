@@ -13,7 +13,7 @@ interface ContractPricingTableProps {
 }
 
 export function ContractPricingTable({ clientId, clienteNome, compact }: ContractPricingTableProps) {
-  const { contracts, isLoading } = useContractPricing(clientId);
+  const { pricings: contracts, isLoading } = useContractPricing(clientId ? { clientId } : undefined);
 
   if (isLoading) return <Skeleton className="h-32 w-full" />;
   if (contracts.length === 0) return <p className="text-center text-muted-foreground py-4 text-sm">Nenhum contrato encontrado.</p>;

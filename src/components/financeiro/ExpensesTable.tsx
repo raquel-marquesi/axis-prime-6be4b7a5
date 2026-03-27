@@ -6,8 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { MoreHorizontal, Pencil, Trash2, CheckCircle } from 'lucide-react';
+import { MoreHorizontal, Trash2, CheckCircle } from 'lucide-react';
 import { useExpenses } from '@/hooks/useExpenses';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -18,11 +21,22 @@ const statusMap: Record<string, { label: string; variant: 'default' | 'secondary
 };
 
 export function ExpensesTable() {
-  const { expenses, isLoading, deleteExpense, updateExpense } = useExpenses();
+  const { expenses, isLoading } = useExpenses();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const handleMarkPaid = (id: string) => {
-    updateExpense.mutate({ id, status: 'pago', data_pagamento: format(new Date(), 'yyyy-MM-dd') } as any);
+  const handleMarkPaid = async (id: string) => {
+    const { error } = await supabase.from('expenses').update({ status: 'pago', data_pagamento: format(new Date(), 'yyyy-MM-dd') }).eq('id', id);
+    if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    else { toast({ title: 'Despesa marcada como paga' }); queryClient.invalidateQueries({ queryKey: ['expenses'] }); }
+  };
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from('expenses').delete().eq('id', id);
+    if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    else { toast({ title: 'Despesa excluída' }); queryClient.invalidateQueries({ queryKey: ['expenses'] }); }
+    setDeleteId(null);
   };
 
   if (isLoading) return <div className="flex items-center justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
@@ -58,7 +72,7 @@ export function ExpensesTable() {
         </TableBody>
       </Table>
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Excluir despesa?</AlertDialogTitle><AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => { if (deleteId) deleteExpense.mutate(deleteId); setDeleteId(null); }}>Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Excluir despesa?</AlertDialogTitle><AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => deleteId && handleDelete(deleteId)}>Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
       </AlertDialog>
     </>
   );

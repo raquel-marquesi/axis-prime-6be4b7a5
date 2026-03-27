@@ -6,8 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { MoreHorizontal, Trash2, CheckCircle, Eye } from 'lucide-react';
+import { MoreHorizontal, Trash2, CheckCircle } from 'lucide-react';
 import { useInvoices } from '@/hooks/useInvoices';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -18,11 +21,22 @@ const statusMap: Record<string, { label: string; variant: 'default' | 'secondary
 };
 
 export function InvoicesTable() {
-  const { invoices, isLoading, deleteInvoice, updateInvoice } = useInvoices();
+  const { invoices, isLoading } = useInvoices();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const handleMarkPaid = (id: string) => {
-    updateInvoice.mutate({ id, status: 'paga' } as any);
+  const handleMarkPaid = async (id: string) => {
+    const { error } = await supabase.from('invoices').update({ status: 'paga' }).eq('id', id);
+    if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    else { toast({ title: 'Fatura marcada como paga' }); queryClient.invalidateQueries({ queryKey: ['invoices'] }); }
+  };
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from('invoices').delete().eq('id', id);
+    if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    else { toast({ title: 'Fatura excluída' }); queryClient.invalidateQueries({ queryKey: ['invoices'] }); }
+    setDeleteId(null);
   };
 
   if (isLoading) return <div className="flex items-center justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
@@ -58,7 +72,7 @@ export function InvoicesTable() {
         </TableBody>
       </Table>
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Excluir fatura?</AlertDialogTitle><AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => { if (deleteId) deleteInvoice.mutate(deleteId); setDeleteId(null); }}>Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Excluir fatura?</AlertDialogTitle><AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => deleteId && handleDelete(deleteId)}>Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
       </AlertDialog>
     </>
   );
