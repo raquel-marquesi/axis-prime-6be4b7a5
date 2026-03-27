@@ -30,6 +30,11 @@ jobs:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
 
       - name: Deploy Edge Functions
-        run: supabase functions deploy
+        run: |
+          if [ -d "supabase/functions" ] && [ "$(ls -A supabase/functions 2>/dev/null)" ]; then
+            supabase functions deploy
+          else
+            echo "Nenhuma Edge Function encontrada, pulando deploy."
+          fi
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
