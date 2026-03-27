@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useProcesses, Process } from '@/hooks/useProcesses';
-import { ProcessesTable } from '@/components/processes/ProcessesTable';
-import { ProcessFormDialog } from '@/components/processes/ProcessFormDialog';
-import { ProcessDetailsDialog } from '@/components/processes/ProcessDetailsDialog';
-import { BatchImportProcessesDialog } from '@/components/processes/BatchImportProcessesDialog';
-import { BulkImportXlsxDialog } from '@/components/processes/BulkImportXlsxDialog';
+import ProcessesTable from '@/components/processes/ProcessesTable';
+import ProcessFormDialog from '@/components/processes/ProcessFormDialog';
+import ProcessDetailsDialog from '@/components/processes/ProcessDetailsDialog';
+import BatchImportProcessesDialog from '@/components/processes/BatchImportProcessesDialog';
+import BulkImportXlsxDialog from '@/components/processes/BulkImportXlsxDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
