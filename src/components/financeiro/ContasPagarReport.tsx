@@ -1,0 +1,1 @@
+export function ContasPagarReport() { return <div>ContasPagarReport - Em migração</div>; }

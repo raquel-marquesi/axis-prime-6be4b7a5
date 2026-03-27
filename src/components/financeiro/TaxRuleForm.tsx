@@ -1,0 +1,1 @@
+export function TaxRuleForm({ open, onOpenChange, rule, onSubmit }: any) { return null; }

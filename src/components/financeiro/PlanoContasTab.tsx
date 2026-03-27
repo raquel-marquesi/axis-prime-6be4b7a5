@@ -1,0 +1,1 @@
+export function PlanoContasTab() { return <div>PlanoContasTab - Em migração</div>; }

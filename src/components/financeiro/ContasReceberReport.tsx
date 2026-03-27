@@ -1,0 +1,1 @@
+export function ContasReceberReport() { return <div>ContasReceberReport - Em migração</div>; }

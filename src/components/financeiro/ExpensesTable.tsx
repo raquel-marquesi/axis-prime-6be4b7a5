@@ -1,0 +1,1 @@
+export function ExpensesTable() { return <div>ExpensesTable - Em migração</div>; }

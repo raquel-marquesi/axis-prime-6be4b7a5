@@ -1,0 +1,1 @@
+export function TaxSimulator() { return <div>TaxSimulator - Em migração</div>; }

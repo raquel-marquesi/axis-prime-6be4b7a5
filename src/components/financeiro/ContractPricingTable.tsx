@@ -1,0 +1,1 @@
+export function ContractPricingTable({ clientId, clienteNome, compact }: any) { return <div>ContractPricingTable - Em migração</div>; }

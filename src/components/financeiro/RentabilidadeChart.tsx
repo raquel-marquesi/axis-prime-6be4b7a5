@@ -1,0 +1,1 @@
+export function RentabilidadeChart() { return <div>RentabilidadeChart - Em migração</div>; }

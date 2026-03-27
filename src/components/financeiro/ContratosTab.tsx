@@ -1,0 +1,1 @@
+export function ContratosTab() { return <div>ContratosTab - Em migração</div>; }

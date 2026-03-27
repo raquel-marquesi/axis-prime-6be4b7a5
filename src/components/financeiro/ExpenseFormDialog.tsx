@@ -1,0 +1,1 @@
+export function ExpenseFormDialog({ open, onOpenChange }: any) { return null; }

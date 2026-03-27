@@ -1,0 +1,1 @@
+export function NfseTab() { return <div>NfseTab - Em migração</div>; }
