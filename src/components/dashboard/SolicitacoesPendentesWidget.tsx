@@ -5,7 +5,9 @@ import { Inbox, Mail, Globe, Pencil, ArrowRight, AlertCircle } from 'lucide-reac
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useSolicitacoes, PRIORIDADE_LABELS } from '@/hooks/useSolicitacoes';
+import { useSolicitacoes } from '@/hooks/useSolicitacoes';
+
+const PRIORIDADE_LABELS: Record<string, string> = { baixa: 'Baixa', media: 'Média', alta: 'Alta', urgente: 'Urgente' };
 import { cn } from '@/lib/utils';
 
 const origemIcons: Record<string, any> = { email: Mail, api: Globe, manual: Pencil };
