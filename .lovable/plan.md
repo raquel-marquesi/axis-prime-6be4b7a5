@@ -1,62 +1,61 @@
 
 
-# Plan: Import Frontend from Axis to Axis Final
+# Plan: Complete Migration — Remaining Files
 
-## Overview
-Copy the entire frontend codebase from the [Axis](/projects/3743ffcc-098a-4cb7-9157-2b7bc346a365) project into this project, preserving the current Supabase connection (`src/integrations/supabase/`).
+## Summary
+The majority of the frontend is still placeholder stubs. There are **~150 files** remaining to copy from the original Axis project. Here's what's missing:
 
-## What will be copied
+## Missing Hooks (37 hooks not yet copied)
+`useActivityTypes`, `useAllProcessDeadlines`, `useBankAccountsConfig`, `useBankReconciliation`, `useBanks`, `useBillingContacts`, `useBoletos`, `useCalendarSync`, `useChartOfAccounts`, `useClientDocuments`, `useClientSlaRules`, `useCollectiveProcessParticipants`, `useCompanyEntities`, `useContractExtraction`, `useContractMonitor`, `useContractPricing`, `useCostCenters`, `useCrossCheckCalendar`, `useDREReport`, `useDeadlineCompletion`, `useDeadlineWithCalendar`, `useDrive`, `useExpenseSplits`, `useFinanceReports`, `useFinancialGroups`, `useGmail`, `useMonitoredEmails`, `useNfse`, `useOverdueDeadlines`, `useOverdueTimesheetMap`, `useProcessWithFolder`, `useProducaoWidget`, `useRelatedProcesses`, `useReportData`, `useSyncStatus`, `useTaxRules`, `useTeamClients`
 
-### Root files (3 files)
-- `tailwind.config.ts` — identical structure, no changes needed
-- `components.json` — identical structure, no changes needed
-- `index.html` — updated with Marquesi branding, favicon, and Portuguese lang
+## Missing / Stub Components
 
-### `public/` directory (4 files)
-- `favicon.ico`, `favicon.png`, `placeholder.svg`, `robots.txt`
-- `temp/timesheet.xlsx`
+### `components/clients/` (3 missing + 6 stubs)
+- **Missing**: `form/` subfolder (8 files), `ContactFormDialog`, `ContractExtractionDialog`
+- **Stubs**: `ClientsTable`, `ClientsCards`, `ClientFormDialog`, `ClientDetailsDialog`, `BatchImportClientsDialog`, `ClientDataExportButton`
 
-### `src/` directory (everything except `src/integrations/supabase/`)
+### `components/financeiro/` (43 missing + 4 stubs)
+- **Missing**: 43 files (AccountsTable, InvoicesTable, ExpensesTable, DREReport, BankReconciliation, NfseTab, TaxSimulator, etc.)
+- **Stubs**: `FinanceSummary`, `FinanceTable`, `FinanceCharts`, `AddTransactionDialog`
 
-| Folder | Files |
-|--------|-------|
-| `src/assets/` | `logo.png` |
-| `src/contexts/` | `AuthContext.tsx` |
-| `src/types/` | `auth.ts`, `calendar.ts` |
-| `src/lib/` | `utils.ts`, `validators.ts`, `taxCalculations.ts` |
-| `src/hooks/` | 59 custom hooks (useClients, useProcesses, useTimesheet, etc.) |
-| `src/pages/` | 14 pages (Auth, Dashboard, Clients, Processes, Financeiro, etc.) |
-| `src/components/layout/` | MainLayout, Sidebar, RoleSimulationBanner |
-| `src/components/dashboard/` | 20 widgets (Calendar, Gmail, Drive, Finance, etc.) |
-| `src/components/clients/` | 9 files + `form/` subfolder (8 files) |
-| `src/components/processes/` | 8 files |
-| `src/components/financeiro/` | 46 files |
-| `src/components/timesheet/` | 3 files |
-| `src/components/solicitacoes/` | 7 files |
-| `src/components/users/` | 8 files |
-| `src/components/configuracoes/` | 11 files |
-| `src/components/premiacao/` | 4 files |
-| `src/components/relatorios/` | 5 files |
-| `src/components/pautas/` | 1 file |
-| `src/components/calendar/` | 5 files |
-| `src/components/ai/` | 2 files |
-| `src/components/ui/` | 48 UI components (shadcn) |
-| Root `src/` files | `App.tsx`, `App.css`, `index.css`, `main.tsx`, `NavLink.tsx`, `ProtectedRoute.tsx`, `vite-env.d.ts` |
+### `components/dashboard/` (16 missing + 4 stubs)
+- **Missing**: `CalendarWidget`, `GmailWidget`, `DriveWidget`, `ProducaoWidget`, `GoalProgressWidget`, `PrazosAtrasadosWidget`, `SyncStatusWidget`, `BonusWidget`, `SolicitacoesPendentesWidget`, `ComposeEmailDialog`, `CreateEventDialog`, `FullCalendarView`, `LinkClientPopover`, `LinkUserPopover`, `SyncErrorsDialog`, `index.ts`
+- **Stubs**: `BonusGaugeWidget`, `CoordinatorDashboard`, `FinanceDashboard`, `ManagerDashboard`
 
-## What will NOT be touched
-- `src/integrations/supabase/client.ts` — keeps current connection
-- `src/integrations/supabase/types.ts` — keeps current types
-- `.env` — keeps current Supabase credentials
-- `supabase/config.toml` — keeps current config
+### `components/processes/` (3 missing + 5 stubs)
+- **Missing**: `DeadlineCompletionDialog`, `DeadlinesTab`, `RelatedProcessesTab`
+- **Stubs**: all 5 existing files
+
+### `components/solicitacoes/` (entire folder missing — 7 files)
+### `components/timesheet/` (entire folder missing — 3 files)
+### `components/users/` (7 missing, 1 stub)
+- **Missing**: `AddToTeamDialog`, `BatchImportUsersDialog`, `EditUserDialog`, `InviteUserDialog`, `PermissionsByProfile`, `PermissionsByUser`, `TeamMembersView`, `index.ts`
+
+### `components/configuracoes/` (6 missing + 5 stubs)
+- **Missing**: `BankAccountsTab`, `BanksTab`, `BranchesTab`, `CompanyEntitiesTab`, `CostCentersTab`, `EmpresaseFiliaisTab`, `FinancialGroupsTab`, `MonitoredEmailsTab`, `RolesManagerTab`, `TeamsOverviewTab`, `EconomicGroupsTab`
+
+### `components/premiacao/` (4 stubs need replacement)
+### `components/relatorios/` (4 missing + 1 stub)
+### `components/calendar/` (1 missing + stubs)
+- **Missing**: `CrossCheckCalendarDialog`, `index.ts`
+
+### `components/pautas/` (1 missing)
+- `PautasPendentesCard`
+
+### `components/ui/` — likely already present from shadcn, no action needed
+
+## Pages (14 exist but some need real implementations)
+The pages were copied but reference stub components — they'll work once components are real.
 
 ## Execution approach
-1. Copy all files from the Axis project using `cross_project--read_project_file` and write them to this project
-2. Update `src/App.tsx` to use the Axis routing structure with AuthProvider, ProtectedRoute, and all page routes
-3. Copy `src/index.css` with the Marquesi design system (custom HSL colors, dark mode, print styles)
-4. Copy all hooks, components, pages, contexts, types, and lib files
-5. Copy public assets (favicon, logo, timesheet template)
-6. Verify the Supabase imports in copied files point to `@/integrations/supabase/client`
+Due to the volume (~150 files), this will be done in **5-6 batches**:
 
-## Technical note
-This is a large operation (~200+ files). The implementation will be done in batches, prioritizing core structure first (App.tsx, layouts, contexts), then pages, then components and hooks.
+1. **Batch 1**: All 37 missing hooks
+2. **Batch 2**: `clients/` (real components + form subfolder), `processes/` (real components)
+3. **Batch 3**: `dashboard/` (all 20 real components), `calendar/` remaining
+4. **Batch 4**: `financeiro/` (all 47 real components) — largest batch
+5. **Batch 5**: `solicitacoes/`, `timesheet/`, `users/`, `configuracoes/`, `premiacao/`, `relatorios/`, `pautas/`
+6. **Batch 6**: Any remaining pages that need updates + final verification
+
+Each batch will read files from the Axis project and write them to this project, replacing stubs with real implementations.
 
