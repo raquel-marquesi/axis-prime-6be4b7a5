@@ -1,0 +1,1 @@
+export function DREReport() { return <div>DREReport - Em migração</div>; }

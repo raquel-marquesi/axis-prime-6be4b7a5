@@ -1,0 +1,1 @@
+export function InvoiceFormDialog({ open, onOpenChange }: any) { return null; }

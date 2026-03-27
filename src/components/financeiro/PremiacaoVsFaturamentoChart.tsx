@@ -1,0 +1,1 @@
+export function PremiacaoVsFaturamentoChart() { return <div>PremiacaoVsFaturamentoChart - Em migração</div>; }

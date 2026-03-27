@@ -1,0 +1,1 @@
+export function FaturamentoProfissionalReport() { return <div>FaturamentoProfissionalReport - Em migração</div>; }

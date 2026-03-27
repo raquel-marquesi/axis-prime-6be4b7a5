@@ -1,0 +1,1 @@
+export function RecebiveisWidget() { return <div>RecebiveisWidget - Em migração</div>; }

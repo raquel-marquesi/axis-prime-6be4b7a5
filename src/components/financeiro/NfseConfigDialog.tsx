@@ -1,0 +1,1 @@
+export function NfseConfigDialog({ open, onOpenChange }: any) { return null; }

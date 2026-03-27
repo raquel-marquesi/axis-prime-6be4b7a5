@@ -1,0 +1,1 @@
+export function CompanyBankAccountsTab() { return <div>CompanyBankAccountsTab - Em migração</div>; }

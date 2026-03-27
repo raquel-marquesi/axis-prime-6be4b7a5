@@ -1,0 +1,1 @@
+export function TransferFormDialog({ open, onOpenChange }: any) { return null; }

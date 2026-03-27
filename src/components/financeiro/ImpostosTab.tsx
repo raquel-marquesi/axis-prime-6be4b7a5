@@ -1,0 +1,1 @@
+export function ImpostosTab() { return <div>ImpostosTab - Em migração</div>; }

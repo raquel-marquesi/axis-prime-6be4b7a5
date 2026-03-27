@@ -1,0 +1,1 @@
+export function TreasuryTab() { return <div>TreasuryTab - Em migração</div>; }

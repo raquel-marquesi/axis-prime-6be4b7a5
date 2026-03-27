@@ -1,0 +1,1 @@
+export function FluxoCaixaReport() { return <div>FluxoCaixaReport - Em migração</div>; }

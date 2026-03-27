@@ -1,0 +1,1 @@
+export function NfseEmitDialog({ open, onOpenChange, invoice }: any) { return null; }

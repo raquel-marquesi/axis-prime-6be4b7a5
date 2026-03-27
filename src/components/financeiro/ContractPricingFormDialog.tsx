@@ -1,0 +1,1 @@
+export function ContractPricingFormDialog({ open, onOpenChange, pricing, onSubmit }: any) { return null; }

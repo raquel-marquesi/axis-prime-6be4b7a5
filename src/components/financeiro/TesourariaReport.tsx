@@ -1,0 +1,1 @@
+export function TesourariaReport() { return <div>TesourariaReport - Em migração</div>; }

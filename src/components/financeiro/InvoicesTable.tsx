@@ -1,0 +1,1 @@
+export function InvoicesTable() { return <div>InvoicesTable - Em migração</div>; }
