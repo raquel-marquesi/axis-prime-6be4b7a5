@@ -10,5 +10,20 @@ export const useEconomicGroups = () => {
       return data;
     },
   });
-  return { economicGroups: economicGroups || [], isLoading };
+
+  const { data: contractKeys } = useQuery({
+    queryKey: ["contract_keys"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("contract_keys").select("*").order("nome");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  return { 
+    economicGroups: economicGroups || [], 
+    groups: economicGroups || [],
+    contractKeys: contractKeys || [],
+    isLoading 
+  };
 };

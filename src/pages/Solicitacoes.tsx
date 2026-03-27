@@ -1,9 +1,8 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { Plus, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
@@ -16,9 +15,8 @@ const Solicitacoes = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("solicitacoes")
-        .select("*, profiles(full_name)")
+        .select("*")
         .order("created_at", { ascending: false });
-
       if (error) throw error;
       return data;
     },
@@ -30,8 +28,8 @@ const Solicitacoes = () => {
         return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Pendente</Badge>;
       case "em_andamento":
         return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Em Andamento</Badge>;
-      case "concluido":
-        return <Badge variant="secondary" className="bg-green-100 text-green-800">Concluído</Badge>;
+      case "concluida":
+        return <Badge variant="secondary" className="bg-green-100 text-green-800">Concluída</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -44,10 +42,8 @@ const Solicitacoes = () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-slate-900">Solicitações</h1>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Nova Solicitação
-        </Button>
+        <h1 className="text-3xl font-bold text-foreground">Solicitações</h1>
+        <Button><Plus className="mr-2 h-4 w-4" /> Nova Solicitação</Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -58,7 +54,7 @@ const Solicitacoes = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {solicitacoes?.filter(s => s.status === 'pendente').length || 0}
+              {solicitacoes?.filter((s: any) => s.status === 'pendente').length || 0}
             </div>
           </CardContent>
         </Card>
@@ -69,7 +65,7 @@ const Solicitacoes = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {solicitacoes?.filter(s => s.status === 'em_andamento').length || 0}
+              {solicitacoes?.filter((s: any) => s.status === 'em_andamento').length || 0}
             </div>
           </CardContent>
         </Card>
@@ -80,20 +76,17 @@ const Solicitacoes = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {solicitacoes?.filter(s => s.status === 'concluido').length || 0}
+              {solicitacoes?.filter((s: any) => s.status === 'concluida').length || 0}
             </div>
           </CardContent>
         </Card>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Lista de Solicitações</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Lista de Solicitações</CardTitle></CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="space-y-2">
-              <Skeleton className="h-12 w-full" />
               <Skeleton className="h-12 w-full" />
               <Skeleton className="h-12 w-full" />
             </div>
@@ -101,22 +94,20 @@ const Solicitacoes = () => {
             <div className="rounded-md border">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-slate-50">
+                  <tr className="border-b bg-muted/50">
                     <th className="p-4 text-left font-medium">Título</th>
-                    <th className="p-4 text-left font-medium">Solicitante</th>
                     <th className="p-4 text-left font-medium">Data</th>
                     <th className="p-4 text-left font-medium">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {solicitacoes?.map((solicitacao) => (
-                    <tr key={solicitacao.id} className="border-b hover:bg-slate-50">
-                      <td className="p-4 font-medium">{solicitacao.titulo}</td>
-                      <td className="p-4">{solicitacao.profiles?.full_name || "N/A"}</td>
+                  {solicitacoes?.map((s: any) => (
+                    <tr key={s.id} className="border-b hover:bg-muted/50">
+                      <td className="p-4 font-medium">{s.titulo}</td>
                       <td className="p-4">
-                        {format(new Date(solicitacao.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                        {format(new Date(s.created_at), "dd/MM/yyyy", { locale: ptBR })}
                       </td>
-                      <td className="p-4">{getStatusBadge(solicitacao.status)}</td>
+                      <td className="p-4">{getStatusBadge(s.status)}</td>
                     </tr>
                   ))}
                 </tbody>
