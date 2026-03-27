@@ -134,5 +134,83 @@ export function useClients() {
     onError: (error: Error) => { toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' }); },
   });
 
-  return { clients, isLoading, error, createClient, updateClient, deleteClient };
+  const checkDuplicate = async (document: string, tipo: PessoaTipo): Promise<boolean> => {
+    const field = tipo === 'fisica' ? 'cpf' : 'cnpj';
+    const { data } = await supabase.from('clients').select('id').eq(field, document).maybeSingle();
+    return !!data;
+  };
+
+  return { clients, isLoading, error, createClient, updateClient, deleteClient, checkDuplicate };
+}
+
+export interface ClientContact {
+  id: string;
+  client_id: string;
+  nome: string;
+  cargo: string | null;
+  tipo: string;
+  telefone: string | null;
+  celular: string | null;
+  email: string | null;
+  is_active: boolean | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContactFormData {
+  client_id: string;
+  nome: string;
+  cargo?: string;
+  tipo: ContatoTipo;
+  telefone?: string;
+  celular?: string;
+  email?: string;
+  id?: string;
+}
+
+export function useClientContacts(clientId?: string | null) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: contacts = [] } = useQuery({
+    queryKey: ['client-contacts', clientId],
+    queryFn: async () => {
+      if (!clientId) return [];
+      const { data, error } = await supabase.from('client_contacts').select('*').eq('client_id', clientId).order('created_at');
+      if (error) throw error;
+      return data as ClientContact[];
+    },
+    enabled: !!clientId,
+  });
+
+  const createContact = useMutation({
+    mutationFn: async (formData: ContactFormData) => {
+      const { data, error } = await supabase.from('client_contacts').insert(formData).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['client-contacts', clientId] }); },
+    onError: (error: Error) => { toast({ title: 'Erro ao criar contato', description: error.message, variant: 'destructive' }); },
+  });
+
+  const updateContact = useMutation({
+    mutationFn: async ({ id, ...formData }: ContactFormData & { id: string }) => {
+      const { data, error } = await supabase.from('client_contacts').update(formData).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['client-contacts', clientId] }); },
+    onError: (error: Error) => { toast({ title: 'Erro ao atualizar contato', description: error.message, variant: 'destructive' }); },
+  });
+
+  const deleteContact = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('client_contacts').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['client-contacts', clientId] }); },
+    onError: (error: Error) => { toast({ title: 'Erro ao excluir contato', description: error.message, variant: 'destructive' }); },
+  });
+
+  return { contacts, createContact, updateContact, deleteContact };
 }
