@@ -25,5 +25,29 @@ export function useCalendar({ userEmail }: { userEmail: string }) {
     } catch (err: any) { setError(err.message); throw err; } finally { setLoading(false); }
   }, [callCalendarFunction]);
 
-  return { loading, error, listEvents };
+  const createEvent = useCallback(async (eventData: Record<string, unknown>, calendarId = 'primary', email?: string) => {
+    setLoading(true); setError(null);
+    try {
+      const result = await callCalendarFunction({ action: 'createEvent', calendarId, event: eventData });
+      return result;
+    } catch (err: any) { setError(err.message); throw err; } finally { setLoading(false); }
+  }, [callCalendarFunction]);
+
+  const updateEvent = useCallback(async (eventId: string, eventData: Record<string, unknown>, calendarId = 'primary', email?: string) => {
+    setLoading(true); setError(null);
+    try {
+      const result = await callCalendarFunction({ action: 'updateEvent', calendarId, eventId, event: eventData });
+      return result;
+    } catch (err: any) { setError(err.message); throw err; } finally { setLoading(false); }
+  }, [callCalendarFunction]);
+
+  const deleteEvent = useCallback(async (eventId: string, calendarId = 'primary', email?: string) => {
+    setLoading(true); setError(null);
+    try {
+      const result = await callCalendarFunction({ action: 'deleteEvent', calendarId, eventId });
+      return result;
+    } catch (err: any) { setError(err.message); throw err; } finally { setLoading(false); }
+  }, [callCalendarFunction]);
+
+  return { loading, error, listEvents, createEvent, updateEvent, deleteEvent };
 }
