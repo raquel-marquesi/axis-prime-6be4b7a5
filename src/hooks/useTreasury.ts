@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export interface TreasuryEntry {
   id: string; bank_account_id: string; tipo: string; valor: number;
   data_movimentacao: string; descricao: string | null;
+  conta_destino_id: string | null;
   created_by: string | null; created_at: string; updated_at: string;
 }
 
