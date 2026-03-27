@@ -11,10 +11,10 @@ import { AREA_LABELS } from '@/types/auth';
 import InternalCalendarWidget from '@/components/calendar/InternalCalendarWidget';
 import InternalFullCalendar from '@/components/calendar/InternalFullCalendar';
 import EventFormDialog from '@/components/calendar/EventFormDialog';
-import CoordinatorDashboard from '@/components/dashboard/CoordinatorDashboard';
-import ManagerDashboard from '@/components/dashboard/ManagerDashboard';
-import FinanceDashboard from '@/components/dashboard/FinanceDashboard';
-import BonusGaugeWidget from '@/components/dashboard/BonusGaugeWidget';
+import { CoordinatorDashboard } from '@/components/dashboard/CoordinatorDashboard';
+import { ManagerDashboard } from '@/components/dashboard/ManagerDashboard';
+import { FinanceDashboard } from '@/components/dashboard/FinanceDashboard';
+import { BonusGaugeWidget } from '@/components/dashboard/BonusGaugeWidget';
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';

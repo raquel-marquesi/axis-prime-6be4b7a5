@@ -1,5 +1,5 @@
-export { default as CoordinatorDashboard } from './CoordinatorDashboard';
-export { default as ManagerDashboard } from './ManagerDashboard';
-export { default as FinanceDashboard } from './FinanceDashboard';
+export { CoordinatorDashboard } from './CoordinatorDashboard';
+export { ManagerDashboard } from './ManagerDashboard';
+export { FinanceDashboard } from './FinanceDashboard';
 export { PrazosAtrasadosWidget } from './PrazosAtrasadosWidget';
 export { GoalProgressWidgetUser, GoalProgressWidgetCoordinator, GoalProgressWidgetManager } from './GoalProgressWidget';
