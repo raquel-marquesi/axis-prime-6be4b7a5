@@ -22,9 +22,11 @@ const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', curren
 
 const PremiacaoList = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const refMonth = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
-  const { bonuses, isLoading } = useBonus(refMonth);
+  const { allBonus, isLoadingAll } = useBonus();
   const { profiles } = useProfiles();
+  const refMonth = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
+  const refEnd = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+  const bonuses = allBonus.filter(b => b.reference_month >= refMonth && b.reference_month <= refEnd);
 
   const profilesMap = useMemo(() => {
     const m: Record<string, string> = {};
