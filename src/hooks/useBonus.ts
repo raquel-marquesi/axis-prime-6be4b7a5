@@ -1,52 +1,28 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
+
+export type BonusStatus = 'pending' | 'approved' | 'paid' | 'cancelled';
+export interface BonusCalculation { id: string; user_id: string; reference_month: string; area: string; total_weighted: number; monthly_goal: number; excess_count: number; extra_value: number; bonus_amount: number; payment_month: string; status: BonusStatus; approved_by: string | null; approved_at: string | null; notes: string | null; created_at: string; updated_at: string; }
+export interface AreaGoal { id: string; area: string; monthly_goal: number; extra_value_per_calculation: number | null; created_at: string; updated_at: string; }
 
 export function useBonus() {
   const { user, isAdminOrManager, isCoordinatorOrAbove } = useAuth();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  const { data: myBonus = [], isLoading: isLoadingMyBonus } = useQuery({
-    queryKey: ['bonus', 'my', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('bonus_calculations').select('*').eq('user_id', user!.id).order('reference_month', { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
-
-  const { data: allBonus = [], isLoading: isLoadingAll } = useQuery({
-    queryKey: ['bonus', 'all'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('bonus_calculations').select('*').order('reference_month', { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user && (isAdminOrManager() || isCoordinatorOrAbove()),
-  });
-
-  const { data: areaGoals = [] } = useQuery({
-    queryKey: ['area-goals'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('area_goals').select('*').order('area');
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
-
-  const calculateBonus = useMutation({
-    mutationFn: async (month: string) => {
-      const { data, error } = await supabase.rpc('calculate_monthly_bonus', { p_month: month });
-      if (error) throw error;
-      return data as number;
-    },
-    onSuccess: (count) => { toast({ title: `${count} registros processados` }); queryClient.invalidateQueries({ queryKey: ['bonus'] }); },
-    onError: (error: Error) => { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); },
-  });
-
-  return { myBonus, allBonus, areaGoals, isLoadingMyBonus, isLoadingAll, calculateBonus };
+  const { data: myBonus = [], isLoading: isLoadingMyBonus } = useQuery({ queryKey: ['bonus', 'my', user?.id], queryFn: async () => { const { data, error } = await supabase.from('bonus_calculations').select('*').eq('user_id', user!.id).order('reference_month', { ascending: false }); if (error) throw error; return data as BonusCalculation[]; }, enabled: !!user });
+  const { data: allBonus = [], isLoading: isLoadingAll } = useQuery({ queryKey: ['bonus', 'all'], queryFn: async () => { const { data, error } = await supabase.from('bonus_calculations').select('*').order('reference_month', { ascending: false }); if (error) throw error; return data as BonusCalculation[]; }, enabled: !!user && (isAdminOrManager() || isCoordinatorOrAbove()) });
+  const { data: areaGoals = [], isLoading: isLoadingGoals } = useQuery({ queryKey: ['area-goals'], queryFn: async () => { const { data, error } = await supabase.from('area_goals').select('*').order('area'); if (error) throw error; return data as AreaGoal[]; }, enabled: !!user });
+  const calculateBonus = useMutation({ mutationFn: async (month: string) => { const { data, error } = await supabase.rpc('calculate_monthly_bonus', { p_month: month }); if (error) throw error; return data as number; }, onSuccess: (count) => { toast({ title: 'Cálculo concluído', description: String(count) + ' registros de bônus processados.' }); queryClient.invalidateQueries({ queryKey: ['bonus'] }); }, onError: (error: Error) => { toast({ title: 'Erro no cálculo', description: error.message, variant: 'destructive' }); } });
+  const approveBonus = useMutation({ mutationFn: async (ids: string[]) => { const { error } = await supabase.from('bonus_calculations').update({ status: 'approved' as any, approved_by: user!.id, approved_at: new Date().toISOString() }).in('id', ids); if (error) throw error; }, onSuccess: () => { toast({ title: 'Bônus aprovados com sucesso' }); queryClient.invalidateQueries({ queryKey: ['bonus'] }); }, onError: (error: Error) => { toast({ title: 'Erro ao aprovar', description: error.message, variant: 'destructive' }); } });
+  const markAsPaid = useMutation({ mutationFn: async (ids: string[]) => { const { error } = await supabase.from('bonus_calculations').update({ status: 'paid' as any }).in('id', ids); if (error) throw error; }, onSuccess: () => { toast({ title: 'Bônus marcados como pagos' }); queryClient.invalidateQueries({ queryKey: ['bonus'] }); }, onError: (error: Error) => { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); } });
+  const markAsBilled = useMutation({ mutationFn: async (ids: string[]) => { const { error } = await supabase.from('bonus_calculations').update({ is_billed: true, billed_at: new Date().toISOString(), billed_by: user!.id } as any).in('id', ids); if (error) throw error; }, onSuccess: () => { toast({ title: 'Registros marcados como faturados' }); queryClient.invalidateQueries({ queryKey: ['bonus'] }); }, onError: (error: Error) => { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); } });
+  const unmarkBilled = useMutation({ mutationFn: async (ids: string[]) => { const { error } = await supabase.from('bonus_calculations').update({ is_billed: false, billed_at: null, billed_by: null } as any).in('id', ids); if (error) throw error; }, onSuccess: () => { toast({ title: 'Faturamento removido' }); queryClient.invalidateQueries({ queryKey: ['bonus'] }); }, onError: (error: Error) => { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); } });
+  const updateAreaGoal = useMutation({ mutationFn: async ({ id, monthly_goal, extra_value_per_calculation }: { id: string; monthly_goal: number; extra_value_per_calculation: number }) => { const { error } = await supabase.from('area_goals').update({ monthly_goal, extra_value_per_calculation }).eq('id', id); if (error) throw error; }, onSuccess: () => { toast({ title: 'Meta atualizada' }); queryClient.invalidateQueries({ queryKey: ['area-goals'] }); }, onError: (error: Error) => { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); } });
+  const updateActivityWeight = useMutation({ mutationFn: async ({ id, weight }: { id: string; weight: number }) => { const { error } = await supabase.from('activity_types').update({ weight }).eq('id', id); if (error) throw error; }, onSuccess: () => { toast({ title: 'Peso atualizado' }); queryClient.invalidateQueries({ queryKey: ['activity-types'] }); }, onError: (error: Error) => { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); } });
+  const createActivityType = useMutation({ mutationFn: async ({ name, weight, area }: { name: string; weight: number; area: string | null }) => { const { error } = await supabase.from('activity_types').insert({ name, weight, area: area as any }); if (error) throw error; }, onSuccess: () => { toast({ title: 'Tipo de atividade criado' }); queryClient.invalidateQueries({ queryKey: ['activity-types'] }); }, onError: (error: Error) => { toast({ title: 'Erro ao criar', description: error.message, variant: 'destructive' }); } });
+  const toggleActivityType = useMutation({ mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => { const { error } = await supabase.from('activity_types').update({ is_active }).eq('id', id); if (error) throw error; }, onSuccess: () => { toast({ title: 'Status atualizado' }); queryClient.invalidateQueries({ queryKey: ['activity-types'] }); }, onError: (error: Error) => { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); } });
+  const updateActivityType = useMutation({ mutationFn: async ({ id, name, weight, area }: { id: string; name: string; weight: number; area?: string | null }) => { const { error } = await supabase.from('activity_types').update({ name, weight, area: area as any }).eq('id', id); if (error) throw error; }, onSuccess: () => { toast({ title: 'Atividade atualizada' }); queryClient.invalidateQueries({ queryKey: ['activity-types'] }); }, onError: (error: Error) => { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); } });
+  const deleteActivityType = useMutation({ mutationFn: async (id: string) => { const { error } = await supabase.from('activity_types').delete().eq('id', id); if (error) throw error; }, onSuccess: () => { toast({ title: 'Atividade excluída' }); queryClient.invalidateQueries({ queryKey: ['activity-types'] }); }, onError: (error: Error) => { toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' }); } });
+  return { myBonus, allBonus, areaGoals, isLoadingMyBonus, isLoadingAll, isLoadingGoals, calculateBonus, approveBonus, markAsPaid, markAsBilled, unmarkBilled, updateAreaGoal, updateActivityWeight, createActivityType, toggleActivityType, updateActivityType, deleteActivityType };
 }
