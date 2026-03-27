@@ -16,7 +16,7 @@ export function ContratosTab() {
         <Button size="sm" onClick={() => setFormOpen(true)}><Plus className="h-4 w-4 mr-2" />Novo Contrato</Button>
       </div>
       <ContractPricingTable />
-      <ContractPricingFormDialog open={formOpen} onOpenChange={setFormOpen} />
+      <ContractPricingFormDialog open={formOpen} onOpenChange={setFormOpen} onSubmit={() => {}} />
     </div>
   );
 }
