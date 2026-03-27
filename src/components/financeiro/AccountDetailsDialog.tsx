@@ -5,8 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Account } from '@/hooks/useAccounts';
-import { BillingContactsTable } from './BillingContactsTable';
-import { BillingContactFormDialog } from './BillingContactFormDialog';
+import { BillingContactsTable } from '@/components/financeiro/BillingContactsTable';
+import { BillingContactFormDialog } from '@/components/financeiro/BillingContactFormDialog';
 
 const statusColors: Record<string, string> = { ativa: 'bg-green-500/10 text-green-700 border-green-200', inativa: 'bg-red-500/10 text-red-700 border-red-200', prospeccao: 'bg-yellow-500/10 text-yellow-700 border-yellow-200' };
 const statusLabels: Record<string, string> = { ativa: 'Ativa', inativa: 'Inativa', prospeccao: 'Prospecção' };
