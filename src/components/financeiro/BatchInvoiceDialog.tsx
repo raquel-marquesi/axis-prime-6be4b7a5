@@ -14,7 +14,8 @@ interface Props { open: boolean; onOpenChange: (open: boolean) => void; }
 
 export function BatchInvoiceDialog({ open, onOpenChange }: Props) {
   const { accounts } = useAccounts();
-  const { createBatchInvoices } = useInvoices();
+  const { createInvoice } = useInvoices();
+  const createBatchInvoices = { mutateAsync: async (invoices: any[]) => { for (const inv of invoices) { await createInvoice.mutateAsync(inv); } }, isPending: createInvoice.isPending };
   const [accountId, setAccountId] = useState('');
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
   const [valor, setValor] = useState('');
