@@ -357,7 +357,6 @@ export default function Clients() {
         open={isDetailsOpen}
         onOpenChange={setIsDetailsOpen}
         client={selectedClient}
-        onEdit={handleEdit}
       />
 
       <BatchImportClientsDialog
