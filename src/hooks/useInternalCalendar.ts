@@ -62,5 +62,59 @@ export function useInternalCalendar(options: UseInternalCalendarOptions = {}) {
     onError: (error: Error) => { toast({ title: 'Erro ao remover', description: error.message, variant: 'destructive' }); },
   });
 
-  return { events, isLoading, error, refetch, createEvent, updateEvent, deleteEvent };
+  // Deadline-specific helper methods
+  const createEventFromDeadline = async (
+    deadlineId: string,
+    title: string,
+    dateStr: string,
+    description?: string | null,
+    assignedTo?: string
+  ) => {
+    if (!userId) return;
+    const targetUserId = assignedTo || userId;
+    const { error } = await supabase.from('calendar_events').insert({
+      user_id: targetUserId,
+      title,
+      description: description || null,
+      start_at: `${dateStr}T09:00:00`,
+      end_at: `${dateStr}T09:15:00`,
+      all_day: false,
+      event_type: 'prazo',
+      process_deadline_id: deadlineId,
+      sync_to_google: false,
+    });
+    if (error) console.error('Failed to create internal calendar event:', error);
+  };
+
+  const updateEventFromDeadline = async (
+    deadlineId: string,
+    title: string,
+    dateStr: string,
+    description?: string | null
+  ) => {
+    const { error } = await supabase
+      .from('calendar_events')
+      .update({
+        title,
+        description: description || null,
+        start_at: `${dateStr}T09:00:00`,
+        end_at: `${dateStr}T09:15:00`,
+      })
+      .eq('process_deadline_id', deadlineId);
+    if (error) console.error('Failed to update internal calendar event:', error);
+  };
+
+  const deleteEventByDeadline = async (deadlineId: string) => {
+    const { error } = await supabase
+      .from('calendar_events')
+      .delete()
+      .eq('process_deadline_id', deadlineId);
+    if (error) console.error('Failed to delete internal calendar event:', error);
+  };
+
+  return {
+    events, isLoading, error, refetch,
+    createEvent, updateEvent, deleteEvent,
+    createEventFromDeadline, updateEventFromDeadline, deleteEventByDeadline,
+  };
 }
