@@ -1,1 +1,103 @@
 project_id = "pojnrtgqigouahmdanze"
+
+[functions.google-calendar]
+verify_jwt = false
+
+[functions.google-drive]
+verify_jwt = false
+
+[functions.google-gmail]
+verify_jwt = false
+
+[functions.ai-agent]
+verify_jwt = false
+
+[functions.ask-task-context]
+verify_jwt = false
+
+[functions.backfill-timesheet]
+verify_jwt = false
+
+[functions.batch-create-ex-employees]
+verify_jwt = false
+
+[functions.batch-import-clients]
+verify_jwt = false
+
+[functions.batch-import-processes]
+verify_jwt = false
+
+[functions.batch-import-users]
+verify_jwt = false
+
+[functions.bulk-import-data]
+verify_jwt = false
+
+[functions.contract-monitor]
+verify_jwt = false
+
+[functions.cross-check-calendar]
+verify_jwt = false
+
+[functions.delete-user]
+verify_jwt = false
+
+[functions.emit-nfe]
+verify_jwt = false
+
+[functions.external-requests]
+verify_jwt = false
+
+[functions.extract-calculation-data]
+verify_jwt = false
+
+[functions.extract-contract]
+verify_jwt = false
+
+[functions.import-csv-processes]
+verify_jwt = false
+
+[functions.import-historico-axis]
+verify_jwt = false
+
+[functions.invite-user]
+verify_jwt = false
+
+[functions.parse-bank-statement]
+verify_jwt = false
+
+[functions.process-monitored-inboxes]
+verify_jwt = false
+
+[functions.process-pauta]
+verify_jwt = false
+
+[functions.reconcile-data]
+verify_jwt = false
+
+[functions.sync-clients-sheet]
+verify_jwt = false
+
+[functions.sync-deadlines]
+verify_jwt = false
+
+[functions.sync-email-agendamentos]
+verify_jwt = false
+
+[functions.sync-external-project]
+verify_jwt = false
+
+[functions.sync-sheets]
+verify_jwt = false
+
+[functions.sync-solicitacoes-sheet]
+verify_jwt = false
+
+[functions.webhook-contract-extract]
+verify_jwt = false
+
+[functions.webhook-prazos]
+verify_jwt = false
+
+[functions.xlsx-direct-import]
+verify_jwt = false
