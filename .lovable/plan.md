@@ -1,61 +1,39 @@
 
 
-# Plan: Complete Migration — Remaining Files
+## Diagnóstico da Conexão com a Planilha
 
-## Summary
-The majority of the frontend is still placeholder stubs. There are **~150 files** remaining to copy from the original Axis project. Here's what's missing:
+### Planilha identificada
+A planilha `11tvMSgLv0AJ40x3r6IW3VU3aZeCZGnkEj8pAdaD6Sbc` é usada pela Edge Function **`sync-email-agendamentos`**, que sincroniza solicitações de cálculo extraídas de e-mails organizadas por abas de clientes.
 
-## Missing Hooks (37 hooks not yet copied)
-`useActivityTypes`, `useAllProcessDeadlines`, `useBankAccountsConfig`, `useBankReconciliation`, `useBanks`, `useBillingContacts`, `useBoletos`, `useCalendarSync`, `useChartOfAccounts`, `useClientDocuments`, `useClientSlaRules`, `useCollectiveProcessParticipants`, `useCompanyEntities`, `useContractExtraction`, `useContractMonitor`, `useContractPricing`, `useCostCenters`, `useCrossCheckCalendar`, `useDREReport`, `useDeadlineCompletion`, `useDeadlineWithCalendar`, `useDrive`, `useExpenseSplits`, `useFinanceReports`, `useFinancialGroups`, `useGmail`, `useMonitoredEmails`, `useNfse`, `useOverdueDeadlines`, `useOverdueTimesheetMap`, `useProcessWithFolder`, `useProducaoWidget`, `useRelatedProcesses`, `useReportData`, `useSyncStatus`, `useTaxRules`, `useTeamClients`
+### Problema encontrado
+A função retorna erro **500**: `GOOGLE_SERVICE_ACCOUNT_JSON not set`.
 
-## Missing / Stub Components
+O secret `GOOGLE_SERVICE_ACCOUNT_JSON` **não está configurado** nas Edge Functions do Supabase. Este mesmo secret é necessário por 13 Edge Functions (google-calendar, google-drive, google-gmail, sync-sheets, etc.) — é por isso que o google-calendar também retorna 401.
 
-### `components/clients/` (3 missing + 6 stubs)
-- **Missing**: `form/` subfolder (8 files), `ContactFormDialog`, `ContractExtractionDialog`
-- **Stubs**: `ClientsTable`, `ClientsCards`, `ClientFormDialog`, `ClientDetailsDialog`, `BatchImportClientsDialog`, `ClientDataExportButton`
+### O que precisa ser feito
 
-### `components/financeiro/` (43 missing + 4 stubs)
-- **Missing**: 43 files (AccountsTable, InvoicesTable, ExpensesTable, DREReport, BankReconciliation, NfseTab, TaxSimulator, etc.)
-- **Stubs**: `FinanceSummary`, `FinanceTable`, `FinanceCharts`, `AddTransactionDialog`
+1. **Configurar o secret `GOOGLE_SERVICE_ACCOUNT_JSON`** no painel do Supabase (Edge Functions > Secrets) com o JSON da conta de serviço do Google que tem acesso às planilhas e APIs do Google Workspace.
 
-### `components/dashboard/` (16 missing + 4 stubs)
-- **Missing**: `CalendarWidget`, `GmailWidget`, `DriveWidget`, `ProducaoWidget`, `GoalProgressWidget`, `PrazosAtrasadosWidget`, `SyncStatusWidget`, `BonusWidget`, `SolicitacoesPendentesWidget`, `ComposeEmailDialog`, `CreateEventDialog`, `FullCalendarView`, `LinkClientPopover`, `LinkUserPopover`, `SyncErrorsDialog`, `index.ts`
-- **Stubs**: `BonusGaugeWidget`, `CoordinatorDashboard`, `FinanceDashboard`, `ManagerDashboard`
+2. **Onde obter o JSON**: No Google Cloud Console do projeto que já é utilizado (provavelmente o workspace `marquesi.adv.br`):
+   - Acessar **IAM & Admin > Service Accounts**
+   - Localizar a conta de serviço existente (ex: `integracao@marquesi.adv.br` ou similar)
+   - Gerar uma nova chave JSON (ou usar a existente)
+   - O JSON contém `client_email`, `private_key`, `project_id`, etc.
 
-### `components/processes/` (3 missing + 5 stubs)
-- **Missing**: `DeadlineCompletionDialog`, `DeadlinesTab`, `RelatedProcessesTab`
-- **Stubs**: all 5 existing files
+3. **Após configurar o secret**, todas as 13 funções que dependem dele passarão a funcionar, incluindo:
+   - `sync-email-agendamentos` (esta planilha)
+   - `google-calendar` (que está retornando 401)
+   - `google-drive`, `google-gmail`, `sync-sheets`, etc.
 
-### `components/solicitacoes/` (entire folder missing — 7 files)
-### `components/timesheet/` (entire folder missing — 3 files)
-### `components/users/` (7 missing, 1 stub)
-- **Missing**: `AddToTeamDialog`, `BatchImportUsersDialog`, `EditUserDialog`, `InviteUserDialog`, `PermissionsByProfile`, `PermissionsByUser`, `TeamMembersView`, `index.ts`
+### Resumo técnico
 
-### `components/configuracoes/` (6 missing + 5 stubs)
-- **Missing**: `BankAccountsTab`, `BanksTab`, `BranchesTab`, `CompanyEntitiesTab`, `CostCentersTab`, `EmpresaseFiliaisTab`, `FinancialGroupsTab`, `MonitoredEmailsTab`, `RolesManagerTab`, `TeamsOverviewTab`, `EconomicGroupsTab`
+| Item | Valor |
+|------|-------|
+| Planilha ID | `11tvMSgLv0AJ40x3r6IW3VU3aZeCZGnkEj8pAdaD6Sbc` |
+| Edge Function | `sync-email-agendamentos` |
+| Secret faltante | `GOOGLE_SERVICE_ACCOUNT_JSON` |
+| Funções afetadas | 13 Edge Functions |
+| Escopo necessário | `spreadsheets`, `calendar`, `drive`, `gmail` (domain-wide delegation) |
 
-### `components/premiacao/` (4 stubs need replacement)
-### `components/relatorios/` (4 missing + 1 stub)
-### `components/calendar/` (1 missing + stubs)
-- **Missing**: `CrossCheckCalendarDialog`, `index.ts`
-
-### `components/pautas/` (1 missing)
-- `PautasPendentesCard`
-
-### `components/ui/` — likely already present from shadcn, no action needed
-
-## Pages (14 exist but some need real implementations)
-The pages were copied but reference stub components — they'll work once components are real.
-
-## Execution approach
-Due to the volume (~150 files), this will be done in **5-6 batches**:
-
-1. **Batch 1**: All 37 missing hooks
-2. **Batch 2**: `clients/` (real components + form subfolder), `processes/` (real components)
-3. **Batch 3**: `dashboard/` (all 20 real components), `calendar/` remaining
-4. **Batch 4**: `financeiro/` (all 47 real components) — largest batch
-5. **Batch 5**: `solicitacoes/`, `timesheet/`, `users/`, `configuracoes/`, `premiacao/`, `relatorios/`, `pautas/`
-6. **Batch 6**: Any remaining pages that need updates + final verification
-
-Each batch will read files from the Axis project and write them to this project, replacing stubs with real implementations.
+Após você fornecer o JSON da conta de serviço, eu configuro o secret e testo a conexão com a planilha.
 
