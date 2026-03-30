@@ -30,17 +30,23 @@ interface CalendarEvent {
   reminders?: { useDefault: boolean; overrides?: Array<{ method: string; minutes: number }> };
 }
 
-async function getAccessToken(credentials: ServiceAccountCredentials, userEmail: string): Promise<string> {
+const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar";
+
+async function getAccessToken(
+  credentials: ServiceAccountCredentials,
+  userEmail: string,
+  scope = CALENDAR_SCOPE,
+): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  
+
   // Fix private key newlines that may be escaped
-  const privateKeyPem = credentials.private_key.replace(/\\n/g, '\n');
+  const privateKeyPem = credentials.private_key.replace(/\\n/g, "\n");
   const privateKey = await importPKCS8(privateKeyPem, "RS256");
-  
+
   const jwt = await new SignJWT({
     iss: credentials.client_email,
     sub: userEmail,
-    scope: "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events",
+    scope,
     aud: "https://oauth2.googleapis.com/token",
     iat: now,
     exp: now + 3600,
@@ -58,9 +64,17 @@ async function getAccessToken(credentials: ServiceAccountCredentials, userEmail:
   });
 
   const tokenData = await tokenResponse.json();
-  
+
   if (!tokenResponse.ok) {
     console.error("Token error:", tokenData);
+
+    if (tokenData?.error === "unauthorized_client") {
+      throw new Error(
+        `Google service account sem autorização de delegação para o escopo ${scope}. ` +
+        `Autorize este escopo no Domain-Wide Delegation e confirme o usuário impersonado (${userEmail}).`,
+      );
+    }
+
     throw new Error(`Failed to get access token: ${tokenData.error_description || tokenData.error}`);
   }
 
