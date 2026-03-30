@@ -7,6 +7,8 @@ const corsHeaders = {
 };
 
 const SPREADSHEET_ID = "1ORp5ThzcGdLIvSEkVgReHSbL5-euIuNT8Gt35Na_k5I";
+const GITHUB_REPO = "raquel-marquesi/axis-prime-6be4b7a5";
+const GITHUB_API = "https://api.github.com";
 
 const TABS = [
   { name: "PERNAMBUCANAS", client: "PERNAMBUCANAS" },
@@ -131,12 +133,67 @@ function derivePrioridade(dataLimite: string | null): "baixa" | "media" | "alta"
   return "baixa";
 }
 
+// ─── GitHub Issues ─────────────────────────────────────────────────
+
+async function ensureGithubLabel(
+  token: string, name: string, color: string
+): Promise<void> {
+  const res = await fetch(
+    `${GITHUB_API}/repos/${GITHUB_REPO}/labels/${encodeURIComponent(name)}`,
+    { headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" } }
+  );
+  if (res.status === 404) {
+    await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/labels`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "Content-Type": "application/json", "X-GitHub-Api-Version": "2022-11-28" },
+      body: JSON.stringify({ name, color }),
+    });
+  }
+}
+
+async function createGithubIssue(
+  token: string, title: string, body: string, labels: string[]
+): Promise<number | null> {
+  const res = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/issues`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+      "Content-Type": "application/json",
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
+    body: JSON.stringify({ title, body, labels }),
+  });
+  if (!res.ok) {
+    console.error(`[GITHUB] ${res.status}: ${(await res.text()).substring(0, 200)}`);
+    return null;
+  }
+  return (await res.json()).number ?? null;
+}
+
+// ─── Main handler ──────────────────────────────────────────────────
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const githubToken = Deno.env.get("GITHUB_TOKEN");
   const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+  // Bootstrap GitHub labels (non-blocking)
+  if (githubToken) {
+    const labelDefs = [
+      { name: "solicitacao", color: "f9d0c4" },
+      { name: "prioridade:urgente", color: "d73a4a" },
+      { name: "prioridade:alta", color: "e4e669" },
+      { name: "prioridade:media", color: "0052cc" },
+      { name: "prioridade:baixa", color: "cfd3d7" },
+      { name: "area:trabalhista", color: "bfd4f2" },
+      { name: "area:civel", color: "d4c5f9" },
+    ];
+    await Promise.allSettled(labelDefs.map(l => ensureGithubLabel(githubToken, l.name, l.color)));
+  }
 
   const logId = crypto.randomUUID();
   let rowsFound = 0, rowsProcessed = 0, rowsFailed = 0;
@@ -501,13 +558,106 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ─── Create GitHub Issues for new solicitacoes ──────────────────
+    let issuesCreated = 0;
+    if (githubToken && insertedIds.length > 0) {
+      // Fetch all inserted records with their resolved assigned_to
+      for (let i = 0; i < insertedIds.length; i += BATCH) {
+        const idBatch = insertedIds.slice(i, i + BATCH);
+        const { data: sols } = await supabase
+          .from("solicitacoes")
+          .select("id, titulo, descricao, process_id, prioridade, area, data_limite, assigned_to, extracted_details, client_id")
+          .in("id", idBatch);
+
+        // Batch-resolve assigned user names
+        const assignedIds = [...new Set((sols || []).map(s => s.assigned_to).filter(Boolean))];
+        const { data: assignedProfiles } = assignedIds.length > 0
+          ? await supabase.from("profiles").select("user_id, full_name, sigla").in("user_id", assignedIds)
+          : { data: [] };
+        const userNameMap = new Map<string, string>();
+        for (const p of assignedProfiles || []) {
+          userNameMap.set(p.user_id, p.full_name || p.sigla || p.user_id);
+        }
+
+        // Batch-resolve client names
+        const clientIds = [...new Set((sols || []).map(s => s.client_id).filter(Boolean))];
+        const { data: clientsData } = clientIds.length > 0
+          ? await supabase.from("clients").select("id, nome, razao_social, nome_fantasia").in("id", clientIds)
+          : { data: [] };
+        const clientNameMap = new Map<string, string>();
+        for (const c of clientsData || []) {
+          clientNameMap.set(c.id, c.razao_social || c.nome_fantasia || c.nome || c.id);
+        }
+
+        const issueResults = await Promise.allSettled(
+          (sols || []).map(async (sol) => {
+            // Skip if already has a GitHub issue
+            if ((sol.extracted_details as any)?.github_issue_number) return;
+
+            const assignedName = sol.assigned_to
+              ? (userNameMap.get(sol.assigned_to) ?? "Não atribuído")
+              : "Não atribuído";
+            const clientName = sol.client_id
+              ? (clientNameMap.get(sol.client_id) ?? "—")
+              : "—";
+            const prazoFmt = sol.data_limite
+              ? new Date(sol.data_limite + "T12:00:00Z").toLocaleDateString("pt-BR")
+              : "Não informado";
+
+            const issueTitle = `[${clientName}] ${sol.titulo}`.substring(0, 200);
+            const issueBody = [
+              "## Solicitação de Cálculo",
+              "",
+              "| Campo | Valor |",
+              "|---|---|",
+              `| **Cliente** | ${clientName} |`,
+              `| **Título** | ${sol.titulo} |`,
+              `| **Prazo** | ${prazoFmt} |`,
+              `| **Prioridade** | ${sol.prioridade} |`,
+              `| **Área** | ${sol.area} |`,
+              `| **Atribuído** | ${assignedName} |`,
+              ...(sol.descricao ? [`| **Descrição** | ${sol.descricao.substring(0, 300)} |`] : []),
+              "",
+              "---",
+              `*Origem: Planilha 5 clientes · ${new Date().toLocaleDateString("pt-BR")}*`,
+            ].join("\n");
+
+            const labels = [
+              "solicitacao",
+              `prioridade:${sol.prioridade}`,
+              `area:${sol.area}`,
+            ];
+
+            const issueNumber = await createGithubIssue(githubToken!, issueTitle, issueBody, labels);
+            if (issueNumber) {
+              issuesCreated++;
+              const currentDetails = (sol.extracted_details as any) || {};
+              await supabase.from("solicitacoes").update({
+                extracted_details: {
+                  ...currentDetails,
+                  github_issue_number: issueNumber,
+                  github_issue_url: `https://github.com/${GITHUB_REPO}/issues/${issueNumber}`,
+                },
+              }).eq("id", sol.id);
+            }
+          })
+        );
+
+        for (const result of issueResults) {
+          if (result.status === "rejected") {
+            errors.push(`GitHub Issue: ${(result as PromiseRejectedResult).reason?.message}`);
+          }
+        }
+      }
+    }
+
     await supabase.from("sync_logs").update({
       status: errors.length > 0 ? "partial" : "success",
       finished_at: new Date().toISOString(),
       rows_found: rowsFound,
       rows_processed: rowsProcessed,
       rows_failed: rowsFailed,
-      details: { errors: errors.slice(0, 50) },
+      details: { errors: errors.slice(0, 50), issues_created: issuesCreated },
     }).eq("id", logId);
 
     return new Response(JSON.stringify({
@@ -515,6 +665,7 @@ Deno.serve(async (req) => {
       processed: rowsProcessed,
       failed: rowsFailed,
       deadlines_created: deadlinesCreated,
+      issues_created: issuesCreated,
       errors: errors.slice(0, 10),
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 

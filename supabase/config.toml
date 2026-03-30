@@ -90,6 +90,9 @@ verify_jwt = false
 [functions.sync-sheets]
 verify_jwt = false
 
+[functions.sync-pautas-github]
+verify_jwt = false
+
 [functions.sync-solicitacoes-sheet]
 verify_jwt = false
 
