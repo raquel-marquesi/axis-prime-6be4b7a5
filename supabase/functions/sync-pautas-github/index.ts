@@ -83,11 +83,13 @@ function base64url(buf: ArrayBuffer): string {
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-async function getGoogleAccessToken(sa: any): Promise<string> {
+async function getGoogleAccessToken(sa: any, impersonateEmail?: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const header = base64url(new TextEncoder().encode(JSON.stringify({ alg: "RS256", typ: "JWT" })));
   const payload = base64url(new TextEncoder().encode(JSON.stringify({
     iss: sa.client_email,
+    // sub impersonates a Workspace user — required for Shared Drive access
+    ...(impersonateEmail ? { sub: impersonateEmail } : {}),
     scope: "https://www.googleapis.com/auth/spreadsheets.readonly",
     aud: "https://oauth2.googleapis.com/token",
     iat: now, exp: now + 3600,
@@ -376,7 +378,8 @@ Deno.serve(async (req) => {
     const saJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_JSON");
     if (!saJson) throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON not set");
     const sa = JSON.parse(saJson);
-    const accessToken = await getGoogleAccessToken(sa);
+    const impersonateEmail = Deno.env.get("GOOGLE_IMPERSONATE_EMAIL");
+    const accessToken = await getGoogleAccessToken(sa, impersonateEmail);
 
     // ── GitHub labels bootstrap ──
     const allSourceLabels = SOURCES.map(s => s.label).filter(Boolean) as string[];
