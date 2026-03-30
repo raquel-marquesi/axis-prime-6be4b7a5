@@ -40,14 +40,15 @@ Configurar em: **Supabase Dashboard → Edge Functions → Secrets**
 
 Uma **Service Account** no Google Cloud com **Domain-Wide Delegation** habilitada, para que o backend possa agir em nome dos usuários do Workspace (impersonation).
 
-### 3.2 Como obter o Client ID
+### 3.2 Service Account do projeto
 
-1. Acesse [console.cloud.google.com](https://console.cloud.google.com)
-2. IAM & Admin → **Service Accounts**
-3. Clique na service account do projeto
-4. Aba **Details** → campo **"Unique ID"** (número com ~21 dígitos)
+| Campo | Valor |
+|-------|-------|
+| **Client ID (Unique ID)** | `101511187044485431027` |
+| **client_email** | `axis-integration@axis-485613.iam.gserviceaccount.com` |
+| **project_id** | `axis-485613` |
 
-> Este número é o **Client ID** usado no Google Admin Console para Domain-Wide Delegation.
+> O **Client ID** `101511187044485431027` é o que deve estar cadastrado no Google Admin Console para Domain-Wide Delegation.
 
 ### 3.3 Configurar Domain-Wide Delegation
 
@@ -75,15 +76,15 @@ O secret deve conter o JSON completo baixado do Google Cloud:
 ```json
 {
   "type": "service_account",
-  "project_id": "...",
+  "project_id": "axis-485613",
   "private_key_id": "...",
   "private_key": "-----BEGIN RSA PRIVATE KEY-----\n...",
-  "client_email": "nome@projeto.iam.gserviceaccount.com",
-  "client_id": "...",
+  "client_email": "axis-integration@axis-485613.iam.gserviceaccount.com",
+  "client_id": "101511187044485431027",
   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
   "token_uri": "https://oauth2.googleapis.com/token",
   "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "..."
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/axis-integration%40axis-485613.iam.gserviceaccount.com"
 }
 ```
 
