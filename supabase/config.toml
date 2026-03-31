@@ -101,3 +101,6 @@ verify_jwt = false
 
 [functions.xlsx-direct-import]
 verify_jwt = false
+
+[functions.sync-pautas-github]
+verify_jwt = false
