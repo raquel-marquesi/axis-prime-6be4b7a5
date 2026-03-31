@@ -1,61 +1,74 @@
 
 
-## Vincular usuários às equipes na página Equipes
+## Auditoria: Configurações — Tabelas do banco vs. Frontend
 
-### Problema identificado
+### Status atual das abas
 
-1. **Nomes dos líderes aparecem como "Desconhecido"**: O `team_lead_id` na tabela `team_clients` armazena o `profiles.id`, mas o hook `useProfiles` busca por `user_id`. O `getName()` nunca encontra correspondência.
+| Aba | Tabelas consultadas | Status |
+|-----|---------------------|--------|
+| Geral | nenhuma (local state) | Funcional (mas não persiste no banco) |
+| Empresa | `company_entities`, `branches` | OK |
+| Usuários | `profiles` | OK (falta exibir `user_roles`, `is_active`) |
+| Permissões | `custom_roles` | Parcial — faltam 3 tabelas |
+| Notificações | nenhuma (local state) | Stub — não persiste |
+| Backup e Dados | nenhuma | Stub — apenas informativo |
 
-2. **Membros da equipe não são exibidos**: A página só mostra clientes vinculados. Os usuários subordinados (via `profiles.reports_to`) não aparecem, apesar de existirem no banco (ex: Juliana tem 12 membros, Kleber tem 8, Felipe tem 6, Vinícius tem 8, Rafael tem 5).
+### Tabelas de configuração SEM interface no frontend
 
-### Dados no banco
+| Tabela | Registros | Descrição | Onde deveria aparecer |
+|--------|-----------|-----------|----------------------|
+| `activity_types` | 65 | Tipos de atividade + peso para timesheet/premiação | Nova aba "Operacional" |
+| `area_goals` | 12 | Metas mensais por área + valor extra por cálculo | Nova aba "Operacional" |
+| `calculation_types` | 12 | Tipos de cálculo (Sentença, Acórdão, etc.) | Nova aba "Operacional" |
+| `phase_area_mapping` | 15 | Mapeamento fase → área para distribuição automática | Nova aba "Operacional" |
+| `permissions` | 54 | Permissões por módulo/ação | Aba "Permissões" |
+| `role_permissions` | 308 | Vínculo papel → permissão | Aba "Permissões" |
+| `user_permission_overrides` | ? | Exceções de permissão por usuário | Aba "Permissões" |
+| `contract_keys` | 11 | Chaves de contrato (BRADESCO, BOTICARIO, etc.) | Aba "Empresa" ou nova aba |
+| `client_aliases` | 12 | Nomes alternativos de clientes para matching | Aba "Empresa" ou "Dados" |
+| `user_aliases` | 1 | Nomes alternativos de usuários para matching | Aba "Usuários" |
+| `monitored_emails` | 0 | E-mails monitorados para importação automática | Aba "Notificações" ou "Integrações" |
+| `economic_groups` | ? | Grupos econômicos de clientes | Aba "Empresa" |
+| `bank_accounts_config` | 6 | Contas bancárias da empresa | Aba "Empresa" (já existe em Financeiro) |
+| `nfse_config` | 0 | Configuração de NFSe | Aba "Empresa" ou Financeiro |
 
-| Líder (profiles.id) | Nome | Membros (reports_to) | Clientes (team_clients) |
-|---|---|---|---|
-| 5aed80f0... | JULIANA FERREIRA MARTINS PEREIRA | 12 | vários |
-| 45052afb... | KLEBER NAPOLITANO DO ROSARIO | 8+ | vários |
-| fcbae628... | FELIPE CAMPOS DE SOUZA | 6 | vários |
-| 4b0b162d... | VINICIUS MARCANTUONO | 8+ | vários |
-| 07c32525... | RAFAEL SENA SANTOS DE SOUZA | 5+ | vários |
+### Plano de implementação
 
-### Alterações
+**1. Nova aba "Operacional"** em Configurações
+- CRUD para `activity_types` (nome, peso, área, ativo/inativo)
+- CRUD para `area_goals` (meta mensal, valor extra por área)
+- CRUD para `calculation_types` (nome, complexidade estimada)
+- CRUD para `phase_area_mapping` (keyword de fase → área/setor)
+- Criar componente `src/components/configuracoes/OperationalSettings.tsx`
 
-**1. `src/pages/Equipes.tsx`**
+**2. Expandir aba "Permissões"**
+- Além de `custom_roles`, exibir a **matriz de permissões**: role × módulo/ação com checkboxes
+- Dados vêm de `permissions`, `role_permissions`
+- Permitir override por usuário (`user_permission_overrides`)
+- Expandir `UserRolesSettings.tsx` ou criar `PermissionsMatrix.tsx`
 
-- Buscar perfis completos via `supabase.from('profiles')` (com `id` e `user_id`) em vez de depender do `useProfiles` (que só tem `user_id`)
-- Resolver nomes dos líderes usando `profiles.id` (não `user_id`)
-- Buscar membros da equipe: `profiles WHERE reports_to = leader.id`
-- No card de cada equipe, exibir duas seções:
-  - **Membros**: lista de usuários subordinados (nome, área/sigla)
-  - **Clientes**: lista de clientes vinculados (já existente)
-- Corrigir o dialog de "Vincular Cliente" para usar `profiles.id` como `team_lead_id`
+**3. Expandir aba "Empresa"**
+- Adicionar seção para `economic_groups` (CRUD)
+- Adicionar seção para `contract_keys` (CRUD)
+- Adicionar seção para `client_aliases` e `user_aliases` (tabelas de apelidos para matching de importação)
 
-**2. `src/hooks/useTeamClients.ts`** (sem alteração estrutural)
+**4. Expandir aba "Usuários"**
+- Exibir coluna `is_active` (hoje mostra sempre "Ativo")
+- Exibir roles do usuário (via `user_roles`)
+- Exibir `reports_to` (supervisor)
 
-O hook já funciona corretamente com a tabela. O problema é apenas na resolução de nomes no frontend.
+**5. Aba "Notificações"**
+- Conectar `monitored_emails` para gerenciar caixas de entrada monitoradas
+- Atualmente é stub com estado local — decisão: persistir preferências no banco ou manter como está
 
-### Layout do card atualizado
-
-```text
-┌─────────────────────────────────┐
-│ JULIANA FERREIRA MARTINS PEREIRA│
-│ 👥 12 membros  │  🏢 N clientes │
-├─────────────────────────────────┤
-│ ▾ Membros da Equipe             │
-│   • Gabriel de Jesus Silva      │
-│   • Gabriel Moreira             │
-│   • Patricia de Moraes          │
-│   • ...                         │
-│ ▾ Clientes Vinculados           │
-│   • Cliente ABC                 │
-│   • Cliente XYZ                 │
-│   (botão remover)               │
-└─────────────────────────────────┘
-```
-
-### Arquivo
+### Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `src/pages/Equipes.tsx` | Reescrever: buscar profiles com `id`, exibir membros via `reports_to`, corrigir resolução de nomes |
+| `src/components/configuracoes/OperationalSettings.tsx` | Criar — CRUD activity_types, area_goals, calculation_types, phase_area_mapping |
+| `src/components/configuracoes/PermissionsMatrix.tsx` | Criar — Matriz de permissões role × módulo |
+| `src/components/configuracoes/CompanySettings.tsx` | Expandir — economic_groups, contract_keys, aliases |
+| `src/components/configuracoes/UserRolesSettings.tsx` | Expandir — integrar PermissionsMatrix |
+| `src/pages/Configuracoes.tsx` | Adicionar aba "Operacional" |
+| `src/pages/UserManagement.tsx` | Exibir is_active, roles, reports_to |
 
