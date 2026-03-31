@@ -15,8 +15,8 @@ const Financeiro = () => {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Financeiro</h1>
-          <p className="text-muted-foreground">Gerencie suas receitas, despesas e fluxo de caixa.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Financeiro</h1>
+          <p className="text-sm text-muted-foreground">Gerencie suas receitas, despesas e fluxo de caixa.</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="gap-2">

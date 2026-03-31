@@ -10,10 +10,10 @@ import { BackupSettings } from "@/components/configuracoes/BackupSettings";
 
 const Configuracoes = () => {
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-500">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Configurações</h1>
+        <p className="text-sm text-muted-foreground">
           Gerencie as configurações do sistema e preferências da empresa.
         </p>
       </div>
