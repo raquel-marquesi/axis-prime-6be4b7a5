@@ -52,8 +52,8 @@ export function TimesheetTable({ entries, onEdit, onDelete }: TimesheetTableProp
           <TableBody>
             {entries.map((entry) => (
               <TableRow key={entry.id}>
-                <TableCell className="font-mono text-sm">{formatDate(entry.data_atividade)}</TableCell>
-                <TableCell className="font-mono text-sm">{entry.process?.numero_pasta || '-'}</TableCell>
+                <TableCell className="tabular-nums tracking-wide text-sm">{formatDate(entry.data_atividade)}</TableCell>
+                <TableCell className="tabular-nums tracking-wide text-sm">{entry.process?.numero_pasta || '-'}</TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">

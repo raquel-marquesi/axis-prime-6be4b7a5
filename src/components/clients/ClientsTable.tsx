@@ -107,7 +107,7 @@ export function ClientsTable({ clients, onViewDetails, onEdit }: ClientsTablePro
                       <span className="block text-xs text-muted-foreground">{client.nome_fantasia}</span>
                     )}
                   </TableCell>
-                  <TableCell className="font-mono text-sm">{getDocument(client)}</TableCell>
+                  <TableCell className="tabular-nums tracking-wide text-sm">{getDocument(client)}</TableCell>
                   <TableCell>
                     {client.branch_nomes.length > 0 ? (
                       <div className="flex flex-wrap gap-1">

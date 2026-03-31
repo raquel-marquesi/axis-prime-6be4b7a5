@@ -43,7 +43,7 @@ export function BatchImportProcessesDialog({ open, onOpenChange }: Props) {
         <ScrollArea className="max-h-[400px]">
           <div className="space-y-2">{DIGIMAIS_RECORDS.map((r, i) => (
             <div key={i} className="flex items-start gap-3 p-2 rounded border text-sm">
-              <span className="font-mono text-xs text-muted-foreground w-5 shrink-0">{i + 1}</span>
+              <span className="tabular-nums tracking-wide text-xs text-muted-foreground w-5 shrink-0">{i + 1}</span>
               <div className="min-w-0"><p className="font-medium truncate">{r.numero_processo}</p><p className="text-muted-foreground truncate">{r.parte_contraria}</p></div>
             </div>
           ))}</div>

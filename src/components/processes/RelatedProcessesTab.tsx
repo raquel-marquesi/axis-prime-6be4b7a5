@@ -60,7 +60,7 @@ export function RelatedProcessesTab({ processId }: RelatedProcessesTabProps) {
               return (
                 <div key={rel.id} className="flex items-center justify-between bg-muted/50 rounded px-3 py-2">
                   <div className="flex-1">
-                    <p className="font-mono text-sm">{rel.numero_processo_relacionado}</p>
+                    <p className="tabular-nums tracking-wide text-sm">{rel.numero_processo_relacionado}</p>
                     {rel.observacoes && <p className="text-xs text-muted-foreground">{rel.observacoes}</p>}
                   </div>
                   <div className="flex items-center gap-2">

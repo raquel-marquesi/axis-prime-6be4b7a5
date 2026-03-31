@@ -78,7 +78,7 @@ export function ProcessesTable({ processes, onViewDetails, onEdit }: ProcessesTa
                 }
               }}>
                 <TableCell>
-                  <Badge variant="outline" className="gap-1 font-mono">
+                  <Badge variant="outline" className="gap-1 tabular-nums tracking-wide">
                     <FolderOpen className="w-3 h-3" />{process.numero_pasta}
                   </Badge>
                 </TableCell>
@@ -92,13 +92,13 @@ export function ProcessesTable({ processes, onViewDetails, onEdit }: ProcessesTa
                     {process.tipo_acao === 'individual' ? <><User className="w-3 h-3 mr-1" /> Individual</> : <><Users className="w-3 h-3 mr-1" /> Coletiva</>}
                   </Badge>
                 </TableCell>
-                <TableCell className="font-mono text-sm">{process.numero_processo}</TableCell>
+                <TableCell className="tabular-nums tracking-wide text-sm">{process.numero_processo}</TableCell>
                 <TableCell>{getClientName(process)}</TableCell>
                 <TableCell>
                   <div className="flex flex-col">
                     <span>{process.reclamante_nome}</span>
                     {process.area === 'trabalhista' && process.reclamante_cpf && (
-                      <span className="text-xs text-muted-foreground font-mono">{formatCPF(process.reclamante_cpf)}</span>
+                      <span className="text-xs text-muted-foreground tabular-nums tracking-wide">{formatCPF(process.reclamante_cpf)}</span>
                     )}
                   </div>
                 </TableCell>
@@ -114,7 +114,7 @@ export function ProcessesTable({ processes, onViewDetails, onEdit }: ProcessesTa
                 </TableCell>
                 <TableCell>
                   {process.drive_folder_id ? (
-                    <span className="text-xs font-mono text-muted-foreground truncate max-w-[120px] inline-block" title={process.drive_folder_id}>
+                    <span className="text-xs tabular-nums tracking-wide text-muted-foreground truncate max-w-[120px] inline-block" title={process.drive_folder_id}>
                       {process.drive_folder_id.slice(0, 12)}…
                     </span>
                   ) : '—'}

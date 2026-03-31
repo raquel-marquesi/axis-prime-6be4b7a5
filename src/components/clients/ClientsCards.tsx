@@ -103,7 +103,7 @@ export function ClientsCards({ clients, onViewDetails, onEdit }: ClientsCardsPro
               <div className="space-y-2 text-sm">
                 {getDocument(client) && (
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <span className="font-mono">{getDocument(client)}</span>
+                    <span className="tabular-nums tracking-wide">{getDocument(client)}</span>
                   </div>
                 )}
                 

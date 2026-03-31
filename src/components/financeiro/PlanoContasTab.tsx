@@ -74,7 +74,7 @@ export function PlanoContasTab() {
                 <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Nenhuma conta cadastrada</TableCell></TableRow>
               ) : accounts.map(a => (
                 <TableRow key={a.id}>
-                  <TableCell className="font-mono" style={{ paddingLeft: `${(a.level - 1) * 24 + 16}px` }}>{a.code}</TableCell>
+                  <TableCell className="tabular-nums tracking-wide" style={{ paddingLeft: `${(a.level - 1) * 24 + 16}px` }}>{a.code}</TableCell>
                   <TableCell>{a.name}</TableCell>
                   <TableCell><Badge variant="outline">{typeLabels[a.type] || a.type}</Badge></TableCell>
                   <TableCell>{a.level}</TableCell>
