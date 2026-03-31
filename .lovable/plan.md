@@ -1,33 +1,27 @@
 
 
-## Unificar fontes: remover `font-mono` e usar Inter em todo o sistema
+## Simulação de Faturamento — Widget no Dashboard Financeiro
 
-### Problema
-O CPF/CNPJ nos cards de clientes (e números de processo, datas em outras telas) usa `font-mono`, que renderiza em uma fonte monoespaçada genérica do sistema, quebrando a consistência visual com a fonte Inter recém-adotada.
+### Alteração vs plano anterior
+O componente **não** se chamará `SimulacaoFaturamentoWidget`. Será nomeado `ProjecaoReceitaWidget` ("Projeção de Receita"), que descreve a funcionalidade sem sugerir ser uma simulação temporária.
 
-### Solução
-Substituir todas as ocorrências de `font-mono` por `tabular-nums tracking-wide` — isso mantém o alinhamento numérico (dígitos com largura uniforme) usando a própria Inter, sem trocar de família tipográfica.
+### Implementação
 
-### Arquivos afetados (12 arquivos, ~86 ocorrências)
+**1. Criar `src/components/financeiro/ProjecaoReceitaWidget.tsx`**
+- Card com título "Projeção de Receita — Prazos em Aberto"
+- Query via Supabase: `process_deadlines` (não completados) → join `processes` → join `clients` → left join `contract_pricing`
+- Para cada cliente: `prazos_abertos × preço_médio_contrato` (ou R$ 475,62 como fallback global)
+- Cards resumo no topo: Total Geral, Total Com Contrato, Total Estimado, Nº Prazos
+- Tabela: Cliente, Prazos Abertos, Preço Médio, Receita Projetada, Fonte (badge "contrato" ou "estimado")
+- Ordenação por receita projetada decrescente
 
-| Arquivo | Contexto |
-|---------|----------|
-| `src/components/clients/ClientsCards.tsx` | CPF/CNPJ nos cards |
-| `src/components/clients/ClientsTable.tsx` | CPF/CNPJ na tabela |
-| `src/components/processes/ProcessDetailsDialog.tsx` | Número do processo, CPF |
-| `src/components/processes/ProcessesTable.tsx` | Números de processo/pasta |
-| `src/components/processes/ProcessFormDialog.tsx` | Select de processos |
-| `src/components/timesheet/TimesheetTable.tsx` | Datas e número pasta |
-| `src/components/timesheet/TimesheetFormDialog.tsx` | Select de processos |
-| `src/components/financeiro/PlanoContasTab.tsx` | Código de contas |
-| `src/components/dashboard/SyncErrorsDialog.tsx` | Linha de erro |
-| `src/components/solicitacoes/PrazosProcessuaisTab.tsx` | Números de processo |
-| `src/components/ui/chart.tsx` | Valores numéricos |
-| Demais arquivos com `font-mono` | Busca e substituição global |
+**2. Editar `src/components/dashboard/FinanceDashboard.tsx`**
+- Importar e renderizar `ProjecaoReceitaWidget` abaixo do `AgendaFaturamentoWidget`
 
-### Regra de substituição
-- `font-mono` → `tabular-nums tracking-wide` (na maioria dos casos)
-- Onde `font-mono` aparece junto com `font-medium` ou `font-semibold`, manter esses modificadores
+### Arquivos
 
-Nenhuma alteração estrutural — apenas classe CSS.
+| Arquivo | Ação |
+|---------|------|
+| `src/components/financeiro/ProjecaoReceitaWidget.tsx` | Criar |
+| `src/components/dashboard/FinanceDashboard.tsx` | Adicionar widget |
 
