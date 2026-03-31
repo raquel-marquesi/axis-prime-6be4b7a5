@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { MainLayout } from '@/components/layout/MainLayout';
+
 import { useClients, Client } from '@/hooks/useClients';
 import { useBranches } from '@/hooks/useBranches';
 import ClientsTable from '@/components/clients/ClientsTable';
@@ -141,7 +141,7 @@ export default function Clients() {
   };
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -363,6 +363,6 @@ export default function Clients() {
         open={isImportOpen}
         onOpenChange={setIsImportOpen}
       />
-    </MainLayout>
+    </>
   );
 }

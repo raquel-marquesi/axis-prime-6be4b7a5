@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { MainLayout } from '@/components/layout/MainLayout';
+
 import { useProcesses, Process } from '@/hooks/useProcesses';
 import ProcessesTable from '@/components/processes/ProcessesTable';
 import ProcessFormDialog from '@/components/processes/ProcessFormDialog';
@@ -56,7 +56,7 @@ export default function Processes() {
   const handleCloseForm = () => { setIsFormOpen(false); setEditProcess(null); };
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -113,6 +113,6 @@ export default function Processes() {
       <ProcessDetailsDialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen} process={selectedProcess} onEdit={handleEdit} />
       <BatchImportProcessesDialog open={isImportOpen} onOpenChange={setIsImportOpen} />
       <BulkImportXlsxDialog open={isBulkImportOpen} onOpenChange={setIsBulkImportOpen} />
-    </MainLayout>
+    </>
   );
 }
