@@ -1,0 +1,2 @@
+ALTER TABLE public.timesheet_entries ADD COLUMN IF NOT EXISTS codigo_externo text;
+CREATE INDEX IF NOT EXISTS idx_timesheet_entries_codigo_externo ON public.timesheet_entries(codigo_externo) WHERE codigo_externo IS NOT NULL;
