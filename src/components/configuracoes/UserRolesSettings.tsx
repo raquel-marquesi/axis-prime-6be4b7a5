@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { PermissionsMatrix } from './PermissionsMatrix';
 
 export const UserRolesSettings = () => {
   const { toast } = useToast();
@@ -73,6 +74,8 @@ export const UserRolesSettings = () => {
           )}
         </CardContent>
       </Card>
+
+      <PermissionsMatrix />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>

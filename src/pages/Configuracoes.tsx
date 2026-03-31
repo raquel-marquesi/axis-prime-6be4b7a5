@@ -1,10 +1,11 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Users, Building2, ShieldCheck, Bell, Database } from "lucide-react";
+import { Settings, Users, Building2, ShieldCheck, Bell, Database, Cog } from "lucide-react";
 import { GeneralSettings } from "@/components/configuracoes/GeneralSettings";
 import { UserRolesSettings } from "@/components/configuracoes/UserRolesSettings";
 import { CompanySettings } from "@/components/configuracoes/CompanySettings";
 import { NotificationSettings } from "@/components/configuracoes/NotificationSettings";
 import { BackupSettings } from "@/components/configuracoes/BackupSettings";
+import { OperationalSettings } from "@/components/configuracoes/OperationalSettings";
 import UserManagement from "@/pages/UserManagement";
 
 const Configuracoes = () => {
@@ -35,6 +36,10 @@ const Configuracoes = () => {
             <ShieldCheck className="w-4 h-4" />
             Permissões
           </TabsTrigger>
+          <TabsTrigger value="operacional" className="flex items-center gap-2">
+            <Cog className="w-4 h-4" />
+            Operacional
+          </TabsTrigger>
           <TabsTrigger value="notificacoes" className="flex items-center gap-2">
             <Bell className="w-4 h-4" />
             Notificações
@@ -59,6 +64,10 @@ const Configuracoes = () => {
 
         <TabsContent value="permissoes">
           <UserRolesSettings />
+        </TabsContent>
+
+        <TabsContent value="operacional">
+          <OperationalSettings />
         </TabsContent>
 
         <TabsContent value="notificacoes">
