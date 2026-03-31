@@ -356,11 +356,35 @@ Deno.serve(async (req) => {
           const tituloClean = titulo || `Solicitação ${tab.client}`;
           const descricao = getVal(row, headers, "descricao") || null;
           const prazoRaw = getVal(row, headers, "prazo");
-          const dataLimite = parseDate(prazoRaw);
+          let dataLimite = parseDate(prazoRaw);
           const calculistaRaw = getVal(row, headers, "calculista");
           const assignedTo = resolveCalculista(calculistaRaw);
           const statusRaw = getVal(row, headers, "status");
           const status = mapStatus(statusRaw);
+
+          // SLA fallback when no explicit deadline
+          let slaApplied = false;
+          let slaHoursUsed: number | null = null;
+          if (!dataLimite && clientId) {
+            // Try to extract calculation type from titulo
+            const upperTitulo = tituloClean.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            let calcType = "";
+            if (upperTitulo.includes("EXECUCAO") || upperTitulo.includes("EXECUÇÃO")) calcType = "Execução";
+            else if (upperTitulo.includes("CONTINGENCIA") || upperTitulo.includes("CONTINGÊNCIA")) calcType = "Contingência";
+            else if (upperTitulo.includes("INICIAL")) calcType = "Inicial";
+            else if (upperTitulo.includes("SENTENCA") || upperTitulo.includes("SENTENÇA")) calcType = "Sentença";
+
+            const dataSolRaw = getVal(row, headers, "data_solicitacao");
+            const dataSol = parseDate(dataSolRaw);
+
+            const sla = applySlaFallback(clientId, calcType, dataSol);
+            if (sla) {
+              dataLimite = sla.dataLimite;
+              slaApplied = true;
+              slaHoursUsed = sla.slaHours;
+            }
+          }
+
           const prioridade = derivePrioridade(dataLimite);
 
           // Dedup check
@@ -397,6 +421,7 @@ Deno.serve(async (req) => {
             assigned_to: assignedTo,
             data_limite: dataLimite,
             area,
+            ...(slaApplied ? { extracted_details: { sla_derived: true, sla_hours: slaHoursUsed } } : {}),
           });
         }
       } catch (tabErr: any) {

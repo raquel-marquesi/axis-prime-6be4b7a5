@@ -538,6 +538,28 @@ Deno.serve(async (req) => {
 
           const calcTypeId = resolveCalcType(parsed.calculoTipo);
 
+          // Resolve client_id from processoCliente or from process
+          let clientId: string | null = null;
+          if (parsed.processoCliente) {
+            clientId = clientNameMap.get(parsed.processoCliente.toUpperCase().trim()) || null;
+          }
+          if (!clientId && processId) {
+            clientId = processClientMap.get(processId) || null;
+          }
+
+          // Apply SLA fallback if no deadline from sheet
+          let effectiveDataLimite = parsed.dataLimite;
+          let slaApplied = false;
+          let slaHoursUsed: number | null = null;
+          if (!effectiveDataLimite && clientId) {
+            const sla = applySlaFallback(clientId, parsed.calculoTipo, parsed.dataLimite);
+            if (sla) {
+              effectiveDataLimite = sla.dataLimite;
+              slaApplied = true;
+              slaHoursUsed = sla.slaHours;
+            }
+          }
+
           let solicitacaoId: string | null = null;
           if (existing && !existing.issueNumber) {
             solicitacaoId = existing.id;
@@ -548,10 +570,11 @@ Deno.serve(async (req) => {
               origem: "planilha_pautas" as const,
               source_type: source.key,
               status: parsed.status,
-              prioridade: derivePrioridade(parsed.dataLimite),
+              prioridade: derivePrioridade(effectiveDataLimite),
               process_id: processId,
+              client_id: clientId,
               assigned_to: null,
-              data_limite: parsed.dataLimite,
+              data_limite: effectiveDataLimite,
               id_tarefa_externa: parsed.idTarefa || parsed.idExterno || null,
               area: parsed.area,
               calculation_type_id: calcTypeId,
@@ -565,6 +588,7 @@ Deno.serve(async (req) => {
                 escritorio: parsed.escritorio,
                 source_key: source.key,
                 github_issue_number: null,
+                ...(slaApplied ? { sla_derived: true, sla_hours: slaHoursUsed } : {}),
               },
             };
 
@@ -588,11 +612,11 @@ Deno.serve(async (req) => {
               if (rpcErr) allErrors.push(`[${source.key}] assign_calculation: ${rpcErr.message}`);
             }
 
-            if (processId && parsed.dataLimite) {
+            if (processId && effectiveDataLimite) {
               const ocorrencia = parsed.titulo.substring(0, 120);
               const { error: dlErr } = await supabase.from("process_deadlines").upsert({
                 process_id: processId,
-                data_prazo: parsed.dataLimite,
+                data_prazo: effectiveDataLimite,
                 ocorrencia,
                 detalhes: parsed.observacao?.substring(0, 500) || null,
                 source: "planilha_pautas",
