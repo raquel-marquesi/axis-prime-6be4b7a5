@@ -1,23 +1,26 @@
 
 
-## Unificar tela: remover aba Solicitações, manter apenas Prazos Processuais
+## Unificar layout: todas as páginas com sidebar lateral
 
-### O que muda
+### Situação atual
 
-A página `/solicitacoes` atualmente tem duas abas (Solicitações e Prazos Processuais). O componente `PrazosProcessuaisTab` passará a ser o conteúdo principal da página, sem abas. A aba de solicitações genéricas (tabela `solicitacoes`) será removida da interface.
+Apenas 3 páginas usam `MainLayout` (que contém a `Sidebar`): **Dashboard**, **Clients**, **Processes**. As demais 7 páginas protegidas renderizam conteúdo solto, sem sidebar:
+
+- Solicitacoes, Premiacao, Financeiro, Relatorios, Configuracoes, Equipes, UserManagement, ImportarPautas
+
+### Solução
+
+A abordagem mais limpa é mover o `MainLayout` para dentro do `ProtectedRoute`, eliminando a necessidade de cada página importar e wrappear manualmente.
 
 ### Alterações
 
-**1. `src/pages/Solicitacoes.tsx`**
-- Remover todo o sistema de tabs, cards de contagem de solicitações, e os dialogs de formulário/detalhes de solicitações.
-- Renderizar diretamente o `PrazosProcessuaisTab` como conteúdo principal.
-- Atualizar o título da página para "Prazos Processuais".
-- Remover o botão "Nova Solicitação" (a criação de prazos já é feita via processos).
-- Remover imports de `useSolicitacoes`, `SolicitacoesTable`, `SolicitacaoFormDialog`, `SolicitacaoDetailsDialog`.
+**1. `src/components/ProtectedRoute.tsx`**
+- Importar `MainLayout` e wrappear `{children}` com ele, de forma que toda rota protegida automaticamente tenha sidebar.
 
-**2. `src/components/layout/Sidebar.tsx`**
-- Renomear o item de menu de "Prazos" para "Prazos" (já está correto, sem alteração necessária).
+**2. Remover `MainLayout` das 3 páginas que já o usam:**
+- `src/pages/Dashboard.tsx` — remover import e wrapper `<MainLayout>`
+- `src/pages/Clients.tsx` — idem
+- `src/pages/Processes.tsx` — idem
 
-### Arquivos não removidos
-Os componentes `SolicitacoesTable`, `SolicitacaoFormDialog`, `SolicitacaoDetailsDialog` e o hook `useSolicitacoes` serão mantidos no codebase caso sejam referenciados em outros lugares (ex: dashboard widgets), mas não serão mais acessíveis pela navegação principal.
+Resultado: todas as páginas protegidas terão sidebar automaticamente, sem duplicação de código.
 
