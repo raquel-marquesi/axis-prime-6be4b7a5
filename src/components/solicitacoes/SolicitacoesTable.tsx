@@ -33,12 +33,12 @@ export function SolicitacoesTable({ solicitacoes, onEdit, onView, onDelete, onSt
           <TableHeader><TableRow><TableHead className="w-[100px]">Origem</TableHead><TableHead>Título</TableHead><TableHead>Cliente</TableHead><TableHead className="w-[100px]">Prioridade</TableHead><TableHead className="w-[120px]">Status</TableHead><TableHead>Responsável</TableHead><TableHead className="w-[100px]">Prazo</TableHead><TableHead className="w-[100px]">Criada em</TableHead><TableHead className="w-[70px]"></TableHead></TableRow></TableHeader>
           <TableBody>
             {solicitacoes.map((s) => {
-              const OrigemIcon = origemIcons[s.origem];
+              const OrigemIcon = origemIcons[s.origem] || Pencil;
               const clientName = s.client?.razao_social || s.client?.nome;
               const isOverdue = s.data_limite && new Date(s.data_limite) < new Date() && s.status !== 'concluida' && s.status !== 'cancelada';
               return (
                 <TableRow key={s.id}>
-                  <TableCell><div className="flex items-center gap-2"><OrigemIcon className="h-4 w-4 text-muted-foreground" /><span className="text-xs text-muted-foreground">{ORIGEM_LABELS[s.origem]}</span></div></TableCell>
+                  <TableCell><div className="flex items-center gap-2"><OrigemIcon className="h-4 w-4 text-muted-foreground" /><span className="text-xs text-muted-foreground">{ORIGEM_LABELS[s.origem] || s.origem}</span></div></TableCell>
                   <TableCell><div className="font-medium">{s.titulo}</div>{s.descricao && <div className="text-sm text-muted-foreground truncate max-w-[200px]">{s.descricao}</div>}</TableCell>
                   <TableCell>{clientName ? <span className="text-sm">{clientName}</span> : <span className="text-sm text-muted-foreground">—</span>}</TableCell>
                   <TableCell><Badge className={cn('text-white', prioridadeColors[s.prioridade])}>{PRIORIDADE_LABELS[s.prioridade]}</Badge></TableCell>
