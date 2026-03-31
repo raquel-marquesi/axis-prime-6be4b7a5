@@ -7,6 +7,8 @@ export interface ProcessDeadline {
   detalhes: string | null; assigned_to: string | null; is_completed: boolean;
   completed_at: string | null; completed_by: string | null;
   document_url: string | null; calendar_event_id: string | null; created_at: string; updated_at: string;
+  solicitacao_id: string | null;
+  solicitacao?: { titulo: string; prioridade: string; client_id: string | null } | null;
 }
 
 export interface DeadlineFormData {
