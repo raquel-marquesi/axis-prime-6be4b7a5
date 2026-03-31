@@ -87,10 +87,11 @@ export function ProcessDetailsDialog({ open, onOpenChange, process, onEdit, defa
           </DialogHeader>
 
           <Tabs defaultValue={defaultTab} key={defaultTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="info" className="gap-1"><FileText className="w-4 h-4" /> Informações</TabsTrigger>
               <TabsTrigger value="related" className="gap-1"><Link2 className="w-4 h-4" /> Relacionados</TabsTrigger>
               <TabsTrigger value="deadlines" className="gap-1"><History className="w-4 h-4" /> Prazos</TabsTrigger>
+              <TabsTrigger value="activities" className="gap-1"><Clock className="w-4 h-4" /> Atividades</TabsTrigger>
             </TabsList>
 
             <TabsContent value="info" className="space-y-6 pt-4">
