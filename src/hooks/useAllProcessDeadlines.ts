@@ -114,12 +114,17 @@ export function useAllProcessDeadlines(options: UseAllProcessDeadlinesOptions = 
           assigned_to,
           completed_by,
           ultimo_andamento,
+          solicitacao_id,
           processes!inner (
             numero_processo,
             numero_pasta,
             reclamante_nome,
             reclamadas,
             area
+          ),
+          solicitacoes (
+            titulo,
+            prioridade
           )
         `)
         .order('data_prazo', { ascending: true })
