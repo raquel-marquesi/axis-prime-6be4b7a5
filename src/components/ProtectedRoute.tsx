@@ -22,5 +22,5 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  return <>{children}</>;
+  return <MainLayout>{children}</MainLayout>;
 }
