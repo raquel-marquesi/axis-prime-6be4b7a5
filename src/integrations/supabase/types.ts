@@ -970,6 +970,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          aplicar_grossup: boolean | null
           bairro: string | null
           billing_reminder_days: number | null
           billing_reminder_enabled: boolean | null
@@ -991,6 +992,8 @@ export type Database = {
           dados_bancarios_banco: string | null
           dados_bancarios_conta: string | null
           data_nascimento: string | null
+          dia_emissao_nf: number | null
+          dia_vencimento: number | null
           economic_group_id: string | null
           estado: string | null
           id: string
@@ -1002,6 +1005,8 @@ export type Database = {
           indicacao_responsavel: string | null
           indicacao_tipo: string | null
           indicacao_valor: number | null
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
           is_active: boolean | null
           logradouro: string | null
           metodo_pagamento: string | null
@@ -1015,9 +1020,11 @@ export type Database = {
           rg: string | null
           tipo: Database["public"]["Enums"]["pessoa_tipo"]
           tipo_cadastro: Database["public"]["Enums"]["tipo_cadastro"]
+          tipo_grossup: string | null
           updated_at: string
         }
         Insert: {
+          aplicar_grossup?: boolean | null
           bairro?: string | null
           billing_reminder_days?: number | null
           billing_reminder_enabled?: boolean | null
@@ -1039,6 +1046,8 @@ export type Database = {
           dados_bancarios_banco?: string | null
           dados_bancarios_conta?: string | null
           data_nascimento?: string | null
+          dia_emissao_nf?: number | null
+          dia_vencimento?: number | null
           economic_group_id?: string | null
           estado?: string | null
           id?: string
@@ -1050,6 +1059,8 @@ export type Database = {
           indicacao_responsavel?: string | null
           indicacao_tipo?: string | null
           indicacao_valor?: number | null
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
           is_active?: boolean | null
           logradouro?: string | null
           metodo_pagamento?: string | null
@@ -1063,9 +1074,11 @@ export type Database = {
           rg?: string | null
           tipo: Database["public"]["Enums"]["pessoa_tipo"]
           tipo_cadastro?: Database["public"]["Enums"]["tipo_cadastro"]
+          tipo_grossup?: string | null
           updated_at?: string
         }
         Update: {
+          aplicar_grossup?: boolean | null
           bairro?: string | null
           billing_reminder_days?: number | null
           billing_reminder_enabled?: boolean | null
@@ -1087,6 +1100,8 @@ export type Database = {
           dados_bancarios_banco?: string | null
           dados_bancarios_conta?: string | null
           data_nascimento?: string | null
+          dia_emissao_nf?: number | null
+          dia_vencimento?: number | null
           economic_group_id?: string | null
           estado?: string | null
           id?: string
@@ -1098,6 +1113,8 @@ export type Database = {
           indicacao_responsavel?: string | null
           indicacao_tipo?: string | null
           indicacao_valor?: number | null
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
           is_active?: boolean | null
           logradouro?: string | null
           metodo_pagamento?: string | null
@@ -1111,6 +1128,7 @@ export type Database = {
           rg?: string | null
           tipo?: Database["public"]["Enums"]["pessoa_tipo"]
           tipo_cadastro?: Database["public"]["Enums"]["tipo_cadastro"]
+          tipo_grossup?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1254,14 +1272,18 @@ export type Database = {
       }
       contract_pricing: {
         Row: {
+          cap_horas: number | null
+          cap_valor: number | null
           client_id: string | null
           cliente_nome: string
           cod_cliente: number | null
           cod_contrato: number | null
           contrato: string
           created_at: string | null
+          data_reajuste: string | null
           id: string
           is_active: boolean | null
+          modalidade: string | null
           moeda: string | null
           monitoramento: string | null
           percentual: number | null
@@ -1273,14 +1295,18 @@ export type Database = {
           valor: number | null
         }
         Insert: {
+          cap_horas?: number | null
+          cap_valor?: number | null
           client_id?: string | null
           cliente_nome: string
           cod_cliente?: number | null
           cod_contrato?: number | null
           contrato: string
           created_at?: string | null
+          data_reajuste?: string | null
           id?: string
           is_active?: boolean | null
+          modalidade?: string | null
           moeda?: string | null
           monitoramento?: string | null
           percentual?: number | null
@@ -1292,14 +1318,18 @@ export type Database = {
           valor?: number | null
         }
         Update: {
+          cap_horas?: number | null
+          cap_valor?: number | null
           client_id?: string | null
           cliente_nome?: string
           cod_cliente?: number | null
           cod_contrato?: number | null
           contrato?: string
           created_at?: string | null
+          data_reajuste?: string | null
           id?: string
           is_active?: boolean | null
+          modalidade?: string | null
           moeda?: string | null
           monitoramento?: string | null
           percentual?: number | null
