@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DeadlinesTab } from './DeadlinesTab';
+import { ProcessTimesheetTab } from './ProcessTimesheetTab';
 
 interface ProcessDetailsDialogProps {
   open: boolean;
