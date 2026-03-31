@@ -26,7 +26,7 @@ export function useProcessDeadlines(processId?: string) {
       if (!processId) return [];
       const { data, error } = await supabase.from('process_deadlines').select('*, solicitacoes(titulo, prioridade, client_id)').eq('process_id', processId).order('data_prazo', { ascending: false });
       if (error) throw error;
-      return data as ProcessDeadline[];
+      return (data || []).map((d: any) => ({ ...d, solicitacao: d.solicitacoes || null })) as ProcessDeadline[];
     },
     enabled: !!processId,
   });

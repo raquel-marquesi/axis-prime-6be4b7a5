@@ -218,6 +218,9 @@ export function useAllProcessDeadlines(options: UseAllProcessDeadlinesOptions = 
           area: d.processes.area,
           status,
           dias_atraso: diasAtraso,
+          solicitacao_id: d.solicitacao_id,
+          solicitacao_titulo: d.solicitacoes?.titulo || null,
+          solicitacao_prioridade: d.solicitacoes?.prioridade || null,
         };
       });
     },
