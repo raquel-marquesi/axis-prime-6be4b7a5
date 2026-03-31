@@ -2908,6 +2908,7 @@ export type Database = {
         | "manual"
         | "email_sheet"
         | "planilha_5_clientes"
+        | "planilha_pautas"
       pessoa_tipo: "fisica" | "juridica"
       prioridade_solicitacao: "baixa" | "media" | "alta" | "urgente"
       processed_file_status:
@@ -3089,6 +3090,7 @@ export const Constants = {
         "manual",
         "email_sheet",
         "planilha_5_clientes",
+        "planilha_pautas",
       ],
       pessoa_tipo: ["fisica", "juridica"],
       prioridade_solicitacao: ["baixa", "media", "alta", "urgente"],
