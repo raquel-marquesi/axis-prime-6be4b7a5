@@ -63,6 +63,7 @@ export function ProcessTimesheetTab({ processId }: ProcessTimesheetTabProps) {
             <TableHead>Responsável</TableHead>
             <TableHead>Atividade</TableHead>
             <TableHead>Descrição</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead className="text-right">Qtd/Peso</TableHead>
           </TableRow>
         </TableHeader>
