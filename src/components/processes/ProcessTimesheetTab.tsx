@@ -15,7 +15,7 @@ export function ProcessTimesheetTab({ processId }: ProcessTimesheetTabProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('timesheet_entries')
-        .select('id, data_atividade, descricao, quantidade, user_id, activity_type_id')
+        .select('id, data_atividade, descricao, quantidade, user_id, activity_type_id, client_id, status_faturamento, observacao, source')
         .eq('process_id', processId)
         .order('data_atividade', { ascending: false });
       if (error) throw error;
