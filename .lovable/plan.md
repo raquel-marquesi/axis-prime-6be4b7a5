@@ -1,27 +1,37 @@
 
 
-## Simulação de Faturamento — Widget no Dashboard Financeiro
+## Consolidar página Financeiro com todos os módulos existentes
 
-### Alteração vs plano anterior
-O componente **não** se chamará `SimulacaoFaturamentoWidget`. Será nomeado `ProjecaoReceitaWidget` ("Projeção de Receita"), que descreve a funcionalidade sem sugerir ser uma simulação temporária.
+### Diagnóstico
 
-### Implementação
+A página `/financeiro` mostra apenas 3 componentes básicos (FinanceSummary, FinanceTable, FinanceCharts). Existem **50+ componentes financeiros** já criados no codebase que nunca foram integrados à página:
 
-**1. Criar `src/components/financeiro/ProjecaoReceitaWidget.tsx`**
-- Card com título "Projeção de Receita — Prazos em Aberto"
-- Query via Supabase: `process_deadlines` (não completados) → join `processes` → join `clients` → left join `contract_pricing`
-- Para cada cliente: `prazos_abertos × preço_médio_contrato` (ou R$ 475,62 como fallback global)
-- Cards resumo no topo: Total Geral, Total Com Contrato, Total Estimado, Nº Prazos
-- Tabela: Cliente, Prazos Abertos, Preço Médio, Receita Projetada, Fonte (badge "contrato" ou "estimado")
-- Ordenação por receita projetada decrescente
+- **Contas a Pagar/Receber**, **DRE**, **Fluxo de Caixa**, **Tesouraria**
+- **NF-Se**, **Boletos**, **Impostos**, **Contratos/Precificação**
+- **Plano de Contas**, **Centro de Custos**, **Contas Bancárias**
+- **Breakeven**, **KPIs Financeiros**, **Análise Financeira**
+- **Recebíveis**, **Projeção de Receita**, **Rentabilidade**
 
-**2. Editar `src/components/dashboard/FinanceDashboard.tsx`**
-- Importar e renderizar `ProjecaoReceitaWidget` abaixo do `AgendaFaturamentoWidget`
+Esses componentes estão prontos mas órfãos — alguns aparecem apenas no `FinanceDashboard` (widget do Dashboard para perfil financeiro).
 
-### Arquivos
+### Proposta
 
-| Arquivo | Ação |
-|---------|------|
-| `src/components/financeiro/ProjecaoReceitaWidget.tsx` | Criar |
-| `src/components/dashboard/FinanceDashboard.tsx` | Adicionar widget |
+Reorganizar `/financeiro` em abas, agrupando os módulos existentes:
+
+| Aba | Componentes |
+|-----|-------------|
+| **Visão Geral** | FinanceSummary, FinancialKPICards, RecebiveisWidget, ProjecaoReceitaWidget, FinanceCharts |
+| **Transações** | FinanceTable, AddTransactionDialog, ExpensesTable, AccountsTable |
+| **Faturamento** | InvoicesTable, BoletosTab, NfseTab, ContratosTab, ContractPricingTable, AgendaFaturamentoWidget |
+| **Relatórios** | DREReport, FluxoCaixaReport, ContasPagarReport, ContasReceberReport, CentroCustosReport, TesourariaReport |
+| **Impostos** | ImpostosTab, TaxSimulator, TaxInfoCard |
+| **Configurações** | PlanoContasTab, CompanyBankAccountsTab, BillingContactsTable, BankReconciliation |
+
+### Alterações
+
+**1. `src/pages/Financeiro.tsx`** — Reescrever com sistema de abas expandido, importando todos os componentes relevantes.
+
+**2. `src/components/dashboard/FinanceDashboard.tsx`** — Manter como está (é o widget do Dashboard, não da página).
+
+Nenhum componente novo precisa ser criado — todos já existem. Apenas a página que os organiza precisa ser atualizada.
 
