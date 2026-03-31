@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { MainLayout } from '@/components/layout/MainLayout';
+
 import { useClients, Client } from '@/hooks/useClients';
 import { useBranches } from '@/hooks/useBranches';
 import ClientsTable from '@/components/clients/ClientsTable';
