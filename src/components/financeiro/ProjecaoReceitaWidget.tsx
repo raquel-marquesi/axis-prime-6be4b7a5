@@ -33,29 +33,41 @@ export function ProjecaoReceitaWidget() {
 
       if (!deadlines?.length) return { projections: [] as ClientProjection[], totalGeneral: 0, totalContrato: 0, totalEstimado: 0, totalPrazos: 0 };
 
-      // 2. Get unique process IDs and fetch processes with client info
+      // 2. Get unique process IDs and fetch processes with client ref
       const processIds = [...new Set(deadlines.map(d => d.process_id))];
       
-      // Fetch in batches of 500 to avoid query limits
-      const allProcesses: { id: string; client_id: string | null; client_name: string | null }[] = [];
+      const allProcesses: { id: string; id_cliente: string }[] = [];
       for (let i = 0; i < processIds.length; i += 500) {
         const batch = processIds.slice(i, i + 500);
         const { data: processes, error: pErr } = await supabase
           .from('processes')
-          .select('id, client_id, client_name')
+          .select('id, id_cliente')
           .in('id', batch);
         if (pErr) throw pErr;
         if (processes) allProcesses.push(...processes);
       }
 
-      // 3. Get contract pricing
+      // 3. Get clients for names
+      const clientIds = [...new Set(allProcesses.map(p => p.id_cliente).filter(Boolean))];
+      const allClients: { id: string; nome: string | null; razao_social: string | null }[] = [];
+      for (let i = 0; i < clientIds.length; i += 500) {
+        const batch = clientIds.slice(i, i + 500);
+        const { data: clients, error: cErr } = await supabase
+          .from('clients')
+          .select('id, nome, razao_social')
+          .in('id', batch);
+        if (cErr) throw cErr;
+        if (clients) allClients.push(...clients);
+      }
+      const clientMap = new Map(allClients.map(c => [c.id, c.razao_social || c.nome || 'Sem Nome']));
+
+      // 4. Get contract pricing
       const { data: pricing, error: prErr } = await supabase
         .from('contract_pricing')
         .select('client_id, cliente_nome, valor')
         .eq('is_active', true);
       if (prErr) throw prErr;
 
-      // Build pricing map: client_id -> avg price
       const pricingByClientId = new Map<string, number[]>();
       const pricingByName = new Map<string, number[]>();
       for (const p of pricing || []) {
@@ -72,7 +84,7 @@ export function ProjecaoReceitaWidget() {
         }
       }
 
-      // 4. Map deadlines to clients
+      // 5. Map deadlines to clients
       const processMap = new Map(allProcesses.map(p => [p.id, p]));
       const clientDeadlines = new Map<string, { name: string; clientId: string | null; count: number }>();
 
