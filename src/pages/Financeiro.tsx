@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 
 // Visão Geral
 import FinanceSummary from "@/components/financeiro/FinanceSummary";
-import { FinancialKPICards } from "@/components/financeiro/FinancialKPICards";
+import { AnaliseFinanceiraTab } from "@/components/financeiro/AnaliseFinanceiraTab";
 import { RecebiveisWidget } from "@/components/financeiro/RecebiveisWidget";
 import { ProjecaoReceitaWidget } from "@/components/financeiro/ProjecaoReceitaWidget";
 import FinanceCharts from "@/components/financeiro/FinanceCharts";
