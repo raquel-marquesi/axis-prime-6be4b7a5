@@ -74,6 +74,13 @@ export function ProcessTimesheetTab({ processId }: ProcessTimesheetTabProps) {
               <TableCell>{e.responsavel}</TableCell>
               <TableCell>{e.atividade}</TableCell>
               <TableCell className="max-w-[200px] truncate">{e.descricao || '-'}</TableCell>
+              <TableCell>
+                {e.status_faturamento === 'importado' ? (
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Faturado</span>
+                ) : e.status_faturamento === 'nao_importado' ? (
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">Não faturado</span>
+                ) : '-'}
+              </TableCell>
               <TableCell className="text-right tabular-nums">{e.quantidade ?? 1} × {e.peso}</TableCell>
             </TableRow>
           ))}
