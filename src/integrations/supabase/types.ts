@@ -2557,43 +2557,58 @@ export type Database = {
       timesheet_entries: {
         Row: {
           activity_type_id: string | null
+          client_id: string | null
           created_at: string
           data_atividade: string
           deadline_id: string | null
           descricao: string
           drive_folder_url: string | null
+          external_id: string | null
           id: string
+          observacao: string | null
           process_id: string | null
           quantidade: number
           reclamante_nome: string | null
+          source: string | null
+          status_faturamento: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           activity_type_id?: string | null
+          client_id?: string | null
           created_at?: string
           data_atividade: string
           deadline_id?: string | null
           descricao: string
           drive_folder_url?: string | null
+          external_id?: string | null
           id?: string
+          observacao?: string | null
           process_id?: string | null
           quantidade?: number
           reclamante_nome?: string | null
+          source?: string | null
+          status_faturamento?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           activity_type_id?: string | null
+          client_id?: string | null
           created_at?: string
           data_atividade?: string
           deadline_id?: string | null
           descricao?: string
           drive_folder_url?: string | null
+          external_id?: string | null
           id?: string
+          observacao?: string | null
           process_id?: string | null
           quantidade?: number
           reclamante_nome?: string | null
+          source?: string | null
+          status_faturamento?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -2603,6 +2618,13 @@ export type Database = {
             columns: ["activity_type_id"]
             isOneToOne: false
             referencedRelation: "activity_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
           {
