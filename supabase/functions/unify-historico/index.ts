@@ -72,7 +72,10 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const db = createClient(supabaseUrl, supabaseKey);
+    const db = createClient(supabaseUrl, supabaseKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      db: { schema: 'public' },
+    });
 
     const phase = body.phase || "import"; // "create_processes" | "import"
     const batchSize = body.batch_size || 500;
