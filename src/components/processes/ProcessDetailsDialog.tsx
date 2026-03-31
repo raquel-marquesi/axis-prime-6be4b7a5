@@ -100,14 +100,14 @@ export function ProcessDetailsDialog({ open, onOpenChange, process, onEdit, defa
                 <Badge variant={process.tipo_acao === 'individual' ? 'default' : 'secondary'} className="text-sm">
                   {process.tipo_acao === 'individual' ? <><User className="w-3 h-3 mr-1" /> Individual</> : <><Users className="w-3 h-3 mr-1" /> Coletiva</>}
                 </Badge>
-                <span className="font-mono text-lg font-medium">{process.numero_processo}</span>
+                <span className="tabular-nums tracking-wide text-lg font-medium">{process.numero_processo}</span>
               </div>
               {process.codigo_externo && <div className="text-sm text-muted-foreground"><span className="font-medium">Código Externo:</span> {process.codigo_externo}</div>}
               <Separator />
               <div><h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1"><Building2 className="w-4 h-4" /> Cliente</h4><p>{getClientName()}</p></div>
               <div><h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1"><User className="w-4 h-4" /> {labels.claimant}</h4>
                 <p className="font-medium">{process.reclamante_nome}</p>
-                {process.area === 'trabalhista' && process.reclamante_cpf && <p className="text-sm text-muted-foreground font-mono">CPF: {formatCPF(process.reclamante_cpf)}</p>}
+                {process.area === 'trabalhista' && process.reclamante_cpf && <p className="text-sm text-muted-foreground tabular-nums tracking-wide">CPF: {formatCPF(process.reclamante_cpf)}</p>}
               </div>
               {process.reclamadas?.length > 0 && (
                 <div><h4 className="text-sm font-medium text-muted-foreground mb-2">{labels.defendants} ({process.reclamadas.length})</h4>
@@ -126,7 +126,7 @@ export function ProcessDetailsDialog({ open, onOpenChange, process, onEdit, defa
               {relatedProcesses.length > 0 ? (
                 <div className="space-y-2">{relatedProcesses.map((rel) => (
                   <div key={rel.id} className="flex items-center justify-between bg-muted/50 rounded px-3 py-2">
-                    <div className="flex-1"><p className="font-mono text-sm">{rel.numero_processo_relacionado}</p>{rel.observacoes && <p className="text-xs text-muted-foreground">{rel.observacoes}</p>}</div>
+                    <div className="flex-1"><p className="tabular-nums tracking-wide text-sm">{rel.numero_processo_relacionado}</p>{rel.observacoes && <p className="text-xs text-muted-foreground">{rel.observacoes}</p>}</div>
                     <div className="flex items-center gap-2">
                       {isLeaderOrAbove() && <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setDeleteRelatedId(rel.id)}><Trash2 className="w-3 h-3" /></Button>}
                     </div>

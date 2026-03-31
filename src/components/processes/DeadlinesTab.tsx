@@ -92,7 +92,7 @@ export function DeadlinesTab({ processId, processInfo, driveFolderUrl }: Deadlin
                 <div key={deadline.id} className="flex items-center justify-between bg-muted/50 rounded px-3 py-2">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-mono bg-background px-2 py-0.5 rounded">{formatShortDate(deadline.data_prazo)}</span>
+                      <span className="text-xs tabular-nums tracking-wide bg-background px-2 py-0.5 rounded">{formatShortDate(deadline.data_prazo)}</span>
                       <span className={cn("inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full", status.color)}>
                         <StatusIcon className="w-3 h-3" />{status.label}
                       </span>

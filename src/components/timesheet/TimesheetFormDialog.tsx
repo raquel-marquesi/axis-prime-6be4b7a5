@@ -211,7 +211,7 @@ export function TimesheetFormDialog({ open, onOpenChange, entry }: TimesheetForm
                     <FormControl><SelectTrigger><SelectValue placeholder="Selecione o processo" /></SelectTrigger></FormControl>
                     <SelectContent>{processes.map((process) => (
                       <SelectItem key={process.id} value={process.id}>
-                        <span className="font-mono text-xs mr-2">{process.numero_pasta}</span>
+                        <span className="tabular-nums tracking-wide text-xs mr-2">{process.numero_pasta}</span>
                         {process.numero_processo} - {process.reclamante_nome}
                         {process.tipo_acao === 'coletiva' && <span className="ml-2 text-xs text-primary">(Coletiva)</span>}
                       </SelectItem>

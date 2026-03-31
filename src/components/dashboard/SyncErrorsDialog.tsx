@@ -69,7 +69,7 @@ function CategorySection({ categoryKey, errors, onClose, defaultExpanded = false
           <div className="px-3 pb-3 space-y-1">
             {errors.map((err, idx) => { const parsed = parseErrorLine(err); return (
               <div key={idx} className="flex items-center gap-2 text-xs py-1.5 px-2 rounded bg-background/80 border">
-                {parsed.row && <span className="text-muted-foreground font-mono shrink-0">{parsed.row}</span>}
+                {parsed.row && <span className="text-muted-foreground tabular-nums tracking-wide shrink-0">{parsed.row}</span>}
                 <span className="text-foreground flex-1">{parsed.message}{parsed.client && <Badge variant="outline" className="ml-1 text-[10px] py-0 px-1">{parsed.client}</Badge>}{parsed.responsible && <Badge variant="outline" className="ml-1 text-[10px] py-0 px-1">{parsed.responsible}</Badge>}</span>
                 {categoryKey === 'client_not_found' && parsed.client && <LinkClientPopover aliasName={parsed.client} />}
                 {categoryKey === 'responsible_not_found' && parsed.responsible && <LinkUserPopover aliasName={parsed.responsible} />}
