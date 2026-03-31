@@ -1,52 +1,85 @@
 
 
-## Implementar Opção A: Vincular `solicitacoes` → `process_deadlines` via FK
+## Importar CSV de Timesheet e dar baixa em prazos abertos
 
-### Contexto
+### Diagnóstico
 
-- `process_deadlines`: 1.950 registros (prazos operacionais com `process_id` obrigatório, controle de conclusão, calendário)
-- `solicitacoes`: 3.428 registros (entrada de demandas com `client_id`, `prioridade`, `calculation_type_id`, metadados de e-mail)
-- Ambas possuem `id_tarefa_externa` — 35 registros já compartilham o mesmo valor
-- 770 solicitações têm `process_id` preenchido
+| Métrica | Valor |
+|---------|-------|
+| Linhas no CSV | ~83.870 (Nov/2025 — Mar/2026) |
+| Prazos abertos no sistema (até 31/03) | 1.322 |
+| Prazos abertos com timesheet já vinculado | 77 (5,8%) |
+| Timesheet entries existentes (mesmo período) | 37.656 |
+| Timesheet entries com `process_id` | 5.042 (13%) |
 
-### O que será feito
+**Problema central**: O CSV contém a produção real realizada, mas o sistema não sabe que esses cálculos foram feitos — os prazos permanecem "em aberto". Além disso, 87% dos timesheet entries existentes não têm `process_id`, impedindo o cruzamento.
 
-**1. Migration SQL** — Adicionar `solicitacao_id` em `process_deadlines`
-```sql
-ALTER TABLE process_deadlines 
-  ADD COLUMN solicitacao_id UUID REFERENCES solicitacoes(id) ON DELETE SET NULL;
+### Colunas do CSV vs. tabelas existentes
+
+```text
+CSV:                          historico_axis:          timesheet_entries:
+data_lancamento               lancamento               data_atividade
+Peso                          peso                     quantidade
+numero_processo                numero_processo          process_id (UUID)
+profissional                  profissional             user_id (UUID)
+cliente                       cliente                  client_id (UUID)
+tipo_atividade                tipo_atividade           activity_type_id (UUID)
+descritivo                    descritivo               descricao
+observacao                    observacao               observacao
+codigo_externo                codigo_externo           (não existe)
+parte_principal               parte_principal          (não existe)
+parte_contraria               parte_contraria          reclamante_nome
+equipe                        equipe                   (não existe)
+filial                        filial                   (não existe)
+fechamento                    fechamento               (não existe)
 ```
-Preencher retroativamente os 35 registros que já compartilham `id_tarefa_externa`:
-```sql
-UPDATE process_deadlines pd
-SET solicitacao_id = s.id
-FROM solicitacoes s
-WHERE pd.id_tarefa_externa = s.id_tarefa_externa
-  AND pd.id_tarefa_externa IS NOT NULL;
-```
 
-**2. Edge Functions de sincronização** — Ao criar um `process_deadline` a partir de uma solicitação (em `sync-pautas-github`, `sync-solicitacoes-sheet`), gravar o `solicitacao_id` no deadline.
+O CSV é essencialmente o mesmo formato do `historico_axis`, mas **atualizado** (cobre até março/2026). Pode ser processado pela mesma lógica da Edge Function `unify-historico`.
 
-**3. Frontend — DeadlinesTab** — Na listagem de prazos do processo, se o deadline tiver `solicitacao_id`, exibir um badge/tooltip "Solicitação vinculada" com dados da origem (prioridade, cliente, tipo de cálculo).
+### Plano de execução
 
-**4. Frontend — PrazosProcessuaisTab** — Na tabela global de prazos, adicionar coluna opcional "Origem" que indica se o prazo veio de uma solicitação (com link para detalhes).
+#### Etapa 1: Criar Edge Function `import-timesheet-csv`
 
-**5. Hook `useProcessDeadlines`** — Expandir a query para incluir join com `solicitacoes` quando `solicitacao_id` existir, trazendo `titulo`, `prioridade`, `client_id`.
+Nova Edge Function que:
+1. Recebe o CSV (ou referência a ele no Storage) em batches
+2. Reutiliza os mapas de resolução do `unify-historico` (profiles, user_aliases, processes, clients, activity_types)
+3. Gera `external_id` com hash de `data+processo+profissional+descritivo` para dedup
+4. Faz upsert em `timesheet_entries` com `source = 'csv_import'`
+5. **Cruzamento de baixa**: Para cada registro importado, verifica se existe um `process_deadline` em aberto no mesmo `process_id` com `tipo_atividade` compatível com `ocorrencia`, e marca como concluído (`is_completed = true`, `completed_at = data_lancamento`)
+
+#### Etapa 2: Lógica de matching deadline ↔ atividade
+
+O cruzamento será feito por:
+- `process_deadlines.process_id` = processo resolvido do CSV
+- `process_deadlines.is_completed = false`
+- `process_deadlines.data_prazo` dentro de uma janela razoável da `data_lancamento` (±30 dias)
+- Correspondência fuzzy entre `ocorrencia` do deadline e `tipo_atividade` do CSV
+
+Mapeamento de tipos (exemplos do CSV → ocorrência de deadline):
+- "Cálculo Preliminar Inicial" → deadlines com "inicial", "cálculo geral"
+- "Cálculo de impugnação (manifestação)" → "impugnação", "manifestação", "contestação"
+- "Cálculo de Provisão Sentença" → "sentença", "provisão"
+- "Cálculo de Liquidação Execução/Impugnação" → "liquidação", "execução"
+
+#### Etapa 3: Relatório de reconciliação
+
+Após a importação, a função retorna:
+- Quantos registros importados / atualizados
+- Quantos prazos foram dados baixa automaticamente
+- Quantos prazos permanecem abertos (sem atividade correspondente no CSV)
+- Lista de divergências (prazo agendado para tipo X, atividade realizada era tipo Y)
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| Migration SQL | Criar coluna `solicitacao_id` + backfill |
-| `supabase/functions/sync-pautas-github/index.ts` | Gravar `solicitacao_id` ao criar deadline |
-| `supabase/functions/sync-solicitacoes-sheet/index.ts` | Gravar `solicitacao_id` ao criar deadline |
-| `src/hooks/useProcessDeadlines.ts` | Join com `solicitacoes` para trazer dados da origem |
-| `src/components/processes/DeadlinesTab.tsx` | Badge "Solicitação" nos prazos vinculados |
-| `src/hooks/useAllProcessDeadlines.ts` | Incluir `solicitacao_id` na query global |
-| `src/components/solicitacoes/PrazosProcessuaisTab.tsx` | Coluna "Origem" na tabela |
-| `src/integrations/supabase/types.ts` | Atualizado automaticamente |
+| `supabase/functions/import-timesheet-csv/index.ts` | Criar — importação do CSV com matching e baixa de prazos |
+| `supabase/migrations/xxxx.sql` | Adicionar coluna `codigo_externo` em `timesheet_entries` (campo do CSV não preservado) |
 
-### Resultado
+### Resultado esperado
 
-Cada prazo processual poderá apontar para a solicitação que o originou, permitindo rastrear de onde veio a demanda (e-mail, planilha, manual) sem duplicar dados entre as duas tabelas.
+- ~83k registros de produção importados para `timesheet_entries` (com dedup)
+- Estimativa de **200-500 prazos** dados baixa automaticamente (dos 1.322 abertos)
+- Prazos restantes sinalizados como "sem atividade correspondente" para revisão manual
+- Histórico de atividades visível nas pastas de processos via aba "Atividades"
 
