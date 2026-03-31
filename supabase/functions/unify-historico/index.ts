@@ -319,11 +319,12 @@ async function importHistorico(db: any, batchSize: number, startOffset: number) 
       break;
     }
 
-    const { data: rows, error } = await db
+    const { data: rows, error, count } = await db
       .from("historico_axis")
-      .select("*")
+      .select("*", { count: "exact" })
       .range(offset, offset + batchSize - 1);
 
+    console.log(`Fetch: offset=${offset}, rows=${rows?.length}, count=${count}, error=${error?.message}`);
     if (error) { console.error("Fetch err:", error.message); break; }
     if (!rows || rows.length === 0) { hasMore = false; break; }
 
