@@ -1,85 +1,36 @@
 
 
-## Importar CSV de Timesheet e dar baixa em prazos abertos
+## Desativar criação de issues no GitHub — sync-pautas-github
 
-### Diagnóstico
+### O que muda
 
-| Métrica | Valor |
-|---------|-------|
-| Linhas no CSV | ~83.870 (Nov/2025 — Mar/2026) |
-| Prazos abertos no sistema (até 31/03) | 1.322 |
-| Prazos abertos com timesheet já vinculado | 77 (5,8%) |
-| Timesheet entries existentes (mesmo período) | 37.656 |
-| Timesheet entries com `process_id` | 5.042 (13%) |
+Remover todo o código relacionado à criação de issues no GitHub da Edge Function `sync-pautas-github/index.ts`, mantendo intacta a sincronização com o banco de dados (solicitações, deadlines, SLA, atribuição).
 
-**Problema central**: O CSV contém a produção real realizada, mas o sistema não sabe que esses cálculos foram feitos — os prazos permanecem "em aberto". Além disso, 87% dos timesheet entries existentes não têm `process_id`, impedindo o cruzamento.
+### Código a remover/modificar
 
-### Colunas do CSV vs. tabelas existentes
+**`supabase/functions/sync-pautas-github/index.ts`**
 
-```text
-CSV:                          historico_axis:          timesheet_entries:
-data_lancamento               lancamento               data_atividade
-Peso                          peso                     quantidade
-numero_processo                numero_processo          process_id (UUID)
-profissional                  profissional             user_id (UUID)
-cliente                       cliente                  client_id (UUID)
-tipo_atividade                tipo_atividade           activity_type_id (UUID)
-descritivo                    descritivo               descricao
-observacao                    observacao               observacao
-codigo_externo                codigo_externo           (não existe)
-parte_principal               parte_principal          (não existe)
-parte_contraria               parte_contraria          reclamante_nome
-equipe                        equipe                   (não existe)
-filial                        filial                   (não existe)
-fechamento                    fechamento               (não existe)
-```
+1. **Remover constantes GitHub** (linhas 20-21): `GITHUB_REPO`, `GITHUB_API`
+2. **Remover funções GitHub** (linhas 158-231): `ensureGithubLabels`, `createGithubIssue`, `buildIssueBody`
+3. **Remover leitura do `GITHUB_TOKEN`** (linha 340)
+4. **Remover bloco de bootstrap de labels** (linhas 380-394)
+5. **Remover skip por `issueNumber` existente** (linha 531): `if (existing?.issueNumber) continue;` — mudar para skip apenas se `existing` já tem registro (dedup normal)
+6. **Remover campo `issueNumber` do existingMap** (linhas 488-495): simplificar para guardar apenas o `id`
+7. **Remover todo o bloco de criação de issue** (linhas 631-701): desde `if (!githubToken)` até o `update` de `extracted_details` com `github_issue_number`
+8. **Remover `github_issue_number: null`** do `extracted_details` no insert (linha 590)
+9. **Remover contadores** `totalIssues` e referências a `issues_created` nos logs/resposta
 
-O CSV é essencialmente o mesmo formato do `historico_axis`, mas **atualizado** (cobre até março/2026). Pode ser processado pela mesma lógica da Edge Function `unify-historico`.
+### O que permanece inalterado
 
-### Plano de execução
+- Leitura das 4 planilhas via Google Sheets API
+- Inserção/atualização de `solicitacoes`
+- Resolução de `process_id`, `client_id`, `calculation_type_id`
+- Aplicação de SLA fallback
+- Criação de `process_deadlines`
+- Atribuição automática via `assign_calculation`
+- Logs em `sync_logs`
 
-#### Etapa 1: Criar Edge Function `import-timesheet-csv`
+### Resultado
 
-Nova Edge Function que:
-1. Recebe o CSV (ou referência a ele no Storage) em batches
-2. Reutiliza os mapas de resolução do `unify-historico` (profiles, user_aliases, processes, clients, activity_types)
-3. Gera `external_id` com hash de `data+processo+profissional+descritivo` para dedup
-4. Faz upsert em `timesheet_entries` com `source = 'csv_import'`
-5. **Cruzamento de baixa**: Para cada registro importado, verifica se existe um `process_deadline` em aberto no mesmo `process_id` com `tipo_atividade` compatível com `ocorrencia`, e marca como concluído (`is_completed = true`, `completed_at = data_lancamento`)
-
-#### Etapa 2: Lógica de matching deadline ↔ atividade
-
-O cruzamento será feito por:
-- `process_deadlines.process_id` = processo resolvido do CSV
-- `process_deadlines.is_completed = false`
-- `process_deadlines.data_prazo` dentro de uma janela razoável da `data_lancamento` (±30 dias)
-- Correspondência fuzzy entre `ocorrencia` do deadline e `tipo_atividade` do CSV
-
-Mapeamento de tipos (exemplos do CSV → ocorrência de deadline):
-- "Cálculo Preliminar Inicial" → deadlines com "inicial", "cálculo geral"
-- "Cálculo de impugnação (manifestação)" → "impugnação", "manifestação", "contestação"
-- "Cálculo de Provisão Sentença" → "sentença", "provisão"
-- "Cálculo de Liquidação Execução/Impugnação" → "liquidação", "execução"
-
-#### Etapa 3: Relatório de reconciliação
-
-Após a importação, a função retorna:
-- Quantos registros importados / atualizados
-- Quantos prazos foram dados baixa automaticamente
-- Quantos prazos permanecem abertos (sem atividade correspondente no CSV)
-- Lista de divergências (prazo agendado para tipo X, atividade realizada era tipo Y)
-
-### Arquivos
-
-| Arquivo | Ação |
-|---------|------|
-| `supabase/functions/import-timesheet-csv/index.ts` | Criar — importação do CSV com matching e baixa de prazos |
-| `supabase/migrations/xxxx.sql` | Adicionar coluna `codigo_externo` em `timesheet_entries` (campo do CSV não preservado) |
-
-### Resultado esperado
-
-- ~83k registros de produção importados para `timesheet_entries` (com dedup)
-- Estimativa de **200-500 prazos** dados baixa automaticamente (dos 1.322 abertos)
-- Prazos restantes sinalizados como "sem atividade correspondente" para revisão manual
-- Histórico de atividades visível nas pastas de processos via aba "Atividades"
+A função continua sincronizando planilhas → banco de dados normalmente, mas nenhuma issue será criada no GitHub. As issues existentes no repositório permanecerão lá (podem ser fechadas/deletadas manualmente se desejado).
 
