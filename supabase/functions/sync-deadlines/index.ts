@@ -304,7 +304,7 @@ Deno.serve(async (req) => {
         existingDeadline = data;
       }
 
-      // Dedup 2: fallback by (process_id, data_prazo, ocorrencia)
+      // Dedup 2: fallback by (process_id, data_prazo, ocorrencia) — any status
       if (!existingDeadline) {
         const { data } = await supabase
           .from("process_deadlines")
@@ -312,7 +312,6 @@ Deno.serve(async (req) => {
           .eq("process_id", processId)
           .eq("data_prazo", body.data_agenda)
           .eq("ocorrencia", body.tipo_agenda)
-          .eq("is_completed", false)
           .limit(1)
           .single();
         existingDeadline = data;

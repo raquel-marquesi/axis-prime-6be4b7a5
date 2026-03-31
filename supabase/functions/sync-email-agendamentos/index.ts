@@ -388,30 +388,19 @@ Deno.serve(async (req) => {
         for (const sol of sols || []) {
           if (!sol.process_id || !sol.data_limite) continue;
 
-          // Dedup by (process_id, data_prazo) only — ignoring ocorrencia text
-          const { data: existingDl } = await supabase
-            .from("process_deadlines")
-            .select("id")
-            .eq("process_id", sol.process_id)
-            .eq("data_prazo", sol.data_limite)
-            .eq("is_completed", false)
-            .maybeSingle();
-
-          if (existingDl) continue;
-
-          // Clean ocorrencia: use titulo truncated to a readable length
           const ocorrencia = (sol.titulo || "Agendamento via e-mail").substring(0, 120);
 
           const { error: dlErr } = await supabase
             .from("process_deadlines")
-            .insert({
+            .upsert({
               process_id: sol.process_id,
               data_prazo: sol.data_limite,
               ocorrencia,
               detalhes: sol.descricao?.substring(0, 500) || null,
               assigned_to: sol.assigned_to || null,
               source: "planilha_cliente",
-            });
+              is_completed: false,
+            }, { onConflict: "process_id,data_prazo,ocorrencia", ignoreDuplicates: true });
 
           if (dlErr) {
             errors.push(`Deadline: ${dlErr.message} (${sol.titulo?.substring(0, 20)})`);
