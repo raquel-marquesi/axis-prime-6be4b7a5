@@ -1,5 +1,3 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, Users, Building2, ShieldCheck, Bell, Database } from "lucide-react";
 import { GeneralSettings } from "@/components/configuracoes/GeneralSettings";
@@ -7,6 +5,7 @@ import { UserRolesSettings } from "@/components/configuracoes/UserRolesSettings"
 import { CompanySettings } from "@/components/configuracoes/CompanySettings";
 import { NotificationSettings } from "@/components/configuracoes/NotificationSettings";
 import { BackupSettings } from "@/components/configuracoes/BackupSettings";
+import UserManagement from "@/pages/UserManagement";
 
 const Configuracoes = () => {
   return (
@@ -28,6 +27,10 @@ const Configuracoes = () => {
             <Building2 className="w-4 h-4" />
             Empresa
           </TabsTrigger>
+          <TabsTrigger value="usuarios" className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Usuários
+          </TabsTrigger>
           <TabsTrigger value="permissoes" className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4" />
             Permissões
@@ -48,6 +51,10 @@ const Configuracoes = () => {
 
         <TabsContent value="empresa">
           <CompanySettings />
+        </TabsContent>
+
+        <TabsContent value="usuarios">
+          <UserManagement />
         </TabsContent>
 
         <TabsContent value="permissoes">
