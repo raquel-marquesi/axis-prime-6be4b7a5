@@ -24,6 +24,9 @@ export interface ProcessDeadlineRow {
   area: string;
   status: DeadlineStatus;
   dias_atraso: number;
+  solicitacao_id: string | null;
+  solicitacao_titulo: string | null;
+  solicitacao_prioridade: string | null;
 }
 
 interface UseAllProcessDeadlinesOptions {
