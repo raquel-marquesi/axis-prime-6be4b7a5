@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MainLayout } from '@/components/layout/MainLayout';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { AREA_LABELS } from '@/types/auth';
 import InternalCalendarWidget from '@/components/calendar/InternalCalendarWidget';
