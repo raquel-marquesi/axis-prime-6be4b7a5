@@ -115,8 +115,8 @@ export function PrazosProcessuaisTab() {
             <CardHeader><CardTitle>Prazos Processuais</CardTitle><CardDescription>Prazos vinculados a processos do sistema</CardDescription></CardHeader>
             <CardContent>
               {isLoading ? <div className="space-y-3">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-12 w-full" />)}</div> : filteredDeadlines.length === 0 ? <p className="text-center text-muted-foreground py-8">Nenhum prazo processual encontrado.</p> : (
-                <Table>
-                  <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Status</TableHead><TableHead>Processo</TableHead><TableHead>Reclamante</TableHead><TableHead>Reclamada</TableHead><TableHead>Ocorrência</TableHead>{showResponsavel && <TableHead>Responsável</TableHead>}<TableHead>Atividades</TableHead><TableHead>Solicitante</TableHead><TableHead className="max-w-[150px]">Últ. Andamento</TableHead></TableRow></TableHeader>
+                 <Table>
+                  <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Status</TableHead><TableHead>Processo</TableHead><TableHead>Reclamante</TableHead><TableHead>Reclamada</TableHead><TableHead>Ocorrência</TableHead><TableHead>Origem</TableHead>{showResponsavel && <TableHead>Responsável</TableHead>}<TableHead>Atividades</TableHead><TableHead>Solicitante</TableHead><TableHead className="max-w-[150px]">Últ. Andamento</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {filteredDeadlines.map((d) => {
                       const cfg = STATUS_CONFIG[d.status]; const Icon = cfg.icon;
