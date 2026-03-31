@@ -17,8 +17,6 @@ const SOURCES: SheetSource[] = [
 ];
 
 const CALC_TYPE_COLS_C = ["acordao", "execucao", "inicial", "sentenca"] as const;
-const GITHUB_REPO = "raquel-marquesi/axis-prime-6be4b7a5";
-const GITHUB_API = "https://api.github.com";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -155,81 +153,6 @@ function detectArea(combined: string): "trabalhista" | "civel" {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-async function ensureGithubLabels(
-  token: string,
-  labels: Array<{ name: string; color: string; description?: string }>
-): Promise<void> {
-  await Promise.allSettled(
-    labels.map(async (label) => {
-      const check = await fetch(
-        `${GITHUB_API}/repos/${GITHUB_REPO}/labels/${encodeURIComponent(label.name)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28",
-          },
-        }
-      );
-      if (check.status === 404) {
-        await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/labels`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/vnd.github+json",
-            "Content-Type": "application/json",
-            "X-GitHub-Api-Version": "2022-11-28",
-          },
-          body: JSON.stringify({
-            name: label.name,
-            color: label.color,
-            description: label.description ?? "",
-          }),
-        });
-      }
-    })
-  );
-}
-
-async function createGithubIssue(
-  token: string,
-  title: string,
-  body: string,
-  labels: string[]
-): Promise<number | null> {
-  const res = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/issues`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.github+json",
-      "Content-Type": "application/json",
-      "X-GitHub-Api-Version": "2022-11-28",
-    },
-    body: JSON.stringify({ title, body, labels }),
-  });
-  if (!res.ok) {
-    console.error(`[GITHUB] ${res.status}: ${(await res.text()).substring(0, 200)}`);
-    return null;
-  }
-  return (await res.json()).number ?? null;
-}
-
-function buildIssueBody(fields: Record<string, string | null | undefined>): string {
-  const rows = Object.entries(fields)
-    .filter(([, v]) => v && v.trim())
-    .map(([k, v]) => `| **${k}** | ${v} |`);
-  return [
-    "## Detalhes da Pauta",
-    "",
-    "| Campo | Valor |",
-    "|---|---|",
-    ...rows,
-    "",
-    "---",
-    `*Origem: Planilha Pautas · ${new Date().toLocaleDateString("pt-BR")}*`,
-  ].join("\n");
-}
-
 interface ParsedRow {
   idTarefa: string;
   idExterno: string;
@@ -337,7 +260,6 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const githubToken = Deno.env.get("GITHUB_TOKEN");
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
   let body: any = {};
@@ -352,7 +274,6 @@ Deno.serve(async (req) => {
   let totalFound = 0,
     totalProcessed = 0,
     totalFailed = 0,
-    totalIssues = 0,
     totalDeadlines = 0;
   const allErrors: string[] = [];
 
@@ -376,23 +297,6 @@ Deno.serve(async (req) => {
     console.log(`[AUTH] Using DWD impersonation: ${impersonateEmail}`);
     const accessToken = await getGoogleAccessToken(sa, impersonateEmail);
 
-    const allSourceLabels = SOURCES.map((s) => s.label).filter(Boolean) as string[];
-    if (githubToken) {
-      const standardLabels = [
-        { name: "pautas", color: "0075ca", description: "Pauta de agendamento" },
-        { name: "prioridade:urgente", color: "d73a4a" },
-        { name: "prioridade:alta", color: "e4e669" },
-        { name: "prioridade:media", color: "0052cc" },
-        { name: "prioridade:baixa", color: "cfd3d7" },
-        { name: "area:trabalhista", color: "bfd4f2" },
-        { name: "area:civel", color: "d4c5f9" },
-        ...allSourceLabels.map((l) => ({ name: l, color: "ededed", description: l })),
-      ];
-      await ensureGithubLabels(githubToken, standardLabels).catch((e) =>
-        console.error("[GITHUB] Label bootstrap:", e.message)
-      );
-    }
-
     const [profilesRes, processesRes, calcTypesRes, slaRes, clientsRes, clientAliasesRes] = await Promise.all([
       supabase.from("profiles").select("user_id, full_name, sigla").eq("is_active", true),
       supabase.from("processes").select("id, numero_processo, id_cliente").limit(15000),
@@ -408,7 +312,7 @@ Deno.serve(async (req) => {
     }
 
     const processMap = new Map<string, string>();
-    const processClientMap = new Map<string, string>(); // processId → client_id
+    const processClientMap = new Map<string, string>();
     for (const p of processesRes.data || []) {
       if (p.numero_processo) processMap.set(p.numero_processo.replace(/[.\-\/\s]/g, ""), p.id);
       processMap.set(p.id, p.id);
@@ -420,7 +324,6 @@ Deno.serve(async (req) => {
       calcTypeMap.set(ct.name.toLowerCase().trim(), ct.id);
     }
 
-    // Client name → client_id map
     const clientNameMap = new Map<string, string>();
     for (const c of clientsRes.data || []) {
       for (const field of [c.nome, c.razao_social, c.nome_fantasia]) {
@@ -431,7 +334,6 @@ Deno.serve(async (req) => {
       if (a.alias) clientNameMap.set(a.alias.toUpperCase().trim(), a.client_id);
     }
 
-    // client_id → SLA rules map
     const clientSlaMap = new Map<string, Array<{ calculation_type: string | null; deadline_hours: number }>>();
     for (const rule of slaRes.data || []) {
       const arr = clientSlaMap.get(rule.client_id) || [];
@@ -450,18 +352,16 @@ Deno.serve(async (req) => {
 
       const normCalc = calculoTipo?.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() || "";
 
-      // Try matching by calculation_type
       let matched = rules.find((r) => {
         if (!r.calculation_type) return false;
         const normRule = r.calculation_type.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
         return normCalc.includes(normRule) || normRule.includes(normCalc);
       });
 
-      // Fallback to "Geral" or null calculation_type
       if (!matched) {
         matched = rules.find((r) => !r.calculation_type || r.calculation_type.toUpperCase().trim() === "GERAL");
       }
-      if (!matched) matched = rules[0]; // last resort: first rule
+      if (!matched) matched = rules[0];
 
       const baseDate = dataReferencia ? new Date(dataReferencia + "T12:00:00Z") : new Date();
       const deadline = new Date(baseDate.getTime() + matched.deadline_hours * 3600000);
@@ -481,16 +381,15 @@ Deno.serve(async (req) => {
 
     const { data: existingRows } = await supabase
       .from("solicitacoes")
-      .select("id, id_tarefa_externa, source_type, extracted_details")
+      .select("id, id_tarefa_externa, source_type")
       .eq("origem", "planilha_pautas")
       .not("id_tarefa_externa", "is", null);
 
-    const existingMap = new Map<string, { id: string; issueNumber: number | null }>();
+    const existingMap = new Map<string, string>();
     for (const s of existingRows || []) {
       if (s.id_tarefa_externa && s.source_type) {
         const key = `${s.source_type}:${s.id_tarefa_externa}`;
-        const issueNumber = (s.extracted_details as any)?.github_issue_number ?? null;
-        existingMap.set(key, { id: s.id, issueNumber });
+        existingMap.set(key, s.id);
       }
     }
 
@@ -527,8 +426,10 @@ Deno.serve(async (req) => {
           srcFound++;
 
           const dedupKey = `${source.key}:${parsed.idTarefa}`;
-          const existing = parsed.idTarefa ? existingMap.get(dedupKey) : null;
-          if (existing?.issueNumber) continue;
+          const existingId = parsed.idTarefa ? existingMap.get(dedupKey) : null;
+
+          // Skip if already exists in the database (dedup)
+          if (existingId) continue;
 
           let processId = parsed.processoId;
           if (!processId && parsed.processoNumero) {
@@ -538,7 +439,6 @@ Deno.serve(async (req) => {
 
           const calcTypeId = resolveCalcType(parsed.calculoTipo);
 
-          // Resolve client_id from processoCliente or from process
           let clientId: string | null = null;
           if (parsed.processoCliente) {
             clientId = clientNameMap.get(parsed.processoCliente.toUpperCase().trim()) || null;
@@ -547,7 +447,6 @@ Deno.serve(async (req) => {
             clientId = processClientMap.get(processId) || null;
           }
 
-          // Apply SLA fallback if no deadline from sheet
           let effectiveDataLimite = parsed.dataLimite;
           let slaApplied = false;
           let slaHoursUsed: number | null = null;
@@ -560,144 +459,66 @@ Deno.serve(async (req) => {
             }
           }
 
-          let solicitacaoId: string | null = null;
-          if (existing && !existing.issueNumber) {
-            solicitacaoId = existing.id;
-          } else {
-            const record = {
-              titulo: parsed.titulo,
-              descricao: parsed.observacao || null,
-              origem: "planilha_pautas" as const,
-              source_type: source.key,
-              status: parsed.status,
-              prioridade: derivePrioridade(effectiveDataLimite),
-              process_id: processId,
-              client_id: clientId,
-              assigned_to: null,
-              data_limite: effectiveDataLimite,
-              id_tarefa_externa: parsed.idTarefa || parsed.idExterno || null,
-              area: parsed.area,
-              calculation_type_id: calcTypeId,
-              extracted_details: {
-                subtipo: parsed.subtipo,
-                processo_parte: parsed.processoParte,
-                processo_parte_contraria: parsed.processoParteContraria,
-                processo_numero: parsed.processoNumero,
-                processo_cliente: parsed.processoCliente,
-                calculo_tipo_raw: parsed.calculoTipo,
-                escritorio: parsed.escritorio,
-                source_key: source.key,
-                github_issue_number: null,
-                ...(slaApplied ? { sla_derived: true, sla_hours: slaHoursUsed } : {}),
-              },
-            };
+          const record = {
+            titulo: parsed.titulo,
+            descricao: parsed.observacao || null,
+            origem: "planilha_pautas" as const,
+            source_type: source.key,
+            status: parsed.status,
+            prioridade: derivePrioridade(effectiveDataLimite),
+            process_id: processId,
+            client_id: clientId,
+            assigned_to: null,
+            data_limite: effectiveDataLimite,
+            id_tarefa_externa: parsed.idTarefa || parsed.idExterno || null,
+            area: parsed.area,
+            calculation_type_id: calcTypeId,
+            extracted_details: {
+              subtipo: parsed.subtipo,
+              processo_parte: parsed.processoParte,
+              processo_parte_contraria: parsed.processoParteContraria,
+              processo_numero: parsed.processoNumero,
+              processo_cliente: parsed.processoCliente,
+              calculo_tipo_raw: parsed.calculoTipo,
+              escritorio: parsed.escritorio,
+              source_key: source.key,
+              ...(slaApplied ? { sla_derived: true, sla_hours: slaHoursUsed } : {}),
+            },
+          };
 
-            const { data: inserted, error: insertErr } = await supabase
-              .from("solicitacoes")
-              .insert(record)
-              .select("id, assigned_to")
-              .single();
-            if (insertErr) {
-              srcFailed++;
-              allErrors.push(`[${source.key}] L${i + 1} Insert: ${insertErr.message}`);
-              continue;
-            }
-            solicitacaoId = inserted.id;
-            srcProcessed++;
-
-            if (!inserted.assigned_to) {
-              const { error: rpcErr } = await supabase.rpc("assign_calculation", {
-                p_solicitacao_id: solicitacaoId,
-              });
-              if (rpcErr) allErrors.push(`[${source.key}] assign_calculation: ${rpcErr.message}`);
-            }
-
-            if (processId && effectiveDataLimite) {
-              const ocorrencia = parsed.titulo.substring(0, 120);
-              const { error: dlErr } = await supabase.from("process_deadlines").upsert({
-                process_id: processId,
-                data_prazo: effectiveDataLimite,
-                ocorrencia,
-                detalhes: parsed.observacao?.substring(0, 500) || null,
-                source: "planilha_pautas",
-                is_completed: false,
-                solicitacao_id: solicitacaoId,
-              }, { onConflict: "process_id,data_prazo,ocorrencia", ignoreDuplicates: true });
-              if (!dlErr) totalDeadlines++;
-              else allErrors.push(`[${source.key}] Deadline: ${dlErr.message}`);
-            }
-          }
-
-          if (!githubToken) {
-            if (allErrors.length === 0 || !allErrors.includes("GITHUB_TOKEN not set")) {
-              allErrors.push("GITHUB_TOKEN not set — issues não criadas");
-            }
+          const { data: inserted, error: insertErr } = await supabase
+            .from("solicitacoes")
+            .insert(record)
+            .select("id, assigned_to")
+            .single();
+          if (insertErr) {
+            srcFailed++;
+            allErrors.push(`[${source.key}] L${i + 1} Insert: ${insertErr.message}`);
             continue;
           }
+          const solicitacaoId = inserted.id;
+          srcProcessed++;
 
-          const { data: sol } = await supabase
-            .from("solicitacoes")
-            .select("assigned_to, prioridade")
-            .eq("id", solicitacaoId!)
-            .single();
-          const assignedName = sol?.assigned_to
-            ? profileById.get(sol.assigned_to) ?? "Não atribuído"
-            : "Não atribuído";
-          const prioridade = sol?.prioridade ?? "media";
+          if (!inserted.assigned_to) {
+            const { error: rpcErr } = await supabase.rpc("assign_calculation", {
+              p_solicitacao_id: solicitacaoId,
+            });
+            if (rpcErr) allErrors.push(`[${source.key}] assign_calculation: ${rpcErr.message}`);
+          }
 
-          const issueTitle = [
-            parsed.titulo,
-            parsed.processoNumero ? `Proc. ${parsed.processoNumero}` : null,
-            parsed.processoParte || parsed.processoParteContraria || null,
-          ]
-            .filter(Boolean)
-            .join(" | ")
-            .substring(0, 200);
-
-          const issueBody = buildIssueBody({
-            "ID Tarefa": parsed.idTarefa,
-            "Tipo de Pauta": parsed.titulo,
-            "Subtipo / Cálculo":
-              [parsed.subtipo, parsed.calculoTipo].filter(Boolean).join(", ") || null,
-            Prazo: parsed.dataLimite
-              ? new Date(parsed.dataLimite + "T12:00:00Z").toLocaleDateString("pt-BR")
-              : null,
-            Prioridade: prioridade,
-            Processo: parsed.processoNumero || null,
-            Parte: parsed.processoParte || null,
-            "Parte Contrária": parsed.processoParteContraria || null,
-            Cliente: parsed.processoCliente || null,
-            Escritório: parsed.escritorio || null,
-            Atribuído: assignedName,
-            Observação: parsed.observacao?.substring(0, 500) || null,
-          });
-
-          const issueLabels = [
-            "pautas",
-            `prioridade:${prioridade}`,
-            `area:${parsed.area}`,
-            ...(source.label ? [source.label] : []),
-          ];
-
-          const issueNumber = await createGithubIssue(githubToken, issueTitle, issueBody, issueLabels);
-          if (issueNumber) {
-            totalIssues++;
-            const { data: currentSol } = await supabase
-              .from("solicitacoes")
-              .select("extracted_details")
-              .eq("id", solicitacaoId!)
-              .single();
-            const currentDetails = (currentSol?.extracted_details as any) || {};
-            await supabase
-              .from("solicitacoes")
-              .update({
-                extracted_details: {
-                  ...currentDetails,
-                  github_issue_number: issueNumber,
-                  github_issue_url: `https://github.com/${GITHUB_REPO}/issues/${issueNumber}`,
-                },
-              })
-              .eq("id", solicitacaoId!);
+          if (processId && effectiveDataLimite) {
+            const ocorrencia = parsed.titulo.substring(0, 120);
+            const { error: dlErr } = await supabase.from("process_deadlines").upsert({
+              process_id: processId,
+              data_prazo: effectiveDataLimite,
+              ocorrencia,
+              detalhes: parsed.observacao?.substring(0, 500) || null,
+              source: "planilha_pautas",
+              is_completed: false,
+              solicitacao_id: solicitacaoId,
+            }, { onConflict: "process_id,data_prazo,ocorrencia", ignoreDuplicates: true });
+            if (!dlErr) totalDeadlines++;
+            else allErrors.push(`[${source.key}] Deadline: ${dlErr.message}`);
           }
         }
 
@@ -722,7 +543,6 @@ Deno.serve(async (req) => {
         rows_processed: totalProcessed,
         rows_failed: totalFailed,
         details: {
-          issues_created: totalIssues,
           deadlines_created: totalDeadlines,
           errors: allErrors.slice(0, 50),
         },
@@ -734,7 +554,6 @@ Deno.serve(async (req) => {
         found: totalFound,
         processed: totalProcessed,
         failed: totalFailed,
-        issues_created: totalIssues,
         deadlines_created: totalDeadlines,
         errors: allErrors.slice(0, 10),
       }),
