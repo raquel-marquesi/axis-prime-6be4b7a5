@@ -1959,6 +1959,7 @@ export type Database = {
           process_id: string
           realizado_por: string | null
           requires_attachment: boolean | null
+          solicitacao_id: string | null
           source: string | null
           timesheet_entry_id: string | null
           ultimo_andamento: string | null
@@ -1982,6 +1983,7 @@ export type Database = {
           process_id: string
           realizado_por?: string | null
           requires_attachment?: boolean | null
+          solicitacao_id?: string | null
           source?: string | null
           timesheet_entry_id?: string | null
           ultimo_andamento?: string | null
@@ -2005,6 +2007,7 @@ export type Database = {
           process_id?: string
           realizado_por?: string | null
           requires_attachment?: boolean | null
+          solicitacao_id?: string | null
           source?: string | null
           timesheet_entry_id?: string | null
           ultimo_andamento?: string | null
@@ -2017,6 +2020,13 @@ export type Database = {
             columns: ["process_id"]
             isOneToOne: false
             referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "process_deadlines_solicitacao_id_fkey"
+            columns: ["solicitacao_id"]
+            isOneToOne: false
+            referencedRelation: "solicitacoes"
             referencedColumns: ["id"]
           },
         ]

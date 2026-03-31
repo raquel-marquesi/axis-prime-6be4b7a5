@@ -24,6 +24,9 @@ export interface ProcessDeadlineRow {
   area: string;
   status: DeadlineStatus;
   dias_atraso: number;
+  solicitacao_id: string | null;
+  solicitacao_titulo: string | null;
+  solicitacao_prioridade: string | null;
 }
 
 interface UseAllProcessDeadlinesOptions {
@@ -111,12 +114,17 @@ export function useAllProcessDeadlines(options: UseAllProcessDeadlinesOptions = 
           assigned_to,
           completed_by,
           ultimo_andamento,
+          solicitacao_id,
           processes!inner (
             numero_processo,
             numero_pasta,
             reclamante_nome,
             reclamadas,
             area
+          ),
+          solicitacoes (
+            titulo,
+            prioridade
           )
         `)
         .order('data_prazo', { ascending: true })
@@ -210,6 +218,9 @@ export function useAllProcessDeadlines(options: UseAllProcessDeadlinesOptions = 
           area: d.processes.area,
           status,
           dias_atraso: diasAtraso,
+          solicitacao_id: d.solicitacao_id,
+          solicitacao_titulo: d.solicitacoes?.titulo || null,
+          solicitacao_prioridade: d.solicitacoes?.prioridade || null,
         };
       });
     },

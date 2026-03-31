@@ -489,6 +489,7 @@ Deno.serve(async (req) => {
               assigned_to: sol.assigned_to || null,
               source: "planilha_cliente",
               is_completed: false,
+              solicitacao_id: sol.id,
             }, { onConflict: "process_id,data_prazo,ocorrencia", ignoreDuplicates: true });
 
           if (dlErr) {

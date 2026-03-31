@@ -621,6 +621,7 @@ Deno.serve(async (req) => {
                 detalhes: parsed.observacao?.substring(0, 500) || null,
                 source: "planilha_pautas",
                 is_completed: false,
+                solicitacao_id: solicitacaoId,
               }, { onConflict: "process_id,data_prazo,ocorrencia", ignoreDuplicates: true });
               if (!dlErr) totalDeadlines++;
               else allErrors.push(`[${source.key}] Deadline: ${dlErr.message}`);

@@ -7,6 +7,8 @@ export interface ProcessDeadline {
   detalhes: string | null; assigned_to: string | null; is_completed: boolean;
   completed_at: string | null; completed_by: string | null;
   document_url: string | null; calendar_event_id: string | null; created_at: string; updated_at: string;
+  solicitacao_id: string | null;
+  solicitacao?: { titulo: string; prioridade: string; client_id: string | null } | null;
 }
 
 export interface DeadlineFormData {
@@ -22,9 +24,9 @@ export function useProcessDeadlines(processId?: string) {
     queryKey: ['process-deadlines', processId],
     queryFn: async () => {
       if (!processId) return [];
-      const { data, error } = await supabase.from('process_deadlines').select('*').eq('process_id', processId).order('data_prazo', { ascending: false });
+      const { data, error } = await supabase.from('process_deadlines').select('*, solicitacoes(titulo, prioridade, client_id)').eq('process_id', processId).order('data_prazo', { ascending: false });
       if (error) throw error;
-      return data as ProcessDeadline[];
+      return (data || []).map((d: any) => ({ ...d, solicitacao: d.solicitacoes || null })) as ProcessDeadline[];
     },
     enabled: !!processId,
   });

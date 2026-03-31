@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Filter, Calendar, CheckCircle2, Clock, AlertTriangle, Search, List, CheckCircle, XCircle, EyeOff, Bot } from 'lucide-react';
+import { Filter, Calendar, CheckCircle2, Clock, AlertTriangle, Search, List, CheckCircle, XCircle, EyeOff, Bot, LinkIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -115,8 +115,8 @@ export function PrazosProcessuaisTab() {
             <CardHeader><CardTitle>Prazos Processuais</CardTitle><CardDescription>Prazos vinculados a processos do sistema</CardDescription></CardHeader>
             <CardContent>
               {isLoading ? <div className="space-y-3">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-12 w-full" />)}</div> : filteredDeadlines.length === 0 ? <p className="text-center text-muted-foreground py-8">Nenhum prazo processual encontrado.</p> : (
-                <Table>
-                  <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Status</TableHead><TableHead>Processo</TableHead><TableHead>Reclamante</TableHead><TableHead>Reclamada</TableHead><TableHead>Ocorrência</TableHead>{showResponsavel && <TableHead>Responsável</TableHead>}<TableHead>Atividades</TableHead><TableHead>Solicitante</TableHead><TableHead className="max-w-[150px]">Últ. Andamento</TableHead></TableRow></TableHeader>
+                 <Table>
+                  <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Status</TableHead><TableHead>Processo</TableHead><TableHead>Reclamante</TableHead><TableHead>Reclamada</TableHead><TableHead>Ocorrência</TableHead><TableHead>Origem</TableHead>{showResponsavel && <TableHead>Responsável</TableHead>}<TableHead>Atividades</TableHead><TableHead>Solicitante</TableHead><TableHead className="max-w-[150px]">Últ. Andamento</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {filteredDeadlines.map((d) => {
                       const cfg = STATUS_CONFIG[d.status]; const Icon = cfg.icon;
@@ -128,6 +128,7 @@ export function PrazosProcessuaisTab() {
                           <TableCell className="max-w-[180px] truncate">{d.reclamante_nome}</TableCell>
                           <TableCell className="max-w-[180px] truncate">{d.reclamadas?.[0] || '—'}</TableCell>
                           <TableCell className="max-w-[200px] truncate">{d.ocorrencia}</TableCell>
+                          <TableCell>{d.solicitacao_id ? <Tooltip><TooltipTrigger asChild><span className="inline-flex items-center gap-1 text-xs"><LinkIcon className="h-3 w-3 text-primary" /><span className="text-primary truncate max-w-[100px]">{d.solicitacao_titulo || 'Solicitação'}</span></span></TooltipTrigger><TooltipContent><p>Prioridade: {d.solicitacao_prioridade || '—'}</p></TooltipContent></Tooltip> : <span className="text-xs text-muted-foreground">Manual</span>}</TableCell>
                           {showResponsavel && <TableCell className="text-muted-foreground">{d.assigned_user_name || '—'}</TableCell>}
                           <TableCell>
                             {d.status === 'atrasado' ? (

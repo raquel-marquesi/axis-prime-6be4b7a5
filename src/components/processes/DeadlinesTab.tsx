@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Plus, Trash2, Eye, ChevronsUpDown, Check, Clock, CheckCircle2, User, CalendarCheck, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Eye, ChevronsUpDown, Check, Clock, CheckCircle2, User, CalendarCheck, AlertTriangle, ExternalLink, LinkIcon } from 'lucide-react';
 import { useProcessDeadlines, ProcessDeadline } from '@/hooks/useProcessDeadlines';
 import { useDeadlineWithCalendar, ProcessInfo } from '@/hooks/useDeadlineWithCalendar';
 import { useProfiles } from '@/hooks/useProfiles';
@@ -109,6 +109,13 @@ export function DeadlinesTab({ processId, processInfo, driveFolderUrl }: Deadlin
                       <Tooltip><TooltipTrigger asChild>
                         <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-green-100 text-green-700 cursor-help"><CalendarCheck className="w-3 h-3" /></span>
                       </TooltipTrigger><TooltipContent><p>Sincronizado com Google Calendar</p></TooltipContent></Tooltip>
+                     )}
+                    {deadline.solicitacao_id && deadline.solicitacao && (
+                      <Tooltip><TooltipTrigger asChild>
+                        <span className="inline-flex h-5 items-center gap-1 px-1.5 rounded bg-accent text-accent-foreground text-[10px] font-medium cursor-help">
+                          <LinkIcon className="w-3 h-3" />Solicitação
+                        </span>
+                      </TooltipTrigger><TooltipContent><p>Origem: {deadline.solicitacao.titulo} ({deadline.solicitacao.prioridade})</p></TooltipContent></Tooltip>
                     )}
                     {deadline.assigned_to && (
                       <Tooltip><TooltipTrigger asChild>
