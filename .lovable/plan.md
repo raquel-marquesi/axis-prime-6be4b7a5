@@ -1,64 +1,36 @@
 
 
-## Aplicar fallback SLA nas Edge Functions de sincronização
+## Corrigir página Equipes — tabela `equipes` não existe
 
-### Contexto
+### Problema
 
-Registros importados das planilhas (pautas e 5 clientes) que chegam sem prazo explícito ficam com `data_limite = NULL` e não geram `process_deadlines`. As regras de SLA já existem na tabela `client_sla_rules` (ACHE 48h, ASSAÍ 48h, ATACADÃO 72h, CARREFOUR 72h, RAIA DROGASIL 72/120/168h). Esses SLAs devem ser usados como fallback para calcular `data_limite` quando a planilha não traz prazo.
+A página `/equipes` tenta consultar uma tabela `equipes` que nunca foi criada no banco de dados. O `as any` no código mascara o erro de tipo, e a query retorna vazio silenciosamente. Por isso a tela aparece em branco.
+
+### Dados reais disponíveis
+
+O sistema já tem dados de equipes funcionando via:
+- **`team_clients`** — 58 registros vinculando 5 team leads a clientes
+- **`profiles`** — hierarquia via `reports_to`, com `full_name` e `sigla`
+- **`useTeamClients`** hook — já implementado com CRUD completo
+
+### Solução
+
+Reescrever `src/pages/Equipes.tsx` para exibir as equipes reais baseadas nos **team leads** (líderes com clientes vinculados em `team_clients`), em vez de depender de uma tabela inexistente.
 
 ### Alterações
 
-**1. `supabase/functions/sync-pautas-github/index.ts`**
+**`src/pages/Equipes.tsx`** — Reescrever:
+- Importar `useTeamClients` e `useProfiles` (hooks existentes)
+- Buscar team leads distintos a partir de `team_clients`
+- Para cada team lead, exibir um Card com:
+  - Nome do líder (via profiles)
+  - Quantidade de clientes vinculados
+  - Lista resumida dos clientes
+  - Botões para gerenciar vínculos (adicionar/remover clientes)
+- Remover toda referência à tabela `equipes`
+- Manter o dialog de vincular clientes a um líder (substituindo "Nova Equipe" por "Vincular Cliente a Líder")
 
-- Após carregar `profiles`, `processes` e `calcTypes` (~linha 396), carregar também:
-  - `client_sla_rules` (tabela completa)
-  - `clients` (id, nome, razao_social, nome_fantasia) + `client_aliases`
-- Construir dois mapas:
-  - `clientNameMap`: nome do cliente → client_id
-  - `clientSlaMap`: client_id → array de `{ calculation_type, deadline_hours }`
-- Após resolver `processId` (~linha 484), se `parsed.dataLimite` for null:
-  - Resolver `clientId` via `parsed.processoCliente` usando `clientNameMap`
-  - Se não achar, tentar resolver via `processId` → buscar `id_cliente` no processo
-  - Buscar regra SLA: primeiro por `parsed.calculoTipo`, depois regra "Geral"
-  - Calcular `dataLimite = dataReferencia + deadline_hours` (usar data da decisão se disponível, senão `created_at` = now)
-  - Adicionar `sla_derived: true` e `sla_hours: N` no `extracted_details`
-- Atualizar a condição da linha 538: `if (processId && dataLimite)` passa a incluir prazos derivados do SLA
-- Inserir o `client_id` no registro da solicitação (campo existe mas não é preenchido atualmente)
+### Resultado
 
-**2. `supabase/functions/sync-solicitacoes-sheet/index.ts`**
-
-- Após carregar clients/aliases (~linha 171), carregar `client_sla_rules`
-- Construir `clientSlaMap`: client_id → array de regras
-- Após `const dataLimite = parseDate(prazoRaw)` (~linha 325), se `dataLimite` for null e `clientId` existir:
-  - Extrair tipo de cálculo do `tituloClean` (match heurístico: "EXECUÇÃO", "CONTINGÊNCIA", "INICIAL")
-  - Buscar regra SLA do cliente (por tipo, fallback "Geral")
-  - Calcular prazo: `dataSolicitacao + deadline_hours` ou `now() + deadline_hours`
-  - Marcar flag no registro para rastreabilidade
-
-**3. Função auxiliar compartilhada (inline em cada arquivo)**
-
-```text
-function applySlaFallback(
-  clientId, clientSlaMap, calculoTipo, dataReferencia
-) → { dataLimite, slaHours } | null
-  1. Buscar rules = clientSlaMap.get(clientId)
-  2. Match por calculation_type (normalizado)
-  3. Fallback para regra com calculation_type = "Geral" ou null
-  4. base = dataReferencia || new Date().toISOString()
-  5. return { dataLimite: addHours(base, hours), slaHours: hours }
-```
-
-### Impacto esperado
-
-- Pautas da ACHE, ASSAÍ, ATACADÃO, CARREFOUR e RAIA DROGASIL que chegam sem prazo passam a ter `data_limite` calculada
-- Novos `process_deadlines` são gerados para esses registros
-- Flag `sla_derived: true` nos detalhes permite distinguir prazos reais de calculados na UI
-- Nenhuma alteração no banco de dados necessária (campos já existem)
-
-### Arquivos
-
-| Arquivo | Ação |
-|---------|------|
-| `supabase/functions/sync-pautas-github/index.ts` | Carregar SLA + clients, aplicar fallback, preencher client_id |
-| `supabase/functions/sync-solicitacoes-sheet/index.ts` | Carregar SLA, aplicar fallback quando prazo vazio |
+A página passa a mostrar as 5 equipes reais com seus 58 vínculos de clientes, em vez de uma tela vazia.
 
