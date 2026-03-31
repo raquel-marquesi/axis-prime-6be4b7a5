@@ -536,24 +536,17 @@ Deno.serve(async (req) => {
             }
 
             if (processId && parsed.dataLimite) {
-              const { data: existingDl } = await supabase
-                .from("process_deadlines")
-                .select("id")
-                .eq("process_id", processId)
-                .eq("data_prazo", parsed.dataLimite)
-                .eq("is_completed", false)
-                .maybeSingle();
-              if (!existingDl) {
-                const { error: dlErr } = await supabase.from("process_deadlines").insert({
-                  process_id: processId,
-                  data_prazo: parsed.dataLimite,
-                  ocorrencia: parsed.titulo.substring(0, 120),
-                  detalhes: parsed.observacao?.substring(0, 500) || null,
-                  source: "planilha_pautas",
-                });
-                if (!dlErr) totalDeadlines++;
-                else allErrors.push(`[${source.key}] Deadline: ${dlErr.message}`);
-              }
+              const ocorrencia = parsed.titulo.substring(0, 120);
+              const { error: dlErr } = await supabase.from("process_deadlines").upsert({
+                process_id: processId,
+                data_prazo: parsed.dataLimite,
+                ocorrencia,
+                detalhes: parsed.observacao?.substring(0, 500) || null,
+                source: "planilha_pautas",
+                is_completed: false,
+              }, { onConflict: "process_id,data_prazo,ocorrencia", ignoreDuplicates: true });
+              if (!dlErr) totalDeadlines++;
+              else allErrors.push(`[${source.key}] Deadline: ${dlErr.message}`);
             }
           }
 
