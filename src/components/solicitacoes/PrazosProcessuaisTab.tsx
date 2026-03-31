@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Filter, Calendar, CheckCircle2, Clock, AlertTriangle, Search, List, CheckCircle, XCircle, EyeOff, Bot } from 'lucide-react';
+import { Filter, Calendar, CheckCircle2, Clock, AlertTriangle, Search, List, CheckCircle, XCircle, EyeOff, Bot, LinkIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
