@@ -1,26 +1,61 @@
 
 
-## Problema: Página de Gerenciamento de Usuários inacessível
+## Vincular usuários às equipes na página Equipes
 
-A página de gerenciamento de usuários existe em `/usuarios` (com `UserManagement.tsx`), mas:
-1. **Não aparece no menu lateral** — o Sidebar não tem link para `/usuarios`
-2. **Não está nas Configurações** — a aba "Permissões" em `/configuracoes` mostra apenas papéis customizados (`custom_roles`), não a lista de usuários
+### Problema identificado
 
-Os usuários cadastrados estão no banco (tabela `profiles`), mas não há caminho visível para acessá-los.
+1. **Nomes dos líderes aparecem como "Desconhecido"**: O `team_lead_id` na tabela `team_clients` armazena o `profiles.id`, mas o hook `useProfiles` busca por `user_id`. O `getName()` nunca encontra correspondência.
 
-### Solução
+2. **Membros da equipe não são exibidos**: A página só mostra clientes vinculados. Os usuários subordinados (via `profiles.reports_to`) não aparecem, apesar de existirem no banco (ex: Juliana tem 12 membros, Kleber tem 8, Felipe tem 6, Vinícius tem 8, Rafael tem 5).
 
-Adicionar uma aba **"Usuários"** na página de Configurações que exiba a lista completa de usuários do sistema, aproveitando o componente `UserManagement` já existente.
+### Dados no banco
+
+| Líder (profiles.id) | Nome | Membros (reports_to) | Clientes (team_clients) |
+|---|---|---|---|
+| 5aed80f0... | JULIANA FERREIRA MARTINS PEREIRA | 12 | vários |
+| 45052afb... | KLEBER NAPOLITANO DO ROSARIO | 8+ | vários |
+| fcbae628... | FELIPE CAMPOS DE SOUZA | 6 | vários |
+| 4b0b162d... | VINICIUS MARCANTUONO | 8+ | vários |
+| 07c32525... | RAFAEL SENA SANTOS DE SOUZA | 5+ | vários |
 
 ### Alterações
 
-**1. `src/pages/Configuracoes.tsx`**
-- Adicionar aba "Usuários" (com ícone `Users`) entre "Empresa" e "Permissões"
-- Renderizar o conteúdo de gerenciamento de usuários (tabela de perfis, botão de convite, edição e exclusão) diretamente nessa aba, reutilizando a lógica do `UserManagement.tsx`
+**1. `src/pages/Equipes.tsx`**
 
-**2. `src/components/layout/Sidebar.tsx`**
-- Opcionalmente, adicionar link direto para `/usuarios` no menu lateral (abaixo de Equipes), visível para admin/gerente
+- Buscar perfis completos via `supabase.from('profiles')` (com `id` e `user_id`) em vez de depender do `useProfiles` (que só tem `user_id`)
+- Resolver nomes dos líderes usando `profiles.id` (não `user_id`)
+- Buscar membros da equipe: `profiles WHERE reports_to = leader.id`
+- No card de cada equipe, exibir duas seções:
+  - **Membros**: lista de usuários subordinados (nome, área/sigla)
+  - **Clientes**: lista de clientes vinculados (já existente)
+- Corrigir o dialog de "Vincular Cliente" para usar `profiles.id` como `team_lead_id`
 
-### Resultado
-O usuário poderá ver e gerenciar todos os usuários cadastrados diretamente pela aba "Usuários" em Configurações, sem precisar conhecer a rota `/usuarios`.
+**2. `src/hooks/useTeamClients.ts`** (sem alteração estrutural)
+
+O hook já funciona corretamente com a tabela. O problema é apenas na resolução de nomes no frontend.
+
+### Layout do card atualizado
+
+```text
+┌─────────────────────────────────┐
+│ JULIANA FERREIRA MARTINS PEREIRA│
+│ 👥 12 membros  │  🏢 N clientes │
+├─────────────────────────────────┤
+│ ▾ Membros da Equipe             │
+│   • Gabriel de Jesus Silva      │
+│   • Gabriel Moreira             │
+│   • Patricia de Moraes          │
+│   • ...                         │
+│ ▾ Clientes Vinculados           │
+│   • Cliente ABC                 │
+│   • Cliente XYZ                 │
+│   (botão remover)               │
+└─────────────────────────────────┘
+```
+
+### Arquivo
+
+| Arquivo | Ação |
+|---------|------|
+| `src/pages/Equipes.tsx` | Reescrever: buscar profiles com `id`, exibir membros via `reports_to`, corrigir resolução de nomes |
 
