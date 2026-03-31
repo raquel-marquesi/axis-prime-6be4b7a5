@@ -170,6 +170,40 @@ Deno.serve(async (req) => {
       if (a.alias) clientMap.set(a.alias.toUpperCase().trim(), a.client_id);
     }
 
+    // ─── Load SLA rules ─────────────────────────────────────────
+    const { data: slaRules } = await supabase.from("client_sla_rules").select("client_id, calculation_type, deadline_hours");
+    const clientSlaMap = new Map<string, Array<{ calculation_type: string | null; deadline_hours: number }>>();
+    for (const rule of slaRules || []) {
+      const arr = clientSlaMap.get(rule.client_id) || [];
+      arr.push({ calculation_type: rule.calculation_type, deadline_hours: rule.deadline_hours });
+      clientSlaMap.set(rule.client_id, arr);
+    }
+
+    function applySlaFallback(
+      cId: string | null,
+      calculoTipo: string,
+      dataRef: string | null,
+    ): { dataLimite: string; slaHours: number } | null {
+      if (!cId) return null;
+      const rules = clientSlaMap.get(cId);
+      if (!rules || rules.length === 0) return null;
+
+      const normCalc = calculoTipo?.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() || "";
+      let matched = rules.find((r) => {
+        if (!r.calculation_type) return false;
+        const normRule = r.calculation_type.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        return normCalc.includes(normRule) || normRule.includes(normCalc);
+      });
+      if (!matched) {
+        matched = rules.find((r) => !r.calculation_type || r.calculation_type.toUpperCase().trim() === "GERAL");
+      }
+      if (!matched) matched = rules[0];
+
+      const baseDate = dataRef ? new Date(dataRef + "T12:00:00Z") : new Date();
+      const deadline = new Date(baseDate.getTime() + matched.deadline_hours * 3600000);
+      return { dataLimite: deadline.toISOString().substring(0, 10), slaHours: matched.deadline_hours };
+    }
+
     // ─── Load profile map (sigla + full_name → user_id) ─────────
     // A coluna CALCULISTA da planilha é a fonte primária de atribuição
     // para os 5 clientes. O fallback inteligente (assign_calculation)

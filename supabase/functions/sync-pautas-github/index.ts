@@ -393,10 +393,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    const [profilesRes, processesRes, calcTypesRes] = await Promise.all([
+    const [profilesRes, processesRes, calcTypesRes, slaRes, clientsRes, clientAliasesRes] = await Promise.all([
       supabase.from("profiles").select("user_id, full_name, sigla").eq("is_active", true),
-      supabase.from("processes").select("id, numero_processo").limit(15000),
+      supabase.from("processes").select("id, numero_processo, id_cliente").limit(15000),
       supabase.from("calculation_types").select("id, name").eq("is_active", true),
+      supabase.from("client_sla_rules").select("client_id, calculation_type, deadline_hours"),
+      supabase.from("clients").select("id, nome, razao_social, nome_fantasia"),
+      supabase.from("client_aliases").select("alias, client_id"),
     ]);
 
     const profileById = new Map<string, string>();
@@ -405,14 +408,64 @@ Deno.serve(async (req) => {
     }
 
     const processMap = new Map<string, string>();
+    const processClientMap = new Map<string, string>(); // processId → client_id
     for (const p of processesRes.data || []) {
       if (p.numero_processo) processMap.set(p.numero_processo.replace(/[.\-\/\s]/g, ""), p.id);
       processMap.set(p.id, p.id);
+      if (p.id_cliente) processClientMap.set(p.id, p.id_cliente);
     }
 
     const calcTypeMap = new Map<string, string>();
     for (const ct of calcTypesRes.data || []) {
       calcTypeMap.set(ct.name.toLowerCase().trim(), ct.id);
+    }
+
+    // Client name → client_id map
+    const clientNameMap = new Map<string, string>();
+    for (const c of clientsRes.data || []) {
+      for (const field of [c.nome, c.razao_social, c.nome_fantasia]) {
+        if (field) clientNameMap.set(field.toUpperCase().trim(), c.id);
+      }
+    }
+    for (const a of clientAliasesRes.data || []) {
+      if (a.alias) clientNameMap.set(a.alias.toUpperCase().trim(), a.client_id);
+    }
+
+    // client_id → SLA rules map
+    const clientSlaMap = new Map<string, Array<{ calculation_type: string | null; deadline_hours: number }>>();
+    for (const rule of slaRes.data || []) {
+      const arr = clientSlaMap.get(rule.client_id) || [];
+      arr.push({ calculation_type: rule.calculation_type, deadline_hours: rule.deadline_hours });
+      clientSlaMap.set(rule.client_id, arr);
+    }
+
+    function applySlaFallback(
+      clientId: string | null,
+      calculoTipo: string,
+      dataReferencia: string | null,
+    ): { dataLimite: string; slaHours: number } | null {
+      if (!clientId) return null;
+      const rules = clientSlaMap.get(clientId);
+      if (!rules || rules.length === 0) return null;
+
+      const normCalc = calculoTipo?.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() || "";
+
+      // Try matching by calculation_type
+      let matched = rules.find((r) => {
+        if (!r.calculation_type) return false;
+        const normRule = r.calculation_type.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        return normCalc.includes(normRule) || normRule.includes(normCalc);
+      });
+
+      // Fallback to "Geral" or null calculation_type
+      if (!matched) {
+        matched = rules.find((r) => !r.calculation_type || r.calculation_type.toUpperCase().trim() === "GERAL");
+      }
+      if (!matched) matched = rules[0]; // last resort: first rule
+
+      const baseDate = dataReferencia ? new Date(dataReferencia + "T12:00:00Z") : new Date();
+      const deadline = new Date(baseDate.getTime() + matched.deadline_hours * 3600000);
+      return { dataLimite: deadline.toISOString().substring(0, 10), slaHours: matched.deadline_hours };
     }
 
     function resolveCalcType(name: string): string | null {
