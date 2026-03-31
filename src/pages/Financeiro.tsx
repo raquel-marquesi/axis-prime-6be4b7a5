@@ -68,7 +68,7 @@ const Financeiro = () => {
 
         <TabsContent value="visao-geral" className="space-y-6">
           <FinanceSummary />
-          <FinancialKPICards />
+          <AnaliseFinanceiraTab />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <RecebiveisWidget />
             <ProjecaoReceitaWidget />
