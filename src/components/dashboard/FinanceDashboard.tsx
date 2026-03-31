@@ -7,6 +7,7 @@ import { RecebiveisWidget } from '@/components/financeiro/RecebiveisWidget';
 import { AgendaFaturamentoWidget } from '@/components/financeiro/AgendaFaturamentoWidget';
 import { RentabilidadeChart } from '@/components/financeiro/RentabilidadeChart';
 import { PremiacaoVsFaturamentoChart } from '@/components/financeiro/PremiacaoVsFaturamentoChart';
+import { ProjecaoReceitaWidget } from '@/components/financeiro/ProjecaoReceitaWidget';
 
 export function FinanceDashboard() {
   const { data: stats, isLoading } = useDashboardStats();
