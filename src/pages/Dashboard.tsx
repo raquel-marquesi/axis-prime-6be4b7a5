@@ -141,6 +141,6 @@ export default function Dashboard() {
         event={selectedEvent}
         onEventSaved={handleEventCreated}
       />
-    </MainLayout>
+    </>
   );
 }

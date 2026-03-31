@@ -113,6 +113,6 @@ export default function Processes() {
       <ProcessDetailsDialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen} process={selectedProcess} onEdit={handleEdit} />
       <BatchImportProcessesDialog open={isImportOpen} onOpenChange={setIsImportOpen} />
       <BulkImportXlsxDialog open={isBulkImportOpen} onOpenChange={setIsBulkImportOpen} />
-    </MainLayout>
+    </>
   );
 }
