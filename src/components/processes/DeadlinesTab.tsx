@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Plus, Trash2, Eye, ChevronsUpDown, Check, Clock, CheckCircle2, User, CalendarCheck, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Eye, ChevronsUpDown, Check, Clock, CheckCircle2, User, CalendarCheck, AlertTriangle, ExternalLink, LinkIcon } from 'lucide-react';
 import { useProcessDeadlines, ProcessDeadline } from '@/hooks/useProcessDeadlines';
 import { useDeadlineWithCalendar, ProcessInfo } from '@/hooks/useDeadlineWithCalendar';
 import { useProfiles } from '@/hooks/useProfiles';
