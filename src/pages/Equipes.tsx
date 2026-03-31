@@ -45,9 +45,9 @@ const Equipes = () => {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-foreground">Equipes</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Equipes</h1>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button><Plus className="mr-2 h-4 w-4" /> Nova Equipe</Button>

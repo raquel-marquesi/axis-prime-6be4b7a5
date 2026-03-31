@@ -44,10 +44,10 @@ export default function ImportarPautas() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-500">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Importar Pautas</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Importar Pautas</h1>
+        <p className="text-sm text-muted-foreground">
           Faça o upload do arquivo de pautas para atualizar o sistema.
         </p>
       </div>
