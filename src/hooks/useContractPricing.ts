@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export interface ContractPricing { id: string; cliente_nome: string; contrato: string; tipo_calculo: string; valor: number | null; moeda: string | null; percentual: number | null; tipo_valor: string | null; monitoramento: string | null; proc_andamento: number | null; proc_encerrado: number | null; cod_cliente: number | null; cod_contrato: number | null; client_id: string | null; is_active: boolean | null; created_at: string | null; updated_at: string | null; }
+export interface ContractPricing { id: string; cliente_nome: string; contrato: string; tipo_calculo: string; valor: number | null; moeda: string | null; percentual: number | null; tipo_valor: string | null; monitoramento: string | null; proc_andamento: number | null; proc_encerrado: number | null; cod_cliente: number | null; cod_contrato: number | null; client_id: string | null; is_active: boolean | null; created_at: string | null; updated_at: string | null; modalidade: string | null; data_reajuste: string | null; cap_valor: number | null; cap_horas: number | null; }
 export type ContractPricingFormData = Omit<ContractPricing, 'id' | 'created_at' | 'updated_at'>;
 
 export function useContractPricing(options?: { clientId?: string; clienteNome?: string }) {
@@ -21,13 +21,13 @@ export function useContractPricing(options?: { clientId?: string; clienteNome?: 
   });
 
   const createPricing = useMutation({
-    mutationFn: async (formData: ContractPricingFormData) => { const { error } = await supabase.from('contract_pricing').insert(formData); if (error) throw error; },
+    mutationFn: async (formData: ContractPricingFormData) => { const { error } = await supabase.from('contract_pricing').insert(formData as any); if (error) throw error; },
     onSuccess: () => { toast.success('Valor contratual criado com sucesso'); queryClient.invalidateQueries({ queryKey: ['contract_pricing'] }); },
     onError: (err: any) => toast.error('Erro ao criar: ' + err.message),
   });
 
   const updatePricing = useMutation({
-    mutationFn: async ({ id, ...formData }: Partial<ContractPricing> & { id: string }) => { const { error } = await supabase.from('contract_pricing').update(formData).eq('id', id); if (error) throw error; },
+    mutationFn: async ({ id, ...formData }: Partial<ContractPricing> & { id: string }) => { const { error } = await supabase.from('contract_pricing').update(formData as any).eq('id', id); if (error) throw error; },
     onSuccess: () => { toast.success('Valor contratual atualizado'); queryClient.invalidateQueries({ queryKey: ['contract_pricing'] }); },
     onError: (err: any) => toast.error('Erro ao atualizar: ' + err.message),
   });
