@@ -2568,6 +2568,7 @@ export type Database = {
         Row: {
           activity_type_id: string | null
           client_id: string | null
+          codigo_externo: string | null
           created_at: string
           data_atividade: string
           deadline_id: string | null
@@ -2587,6 +2588,7 @@ export type Database = {
         Insert: {
           activity_type_id?: string | null
           client_id?: string | null
+          codigo_externo?: string | null
           created_at?: string
           data_atividade: string
           deadline_id?: string | null
@@ -2606,6 +2608,7 @@ export type Database = {
         Update: {
           activity_type_id?: string | null
           client_id?: string | null
+          codigo_externo?: string | null
           created_at?: string
           data_atividade?: string
           deadline_id?: string | null
