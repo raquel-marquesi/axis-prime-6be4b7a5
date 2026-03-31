@@ -90,8 +90,10 @@ export function ProjecaoReceitaWidget() {
 
       for (const d of deadlines) {
         const proc = processMap.get(d.process_id);
-        const clientKey = proc?.client_name?.toUpperCase().trim() || proc?.client_id || 'SEM CLIENTE';
-        const existing = clientDeadlines.get(clientKey) || { name: proc?.client_name || 'Sem Cliente', clientId: proc?.client_id || null, count: 0 };
+        const clientId = proc?.id_cliente || null;
+        const clientName = clientId ? (clientMap.get(clientId) || 'Sem Nome') : 'Sem Cliente';
+        const clientKey = clientName.toUpperCase().trim();
+        const existing = clientDeadlines.get(clientKey) || { name: clientName, clientId, count: 0 };
         existing.count++;
         clientDeadlines.set(clientKey, existing);
       }
