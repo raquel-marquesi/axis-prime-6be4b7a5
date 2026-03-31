@@ -1,36 +1,30 @@
 
 
-## Desativar criação de issues no GitHub — sync-pautas-github
+## Continuar importação do CSV de Timesheet via Edge Function
 
-### O que muda
+### Situação atual
 
-Remover todo o código relacionado à criação de issues no GitHub da Edge Function `sync-pautas-github/index.ts`, mantendo intacta a sincronização com o banco de dados (solicitações, deadlines, SLA, atribuição).
+- A Edge Function `import-timesheet-csv` já está criada e testada (200 registros em teste anterior: 67 inseridos, 133 duplicatas)
+- O CSV tem ~83.870 linhas
+- A função aceita batches via `{ rows: [...] }` no body
 
-### Código a remover/modificar
+### Plano de execução
 
-**`supabase/functions/sync-pautas-github/index.ts`**
+1. **Parsear o CSV** (`user-uploads://TimeSheet_Online_-_Base.csv`) usando `document--parse_document`
+2. **Enviar em lotes de 500 linhas** via `supabase--curl_edge_functions` para `import-timesheet-csv`
+3. **Iterar** até processar todas as ~83.870 linhas (cerca de 168 chamadas)
+4. **Consolidar** as estatísticas de cada batch (inseridos, duplicatas, prazos fechados, erros)
+5. **Reportar** o resultado final com totais
 
-1. **Remover constantes GitHub** (linhas 20-21): `GITHUB_REPO`, `GITHUB_API`
-2. **Remover funções GitHub** (linhas 158-231): `ensureGithubLabels`, `createGithubIssue`, `buildIssueBody`
-3. **Remover leitura do `GITHUB_TOKEN`** (linha 340)
-4. **Remover bloco de bootstrap de labels** (linhas 380-394)
-5. **Remover skip por `issueNumber` existente** (linha 531): `if (existing?.issueNumber) continue;` — mudar para skip apenas se `existing` já tem registro (dedup normal)
-6. **Remover campo `issueNumber` do existingMap** (linhas 488-495): simplificar para guardar apenas o `id`
-7. **Remover todo o bloco de criação de issue** (linhas 631-701): desde `if (!githubToken)` até o `update` de `extracted_details` com `github_issue_number`
-8. **Remover `github_issue_number: null`** do `extracted_details` no insert (linha 590)
-9. **Remover contadores** `totalIssues` e referências a `issues_created` nos logs/resposta
+### Observações técnicas
 
-### O que permanece inalterado
+- Cada chamada à Edge Function tem timeout de ~50s, mas com 500 linhas por batch deve ser rápido
+- A dedup é feita via `external_id` (upsert com `ignoreDuplicates: true`), então re-execuções são seguras
+- A baixa automática de prazos acontece em cada batch (deadlines com `is_completed = false` + matching fuzzy)
 
-- Leitura das 4 planilhas via Google Sheets API
-- Inserção/atualização de `solicitacoes`
-- Resolução de `process_id`, `client_id`, `calculation_type_id`
-- Aplicação de SLA fallback
-- Criação de `process_deadlines`
-- Atribuição automática via `assign_calculation`
-- Logs em `sync_logs`
+### Resultado esperado
 
-### Resultado
-
-A função continua sincronizando planilhas → banco de dados normalmente, mas nenhuma issue será criada no GitHub. As issues existentes no repositório permanecerão lá (podem ser fechadas/deletadas manualmente se desejado).
+- ~83k registros processados em `timesheet_entries`
+- Estimativa de 200-500 prazos fechados automaticamente
+- Relatório consolidado de importação
 
