@@ -128,6 +128,7 @@ export function PrazosProcessuaisTab() {
                           <TableCell className="max-w-[180px] truncate">{d.reclamante_nome}</TableCell>
                           <TableCell className="max-w-[180px] truncate">{d.reclamadas?.[0] || '—'}</TableCell>
                           <TableCell className="max-w-[200px] truncate">{d.ocorrencia}</TableCell>
+                          <TableCell>{d.solicitacao_id ? <Tooltip><TooltipTrigger asChild><span className="inline-flex items-center gap-1 text-xs"><LinkIcon className="h-3 w-3 text-primary" /><span className="text-primary truncate max-w-[100px]">{d.solicitacao_titulo || 'Solicitação'}</span></span></TooltipTrigger><TooltipContent><p>Prioridade: {d.solicitacao_prioridade || '—'}</p></TooltipContent></Tooltip> : <span className="text-xs text-muted-foreground">Manual</span>}</TableCell>
                           {showResponsavel && <TableCell className="text-muted-foreground">{d.assigned_user_name || '—'}</TableCell>}
                           <TableCell>
                             {d.status === 'atrasado' ? (
