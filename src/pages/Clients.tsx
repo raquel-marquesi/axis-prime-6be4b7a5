@@ -363,6 +363,6 @@ export default function Clients() {
         open={isImportOpen}
         onOpenChange={setIsImportOpen}
       />
-    </MainLayout>
+    </>
   );
 }
