@@ -118,7 +118,7 @@ const Financeiro = () => {
         <TabsContent value="configuracoes" className="space-y-6">
           <PlanoContasTab />
           <CompanyBankAccountsTab />
-          <BillingContactsTable />
+          <TreasuryTab />
           <BankReconciliation />
         </TabsContent>
       </Tabs>
