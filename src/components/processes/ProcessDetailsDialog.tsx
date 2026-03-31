@@ -151,6 +151,10 @@ export function ProcessDetailsDialog({ open, onOpenChange, process, onEdit, defa
               <DeadlinesTab processId={process.id} processInfo={processInfo}
                 driveFolderUrl={process.drive_folder_id ? `https://drive.google.com/drive/folders/${process.drive_folder_id}` : undefined} />
             </TabsContent>
+
+            <TabsContent value="activities" className="pt-4">
+              <ProcessTimesheetTab processId={process.id} />
+            </TabsContent>
           </Tabs>
         </DialogContent>
       </Dialog>
