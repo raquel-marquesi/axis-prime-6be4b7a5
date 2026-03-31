@@ -33,6 +33,8 @@ import {
   EnderecoTab,
   ContatosTab,
   ContratoTab,
+  CobrancaTab,
+  PrecificacaoTab,
   OutrosTab,
   formSchema,
   ClientFormData,
@@ -134,6 +136,13 @@ export function ClientFormDialog({ open, onOpenChange, client }: ClientFormDialo
         economic_group_id: client.economic_group_id || '',
         contract_key_id: client.contract_key_id || '',
         contacts: contactsDataForEdit,
+        // New fields
+        inscricao_estadual: (client as any).inscricao_estadual || '',
+        inscricao_municipal: (client as any).inscricao_municipal || '',
+        dia_emissao_nf: (client as any).dia_emissao_nf || '',
+        dia_vencimento: (client as any).dia_vencimento || '',
+        aplicar_grossup: (client as any).aplicar_grossup || false,
+        tipo_grossup: (client as any).tipo_grossup || '',
       } as ClientFormData);
     } else {
       setTipo('fisica');
@@ -222,6 +231,13 @@ export function ClientFormDialog({ open, onOpenChange, client }: ClientFormDialo
       dados_bancarios_banco: (data as any).dados_bancarios_banco || undefined,
       dados_bancarios_agencia: (data as any).dados_bancarios_agencia || undefined,
       dados_bancarios_conta: (data as any).dados_bancarios_conta || undefined,
+      // New fields
+      inscricao_estadual: (data as any).inscricao_estadual || undefined,
+      inscricao_municipal: (data as any).inscricao_municipal || undefined,
+      dia_emissao_nf: (data as any).dia_emissao_nf ? Number((data as any).dia_emissao_nf) : undefined,
+      dia_vencimento: (data as any).dia_vencimento ? Number((data as any).dia_vencimento) : undefined,
+      aplicar_grossup: (data as any).aplicar_grossup || false,
+      tipo_grossup: (data as any).tipo_grossup || undefined,
     };
 
     const submitData: HookClientFormData = data.tipo === 'fisica'
@@ -343,12 +359,14 @@ export function ClientFormDialog({ open, onOpenChange, client }: ClientFormDialo
             </div>
 
             <Tabs defaultValue="dados" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="dados">Dados</TabsTrigger>
-                <TabsTrigger value="endereco">Endereço *</TabsTrigger>
-                <TabsTrigger value="contatos">Contatos *</TabsTrigger>
-                <TabsTrigger value="contrato">Contrato</TabsTrigger>
-                <TabsTrigger value="outros">Outros</TabsTrigger>
+              <TabsList className="flex w-full overflow-x-auto">
+                <TabsTrigger value="dados" className="flex-1 min-w-0">Dados</TabsTrigger>
+                <TabsTrigger value="endereco" className="flex-1 min-w-0">Endereço</TabsTrigger>
+                <TabsTrigger value="contatos" className="flex-1 min-w-0">Contatos</TabsTrigger>
+                <TabsTrigger value="cobranca" className="flex-1 min-w-0">Cobrança</TabsTrigger>
+                <TabsTrigger value="contrato" className="flex-1 min-w-0">Contrato</TabsTrigger>
+                <TabsTrigger value="precificacao" className="flex-1 min-w-0">Precificação</TabsTrigger>
+                <TabsTrigger value="outros" className="flex-1 min-w-0">Outros</TabsTrigger>
               </TabsList>
 
               <TabsContent value="dados" className="mt-4">
@@ -368,6 +386,10 @@ export function ClientFormDialog({ open, onOpenChange, client }: ClientFormDialo
                 <ContatosTab form={form} fieldArray={fieldArray} />
               </TabsContent>
 
+              <TabsContent value="cobranca" className="mt-4">
+                <CobrancaTab form={form} />
+              </TabsContent>
+
               <TabsContent value="contrato" className="mt-4">
                 <ContratoTab 
                   form={form} 
@@ -375,6 +397,10 @@ export function ClientFormDialog({ open, onOpenChange, client }: ClientFormDialo
                   isEditing={isEditing} 
                   onTipoChange={handleTipoChange}
                 />
+              </TabsContent>
+
+              <TabsContent value="precificacao" className="mt-4">
+                <PrecificacaoTab clientId={client?.id} />
               </TabsContent>
 
               <TabsContent value="outros" className="mt-4">

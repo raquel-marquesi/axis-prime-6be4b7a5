@@ -14,6 +14,7 @@ interface Props {
 }
 
 const TIPOS_CALCULO = ["Valor fixo", "Percentual", "Por processo", "Misto"];
+const MODALIDADES = ["Contencioso", "Consultivo", "Trabalhista", "Tributário", "Recuperação Judicial", "Arbitragem", "Outro"];
 
 export function ContractPricingFormDialog({ open, onOpenChange, pricing, onSubmit }: Props) {
   const [clienteNome, setClienteNome] = useState("");
@@ -23,6 +24,10 @@ export function ContractPricingFormDialog({ open, onOpenChange, pricing, onSubmi
   const [percentual, setPercentual] = useState("");
   const [moeda, setMoeda] = useState("BRL");
   const [monitoramento, setMonitoramento] = useState("");
+  const [modalidade, setModalidade] = useState("");
+  const [dataReajuste, setDataReajuste] = useState("");
+  const [capValor, setCapValor] = useState("");
+  const [capHoras, setCapHoras] = useState("");
 
   useEffect(() => {
     if (pricing) {
@@ -33,9 +38,14 @@ export function ContractPricingFormDialog({ open, onOpenChange, pricing, onSubmi
       setPercentual(pricing.percentual?.toString() || "");
       setMoeda(pricing.moeda || "BRL");
       setMonitoramento(pricing.monitoramento || "");
+      setModalidade((pricing as any).modalidade || "");
+      setDataReajuste((pricing as any).data_reajuste || "");
+      setCapValor((pricing as any).cap_valor?.toString() || "");
+      setCapHoras((pricing as any).cap_horas?.toString() || "");
     } else {
       setClienteNome(""); setContrato(""); setTipoCalculo("Valor fixo");
       setValor(""); setPercentual(""); setMoeda("BRL"); setMonitoramento("");
+      setModalidade(""); setDataReajuste(""); setCapValor(""); setCapHoras("");
     }
   }, [pricing, open]);
 
@@ -55,7 +65,11 @@ export function ContractPricingFormDialog({ open, onOpenChange, pricing, onSubmi
       cod_contrato: null,
       client_id: pricing?.client_id || null,
       is_active: true,
-    });
+      modalidade: modalidade || null,
+      data_reajuste: dataReajuste || null,
+      cap_valor: capValor ? parseFloat(capValor) : null,
+      cap_horas: capHoras ? parseFloat(capHoras) : null,
+    } as any);
     onOpenChange(false);
   };
 
@@ -112,9 +126,34 @@ export function ContractPricingFormDialog({ open, onOpenChange, pricing, onSubmi
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Monitoramento</Label>
-              <Input value={monitoramento} onChange={(e) => setMonitoramento(e.target.value)} />
+              <Label>Modalidade</Label>
+              <Select value={modalidade} onValueChange={setModalidade}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {MODALIDADES.map((m) => (
+                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Data de Reajuste</Label>
+              <Input type="date" value={dataReajuste} onChange={(e) => setDataReajuste(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Cap Valor (R$)</Label>
+              <Input type="number" step="0.01" value={capValor} onChange={(e) => setCapValor(e.target.value)} placeholder="Limite de valor" />
+            </div>
+            <div className="space-y-2">
+              <Label>Cap Horas</Label>
+              <Input type="number" step="0.5" value={capHoras} onChange={(e) => setCapHoras(e.target.value)} placeholder="Limite de horas" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Monitoramento</Label>
+            <Input value={monitoramento} onChange={(e) => setMonitoramento(e.target.value)} />
           </div>
         </div>
         <DialogFooter>
