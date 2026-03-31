@@ -37,7 +37,7 @@ import { ImpostosTab } from "@/components/financeiro/ImpostosTab";
 // Configurações
 import { PlanoContasTab } from "@/components/financeiro/PlanoContasTab";
 import { CompanyBankAccountsTab } from "@/components/financeiro/CompanyBankAccountsTab";
-import { BillingContactsTable } from "@/components/financeiro/BillingContactsTable";
+import { TreasuryTab } from "@/components/financeiro/TreasuryTab";
 import { BankReconciliation } from "@/components/financeiro/BankReconciliation";
 
 const Financeiro = () => {
