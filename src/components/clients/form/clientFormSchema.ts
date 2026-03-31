@@ -52,6 +52,13 @@ const baseSchema = {
   economic_group_id: z.string().optional(),
   contract_key_id: z.string().optional(),
   contacts: z.array(contactSchema).min(1, 'Pelo menos um contato é obrigatório'),
+  // New fields - Phase 1
+  inscricao_estadual: z.string().optional(),
+  inscricao_municipal: z.string().optional(),
+  dia_emissao_nf: z.coerce.number().min(1).max(31).optional().or(z.literal('')),
+  dia_vencimento: z.coerce.number().min(1).max(31).optional().or(z.literal('')),
+  aplicar_grossup: z.boolean().optional().default(false),
+  tipo_grossup: z.string().optional(),
 };
 
 export const pessoaFisicaSchema = z.object({
@@ -106,6 +113,9 @@ export const getDefaultValues = (tipo: 'fisica' | 'juridica' = 'fisica'): Client
   cidade: '',
   estado: '',
   contacts: [{ nome: '', tipo: 'principal', email: '' }],
+  inscricao_estadual: '',
+  inscricao_municipal: '',
+  aplicar_grossup: false,
 } as ClientFormData);
 
 export const formatIndicacaoInputValue = (value: unknown, tipoIndicacao?: 'percentual' | 'fixo') => {

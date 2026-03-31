@@ -31,6 +31,14 @@ export function DadosTab({ form, tipo, isCheckingDuplicate, onDocumentChange }: 
       <FormField control={form.control} name="cnpj" render={({ field }) => (
         <FormItem><FormLabel>CNPJ *</FormLabel><FormControl><Input placeholder="00.000.000/0000-00" {...field} onChange={(e) => onDocumentChange(e.target.value, 'cnpj')} /></FormControl><FormMessage /></FormItem>
       )} />
+      <div className="grid grid-cols-2 gap-4">
+        <FormField control={form.control} name="inscricao_estadual" render={({ field }) => (
+          <FormItem><FormLabel>Inscrição Estadual</FormLabel><FormControl><Input placeholder="IE" {...field} /></FormControl><FormMessage /></FormItem>
+        )} />
+        <FormField control={form.control} name="inscricao_municipal" render={({ field }) => (
+          <FormItem><FormLabel>Inscrição Municipal (CCM)</FormLabel><FormControl><Input placeholder="IM / CCM" {...field} /></FormControl><FormMessage /></FormItem>
+        )} />
+      </div>
     </div>
   );
 }
