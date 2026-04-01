@@ -192,7 +192,7 @@ export function useSolicitacoes(filters?: SolicitacoesFilters) {
       toast({ title: 'Prazo atualizado' });
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao atualizar solicitação', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro ao atualizar prazo', description: error.message, variant: 'destructive' });
     },
   });
 
