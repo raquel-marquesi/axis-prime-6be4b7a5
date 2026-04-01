@@ -32,6 +32,7 @@ export default function Relatorios() {
         <TabsContent value="faturamento-profissional"><FaturamentoProfissionalReport /></TabsContent>
         <TabsContent value="centro-custos"><CentroCustosReport /></TabsContent>
         <TabsContent value="carteira"><CarteiraReport /></TabsContent>
+        <TabsContent value="prazos"><PrazosReport /></TabsContent>
       </Tabs>
     </div>
   );

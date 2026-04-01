@@ -46,6 +46,7 @@ const CarteiraReport = () => {
     { key: 'tipo', label: 'Tipo' },
     { key: 'processo_count', label: 'Processos' },
     { key: 'is_active', label: 'Status', format: (v: boolean) => v ? 'Ativo' : 'Inativo' },
+    { key: 'centro_custo_display', label: 'Centro de Custo' },
     { key: 'contrato_data_inicio', label: 'Início Contrato' },
     { key: 'contrato_data_vencimento', label: 'Vencimento Contrato' },
   ];

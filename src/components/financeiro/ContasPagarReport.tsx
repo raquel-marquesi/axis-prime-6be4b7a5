@@ -44,7 +44,17 @@ export function ContasPagarReport() {
               <SelectItem value="vencido">Vencido</SelectItem>
             </SelectContent>
           </Select>
-          <ReportExportButton data={filtered} columns={[{ key: 'descricao', label: 'Descrição' }, { key: 'fornecedor', label: 'Fornecedor' }, { key: 'valor', label: 'Valor', format: fmt }, { key: 'data_vencimento', label: 'Vencimento' }, { key: 'status', label: 'Status' }]} filename="contas-pagar" />
+          <ReportExportButton data={filtered} columns={[
+            { key: 'descricao', label: 'Descrição' },
+            { key: 'fornecedor', label: 'Fornecedor' },
+            { key: 'categoria', label: 'Categoria' },
+            { key: 'centro_custo', label: 'Centro de Custo' },
+            { key: 'valor', label: 'Valor', format: fmt },
+            { key: 'data_vencimento', label: 'Vencimento' },
+            { key: 'data_pagamento', label: 'Data Pagamento' },
+            { key: 'numero_documento', label: 'Nº Documento' },
+            { key: 'status', label: 'Status' },
+          ]} filename="contas-pagar" />
         </div>
       </CardHeader>
       <CardContent>

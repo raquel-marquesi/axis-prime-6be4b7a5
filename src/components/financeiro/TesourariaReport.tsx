@@ -20,6 +20,21 @@ export function TesourariaReport() {
         <div><Label>Data Início</Label><Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></div>
         <div><Label>Data Fim</Label><Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
       </div>
+      {data && data.accounts && data.accounts.length > 0 && (
+        <div className="flex justify-end">
+          <ReportExportButton
+            data={data.accounts}
+            columns={[
+              { key: 'descricao', label: 'Conta', format: (v: any, row: any) => v || `${row?.banco} - ${row?.conta}` },
+              { key: 'banco', label: 'Banco' },
+              { key: 'entradas', label: 'Entradas', format: (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` },
+              { key: 'saidas', label: 'Saídas', format: (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` },
+              { key: 'saldo', label: 'Saldo', format: (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` },
+            ]}
+            filename="tesouraria"
+          />
+        </div>
+      )}
       {isLoading ? (<p className="text-center text-muted-foreground py-8">Carregando...</p>) : !data ? (<p className="text-center text-muted-foreground py-8">Nenhum dado encontrado.</p>) : (
         <>
           <Card><CardHeader><CardTitle>Saldo por Conta Bancária</CardTitle></CardHeader><CardContent>
