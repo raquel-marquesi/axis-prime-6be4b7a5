@@ -21,7 +21,7 @@ export function usePrazosAbertosReport() {
           ? supabase.from('processes').select('id, numero_processo, client_id').in('id', processIds)
           : { data: [], error: null },
         userIds.length > 0
-          ? supabase.from('profiles' as any).select('user_id, full_name').in('user_id', userIds as string[])
+          ? supabase.from('profiles_safe' as any).select('user_id, full_name').in('user_id', userIds as string[])
           : { data: [], error: null },
       ]);
 
