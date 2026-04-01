@@ -38,6 +38,7 @@ const CarteiraReport = () => {
     ...c,
     processo_count: (processCounts as any)[c.id] || 0,
     display_name: c.razao_social || c.nome || '—',
+    centro_custo_display: c.centro_custo || '',
   }));
 
   const exportColumns = [
