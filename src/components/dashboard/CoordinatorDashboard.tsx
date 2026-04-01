@@ -29,7 +29,10 @@ export function CoordinatorDashboard() {
       <GoalProgressWidgetCoordinator />
       <ProducaoWidget />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {teamStats.map(stat => (<Card key={stat.title}><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle><div className={`p-2 rounded-lg ${stat.bgColor}`}><stat.icon className={`h-4 w-4 ${stat.color}`} /></div></CardHeader><CardContent><div className="text-2xl font-bold">{stat.value}</div><p className="text-xs text-muted-foreground mt-1">{stat.description}</p></CardContent></Card>))}
+        {teamStats.map(stat => {
+          const isDeadline = stat.title.includes('Prazo');
+          return (<Card key={stat.title} className={isDeadline ? 'cursor-pointer hover:shadow-md transition-shadow' : ''} onClick={isDeadline ? () => navigate('/solicitacoes') : undefined}><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle><div className={`p-2 rounded-lg ${stat.bgColor}`}><stat.icon className={`h-4 w-4 ${stat.color}`} /></div></CardHeader><CardContent><div className="text-2xl font-bold">{stat.value}</div><p className="text-xs text-muted-foreground mt-1">{stat.description}</p></CardContent></Card>);
+        })}
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <Card><CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-primary" />Prazos por Membro</CardTitle><CardDescription>Status de prazos de cada membro da equipe</CardDescription></CardHeader>
