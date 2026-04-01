@@ -203,7 +203,7 @@ export function useSolicitacoes(filters?: SolicitacoesFilters) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['solicitacoes'] });
-      toast({ title: 'Solicitação removida' });
+      toast({ title: 'Prazo removido' });
     },
     onError: (error: Error) => {
       toast({ title: 'Erro ao remover solicitação', description: error.message, variant: 'destructive' });
