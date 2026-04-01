@@ -182,7 +182,7 @@ export function useAllProcessDeadlines(options: UseAllProcessDeadlinesOptions = 
           .from('profiles_safe' as any)
           .select('user_id, full_name')
           .in('user_id', allUserIds);
-        profiles?.forEach(p => { userNames[p.user_id] = p.full_name; });
+        (profiles as any[])?.forEach((p: any) => { userNames[p.user_id] = p.full_name; });
       }
 
       return deadlines.map((d: any) => {

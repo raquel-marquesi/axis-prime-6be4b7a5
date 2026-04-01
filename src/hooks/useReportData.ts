@@ -16,7 +16,7 @@ export function useProdutividadeReport(filters: ProdutividadeFilters) {
       const end = format(endOfMonth(month), 'yyyy-MM-dd');
       let profilesQuery = supabase.from('profiles_safe' as any).select('user_id, full_name, area, reports_to, id').eq('is_active', true);
       if (areaFilter) profilesQuery = profilesQuery.eq('area', areaFilter as any);
-      const { data: profiles } = await profilesQuery;
+      const { data: profiles } = await profilesQuery as { data: any[] | null };
       if (!profiles?.length) return { rows: [], history: [] };
       let filteredProfiles = profiles;
       if (!isAdminOrManager() && isCoordinatorOrAbove() && user) { const myProfile = profiles.find(p => p.user_id === user.id); if (myProfile) filteredProfiles = profiles.filter(p => p.reports_to === myProfile.id || p.user_id === user.id); }
