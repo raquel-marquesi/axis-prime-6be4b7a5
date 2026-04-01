@@ -20,16 +20,13 @@ const CarteiraReport = () => {
     },
   });
 
-  const { data: processCounts = [] } = useQuery({
+  const { data: processCounts = {} } = useQuery({
     queryKey: ['carteira-process-counts'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('processes')
-        .select('client_id')
-        .not('client_id', 'is', null);
+      const { data, error } = await supabase.rpc('get_process_counts_by_client');
       if (error) throw error;
       const counts: Record<string, number> = {};
-      data.forEach((p: any) => { counts[p.client_id] = (counts[p.client_id] || 0) + 1; });
+      (data || []).forEach((row: any) => { counts[row.client_id] = Number(row.process_count); });
       return counts;
     },
   });
