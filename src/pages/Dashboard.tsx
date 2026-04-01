@@ -24,6 +24,7 @@ import type { CalendarEvent } from '@/types/calendar';
 
 export default function Dashboard() {
   const { profile, session, isAdminOrManager, isCoordinatorOrAbove, isFinanceiro } = useAuth();
+  const navigate = useNavigate();
   
   const [activeTab, setActiveTab] = useState('overview');
   const [createEventOpen, setCreateEventOpen] = useState(false);
