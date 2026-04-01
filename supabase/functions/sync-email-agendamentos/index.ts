@@ -342,76 +342,68 @@ Deno.serve(async (req) => {
 
     console.log(`Rows found: ${rowsFound}, To insert: ${toInsert.length}`);
 
-    // ─── Batch insert + assign_calculation + process_deadlines ──
-    const insertedIds: string[] = [];
+    // ─── Batch insert + assign_calculation + inline deadlines ──
+    let deadlinesCreated = 0;
     const BATCH = 200;
     for (let i = 0; i < toInsert.length; i += BATCH) {
       const batch = toInsert.slice(i, i + BATCH);
       const { data: inserted, error } = await supabase
-        .from("solicitacoes").insert(batch).select("id");
+        .from("solicitacoes").insert(batch).select("id, process_id, data_limite, titulo, descricao, assigned_to");
 
       if (error) {
+        // Fallback: insert one by one
         for (const item of batch) {
           const { data: single, error: sErr } = await supabase
-            .from("solicitacoes").insert(item).select("id");
+            .from("solicitacoes").insert(item).select("id, process_id, data_limite, titulo, descricao, assigned_to");
           if (sErr) {
             rowsFailed++;
             errors.push(`Insert: ${sErr.message} (${item.titulo?.substring(0, 30)})`);
-          } else {
+          } else if (single?.[0]) {
             rowsProcessed++;
-            if (single?.[0]?.id) {
-              insertedIds.push(single[0].id);
-              await supabase.rpc("assign_calculation", { p_solicitacao_id: single[0].id });
+            const sol = single[0];
+            await supabase.rpc("assign_calculation", { p_solicitacao_id: sol.id });
+            // Inline deadline creation
+            if (sol.process_id && sol.data_limite) {
+              const { error: dlErr } = await supabase
+                .from("process_deadlines")
+                .upsert({
+                  process_id: sol.process_id,
+                  data_prazo: sol.data_limite,
+                  ocorrencia: (sol.titulo || "Agendamento via e-mail").substring(0, 120),
+                  detalhes: sol.descricao?.substring(0, 500) || null,
+                  assigned_to: sol.assigned_to || null,
+                  source: "planilha_cliente",
+                  is_completed: false,
+                  solicitacao_id: sol.id,
+                }, { onConflict: "process_id,data_prazo,ocorrencia", ignoreDuplicates: true });
+              if (!dlErr) deadlinesCreated++;
             }
           }
         }
       } else {
         rowsProcessed += batch.length;
-        for (const row of inserted || []) {
-          insertedIds.push(row.id);
-          await supabase.rpc("assign_calculation", { p_solicitacao_id: row.id });
-        }
-      }
-    }
-
-    // ─── Create process_deadlines for records with process_id + data_limite ──
-    let deadlinesCreated = 0;
-    if (insertedIds.length > 0) {
-      // Fetch the inserted solicitacoes with resolved assigned_to
-      for (let i = 0; i < insertedIds.length; i += BATCH) {
-        const idBatch = insertedIds.slice(i, i + BATCH);
-        const { data: sols } = await supabase
-          .from("solicitacoes")
-          .select("id, process_id, data_limite, titulo, descricao, assigned_to")
-          .in("id", idBatch);
-
-        for (const sol of sols || []) {
-          if (!sol.process_id || !sol.data_limite) continue;
-
-          const ocorrencia = (sol.titulo || "Agendamento via e-mail").substring(0, 120);
-
-          const { error: dlErr } = await supabase
-            .from("process_deadlines")
-            .upsert({
-              process_id: sol.process_id,
-              data_prazo: sol.data_limite,
-              ocorrencia,
-              detalhes: sol.descricao?.substring(0, 500) || null,
-              assigned_to: sol.assigned_to || null,
-              source: "planilha_cliente",
-              is_completed: false,
-              solicitacao_id: sol.id,
-            }, { onConflict: "process_id,data_prazo,ocorrencia", ignoreDuplicates: true });
-
-          if (dlErr) {
-            errors.push(`Deadline: ${dlErr.message} (${sol.titulo?.substring(0, 20)})`);
-          } else {
-            deadlinesCreated++;
+        for (const sol of inserted || []) {
+          await supabase.rpc("assign_calculation", { p_solicitacao_id: sol.id });
+          // Inline deadline creation
+          if (sol.process_id && sol.data_limite) {
+            const { error: dlErr } = await supabase
+              .from("process_deadlines")
+              .upsert({
+                process_id: sol.process_id,
+                data_prazo: sol.data_limite,
+                ocorrencia: (sol.titulo || "Agendamento via e-mail").substring(0, 120),
+                detalhes: sol.descricao?.substring(0, 500) || null,
+                assigned_to: sol.assigned_to || null,
+                source: "planilha_cliente",
+                is_completed: false,
+                solicitacao_id: sol.id,
+              }, { onConflict: "process_id,data_prazo,ocorrencia", ignoreDuplicates: true });
+            if (!dlErr) deadlinesCreated++;
           }
         }
       }
-      console.log(`Deadlines created/updated: ${deadlinesCreated}`);
     }
+    console.log(`Deadlines created/updated: ${deadlinesCreated}`);
 
     await supabase.from("sync_logs").update({
       status: errors.length > 0 ? "partial" : "success",
