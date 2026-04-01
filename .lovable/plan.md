@@ -1,57 +1,78 @@
 
 
-## Vincular prazos abertos `planilha_cliente` às solicitações
+## Criar solicitações retroativas e vincular prazos órfãos
 
-### Diagnóstico
+### Situação atual
 
 | Métrica | Valor |
 |---------|-------|
-| Prazos abertos `planilha_cliente` sem vínculo | **1.060** (35 já vinculados) |
-| Match exato por `process_id` + `data_prazo = data_limite` | **715** |
-| Sem solicitação no mesmo processo | **689** (sem match possível) |
-| Mesmo processo, datas diferentes | **4** (match parcial) |
+| Prazos `planilha_cliente` abertos sem `solicitacao_id` | **693** |
+| Já vinculados (UPDATE anterior) | **402** |
+| Processos distintos afetados | ~601 |
 
-**Conclusão**: 715 de 1.060 podem ser vinculados automaticamente com alta confiança. Os 689 restantes não possuem solicitação correspondente no banco — foram criados diretamente pela planilha do cliente sem passar pelo fluxo de solicitações.
+O UPDATE anterior já foi executado e vinculou 402 prazos. Os 693 restantes não possuem solicitação correspondente no banco — precisam de solicitações retroativas.
 
-### Plano de execução
+### Plano
 
-**Passo 1 — Migration SQL** para vincular os 715 registros:
+**Passo 1 — Migration SQL: Criar solicitações retroativas + vincular**
+
+Uma única migration que:
+
+1. Insere uma `solicitacao` para cada prazo órfão com dados extraídos do próprio deadline e processo:
+   - `origem`: `'planilha_cliente'`
+   - `titulo`: `ocorrencia || ' - ' || numero_processo`
+   - `process_id`: do deadline
+   - `client_id`: `id_cliente` da tabela `processes`
+   - `data_limite`: `data_prazo` do deadline
+   - `status`: `'pendente'`
+   - `prioridade`: `'media'`
+2. Atualiza o `solicitacao_id` do deadline para apontar para a solicitação recém-criada
+
+Será feito com um CTE (`WITH ... INSERT ... RETURNING`) para executar atomicamente.
 
 ```sql
+WITH new_sols AS (
+  INSERT INTO solicitacoes (origem, titulo, process_id, client_id, data_limite, status, prioridade)
+  SELECT 
+    'planilha_5_clientes',
+    pd.ocorrencia || ' - ' || p.numero_processo,
+    pd.process_id,
+    p.id_cliente,
+    pd.data_prazo::text,
+    'pendente',
+    'media'
+  FROM process_deadlines pd
+  JOIN processes p ON p.id = pd.process_id
+  WHERE pd.source = 'planilha_cliente'
+    AND pd.is_completed = false
+    AND pd.solicitacao_id IS NULL
+  RETURNING id, process_id, data_limite
+)
 UPDATE process_deadlines pd
-SET solicitacao_id = sub.sol_id
-FROM (
-  SELECT DISTINCT ON (pd2.id)
-    pd2.id AS deadline_id,
-    s.id AS sol_id
-  FROM process_deadlines pd2
-  JOIN solicitacoes s 
-    ON s.process_id = pd2.process_id
-    AND s.data_limite::date = pd2.data_prazo
-  WHERE pd2.source = 'planilha_cliente'
-    AND pd2.is_completed = false
-    AND pd2.solicitacao_id IS NULL
-  ORDER BY pd2.id, s.created_at DESC
-) sub
-WHERE pd.id = sub.deadline_id;
+SET solicitacao_id = ns.id
+FROM new_sols ns
+WHERE pd.process_id = ns.process_id
+  AND pd.data_prazo = ns.data_limite::date
+  AND pd.source = 'planilha_cliente'
+  AND pd.is_completed = false
+  AND pd.solicitacao_id IS NULL;
 ```
 
-Usa `DISTINCT ON` para resolver casos onde múltiplas solicitações coincidem — pega a mais recente.
+**Passo 2 — Verificar frontend**
 
-**Passo 2 — Ajustar Edge Function `sync-email-agendamentos`** para vincular `solicitacao_id` automaticamente ao criar novos prazos (já faz parcialmente, mas garantir que o campo é sempre preenchido).
-
-**Passo 3 — Nenhuma alteração de schema** — a FK `solicitacao_id` já existe em `process_deadlines`.
+Navegar à aba Prazos Processuais e confirmar que a coluna "Origem" exibe o ícone de link com o título da solicitação para os prazos recém-vinculados, em vez de "Manual".
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| Migration SQL | UPDATE em batch dos 715 registros |
-| `supabase/functions/sync-email-agendamentos/index.ts` | Verificar se `solicitacao_id` é preenchido ao criar deadlines |
+| Migration SQL | INSERT solicitações retroativas + UPDATE deadlines |
+| Nenhum arquivo de código | Frontend já renderiza o badge (linha 131 do PrazosProcessuaisTab) |
 
 ### Resultado
 
-- **715 prazos** vinculados às suas solicitações de origem
-- **345 prazos** permanecerão sem vínculo (689 sem solicitação + 4 com datas diferentes − 35 já vinculados) — não há solicitação correspondente para eles
-- Frontend já exibe badge "Solicitação" nos prazos vinculados (implementado anteriormente)
+- **693 solicitações** criadas retroativamente com origem `planilha_5_clientes`
+- **693 prazos** vinculados às novas solicitações
+- **100%** dos prazos `planilha_cliente` abertos terão `solicitacao_id` preenchido
+- Frontend exibirá o badge de solicitação em todos esses prazos
 
