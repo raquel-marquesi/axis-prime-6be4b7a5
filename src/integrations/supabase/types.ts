@@ -2905,6 +2905,13 @@ export type Database = {
             Returns: Json
           }
         | { Args: { p_assigned_to?: string; p_month?: string }; Returns: Json }
+      get_process_counts_by_client: {
+        Args: never
+        Returns: {
+          client_id: string
+          process_count: number
+        }[]
+      }
       get_producao_aggregated: {
         Args: {
           p_dimension: string
