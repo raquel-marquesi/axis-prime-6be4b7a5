@@ -25,7 +25,7 @@ export function TesourariaReport() {
           <ReportExportButton
             data={data.accounts}
             columns={[
-              { key: 'descricao', label: 'Conta', format: (v: any, row: any) => v || `${row?.banco} - ${row?.conta}` },
+              { key: 'descricao', label: 'Conta' },
               { key: 'banco', label: 'Banco' },
               { key: 'entradas', label: 'Entradas', format: (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` },
               { key: 'saidas', label: 'Saídas', format: (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` },

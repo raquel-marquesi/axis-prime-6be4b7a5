@@ -174,7 +174,7 @@ export function usePrazosPorClienteReport() {
         if (d.is_completed) { groups[clientId].concluidos++; }
         else {
           groups[clientId].abertos++;
-          if (d.deadline_date && d.deadline_date < today) groups[clientId].atrasados++;
+          if (d.data_prazo && d.data_prazo < today) groups[clientId].atrasados++;
         }
       }
 
