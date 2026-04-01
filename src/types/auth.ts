@@ -90,7 +90,7 @@ export const MODULE_LABELS: Record<PermissionModule, string> = {
   financeiro: 'Financeiro',
   agenda: 'Agenda',
   relatorios: 'Relatórios',
-  solicitacoes: 'Solicitações',
+  solicitacoes: 'Prazos',
   premiacao: 'Premiação',
   usuarios: 'Usuários',
 };

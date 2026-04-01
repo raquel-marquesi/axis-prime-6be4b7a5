@@ -53,7 +53,7 @@ export function SolicitacoesPendentesWidget() {
         ) : topSolicitacoes.length === 0 ? (
           <div className="text-center py-4 text-muted-foreground">
             <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Nenhuma solicitação pendente</p>
+            <p className="text-sm">Nenhum prazo pendente</p>
           </div>
         ) : (
           <div className="space-y-3">

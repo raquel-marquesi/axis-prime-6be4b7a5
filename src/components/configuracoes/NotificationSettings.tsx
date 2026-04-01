@@ -42,8 +42,8 @@ export const NotificationSettings = () => {
           </div>
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label>Novas Solicitações</Label>
-              <p className="text-sm text-muted-foreground">Notificar quando receber novas solicitações</p>
+              <Label>Novos Prazos</Label>
+              <p className="text-sm text-muted-foreground">Notificar quando receber novos prazos</p>
             </div>
             <Switch checked={newSolicitacao} onCheckedChange={setNewSolicitacao} />
           </div>

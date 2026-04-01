@@ -113,7 +113,7 @@ export function DeadlinesTab({ processId, processInfo, driveFolderUrl }: Deadlin
                     {deadline.solicitacao_id && deadline.solicitacao && (
                       <Tooltip><TooltipTrigger asChild>
                         <span className="inline-flex h-5 items-center gap-1 px-1.5 rounded bg-accent text-accent-foreground text-[10px] font-medium cursor-help">
-                          <LinkIcon className="w-3 h-3" />Solicitação
+                          <LinkIcon className="w-3 h-3" />Prazo vinculado
                         </span>
                       </TooltipTrigger><TooltipContent><p>Origem: {deadline.solicitacao.titulo} ({deadline.solicitacao.prioridade})</p></TooltipContent></Tooltip>
                     )}

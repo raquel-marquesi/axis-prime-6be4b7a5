@@ -206,7 +206,7 @@ export function useSolicitacoes(filters?: SolicitacoesFilters) {
       toast({ title: 'Prazo removido' });
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao remover solicitação', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro ao remover prazo', description: error.message, variant: 'destructive' });
     },
   });
 
