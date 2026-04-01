@@ -8,9 +8,9 @@ export function usePrazosAbertosReport() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('process_deadlines')
-        .select('id, occurrence, deadline_date, is_completed, completed_at, assigned_to, process_id, source')
+        .select('id, ocorrencia, data_prazo, is_completed, completed_at, assigned_to, process_id, source')
         .eq('is_completed', false)
-        .order('deadline_date', { ascending: true });
+        .order('data_prazo', { ascending: true });
       if (error) throw error;
 
       const processIds = [...new Set((data || []).map(d => d.process_id).filter(Boolean))];
