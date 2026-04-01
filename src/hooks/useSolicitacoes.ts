@@ -169,7 +169,7 @@ export function useSolicitacoes(filters?: SolicitacoesFilters) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['solicitacoes'] });
-      toast({ title: 'Solicitação criada', description: 'A solicitação foi registrada com sucesso.' });
+      toast({ title: 'Prazo criado', description: 'O prazo foi registrado com sucesso.' });
     },
     onError: (error: Error) => {
       toast({ title: 'Erro ao criar solicitação', description: error.message, variant: 'destructive' });
