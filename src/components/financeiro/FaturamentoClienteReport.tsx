@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useFaturamentoClienteReport } from '@/hooks/useFinanceReports';
+import { ReportExportButton } from '@/components/relatorios/ReportExportButton';
 
 export function FaturamentoClienteReport() {
   const now = new Date();
