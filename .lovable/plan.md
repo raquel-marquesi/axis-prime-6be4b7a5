@@ -1,21 +1,31 @@
 
 
-## Fix GitHub Actions Node.js 20 deprecation warning
+## Excluir botões de importação e funções associadas da aba Processos
 
-### Problem
+### Arquivos a excluir
 
-The GitHub Actions workflow uses `actions/checkout@v4` and `supabase/setup-cli@v1` which run on Node.js 20, now deprecated.
+| Arquivo | Motivo |
+|---------|--------|
+| `src/components/processes/BulkImportXlsxDialog.tsx` | Componente "Importar XLSX/CSV" |
+| `src/components/processes/BatchImportProcessesDialog.tsx` | Componente "Importar Teste" |
+| `supabase/functions/bulk-import-data/index.ts` | Edge function usada apenas pelo BulkImportXlsxDialog |
+| `supabase/functions/import-csv-processes/index.ts` | Edge function usada apenas pelo BulkImportXlsxDialog |
+| `supabase/functions/batch-import-processes/index.ts` | Edge function usada apenas pelo BatchImportProcessesDialog |
+| `supabase/functions/xlsx-direct-import/index.ts` | Edge function sem uso no frontend |
 
-### Solution
+### Arquivo a editar
 
-Update `.github/workflows/supabase.yml`:
+**`src/pages/Processes.tsx`** — Remover:
+- Imports dos dois dialogs e dos ícones `Upload`, `FileSpreadsheet`
+- Estados `isImportOpen` e `isBulkImportOpen`
+- Os dois botões "Importar XLSX/CSV" e "Importar Teste"
+- Os dois componentes de dialog no JSX
 
-| Action | Current | Updated |
-|--------|---------|---------|
-| `actions/checkout` | `@v4` | `@v5` |
-| `supabase/setup-cli` | `@v1` | `@v2` |
+### Edge Functions a remover do Supabase (deploy)
 
-### File change
-
-**`.github/workflows/supabase.yml`** — Update action versions on lines 13 and 16.
+Usar a ferramenta `supabase--delete_edge_functions` para remover as 4 funções deployadas:
+- `bulk-import-data`
+- `import-csv-processes`
+- `batch-import-processes`
+- `xlsx-direct-import`
 
