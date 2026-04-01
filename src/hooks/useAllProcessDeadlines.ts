@@ -155,7 +155,7 @@ export function useAllProcessDeadlines(options: UseAllProcessDeadlinesOptions = 
       if (!isAdminOrManager() && !isFinanceiro()) {
         if (isCoordinatorOrAbove() && profile?.id) {
           const { data: teamProfiles } = await supabase
-            .from('profiles')
+            .from('profiles_safe' as any)
             .select('user_id')
             .eq('reports_to', profile.id);
           const teamUserIds = teamProfiles?.map(p => p.user_id) || [];
