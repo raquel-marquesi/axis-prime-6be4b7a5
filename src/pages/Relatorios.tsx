@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart3, Users, FileText, DollarSign, TrendingUp } from 'lucide-react';
+import { BarChart3, Users, FileText, DollarSign, TrendingUp, Clock } from 'lucide-react';
 import { DREReport } from '@/components/financeiro/DREReport';
 import { FaturamentoClienteReport } from '@/components/financeiro/FaturamentoClienteReport';
 import { FaturamentoProfissionalReport } from '@/components/financeiro/FaturamentoProfissionalReport';
 import { CentroCustosReport } from '@/components/financeiro/CentroCustosReport';
 import CarteiraReport from '@/components/relatorios/CarteiraReport';
+import { PrazosReport } from '@/components/relatorios/PrazosReport';
 
 export default function Relatorios() {
   return (
