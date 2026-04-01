@@ -75,7 +75,7 @@ export function SyncStatusWidget() {
         <CardContent className="space-y-2">
           <SyncLine label="Atividades" log={lastAtividades} />
           <SyncLine label="Agendamentos Externos" log={lastExternal} />
-          <SyncLine label="Solicitações Planilha" log={lastSolicitacoes} />
+          <SyncLine label="Prazos Planilha" log={lastSolicitacoes} />
         </CardContent>
       </Card>
       <SyncErrorsDialog open={errorsOpen} onOpenChange={setErrorsOpen} />

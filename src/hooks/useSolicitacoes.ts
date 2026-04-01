@@ -169,10 +169,10 @@ export function useSolicitacoes(filters?: SolicitacoesFilters) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['solicitacoes'] });
-      toast({ title: 'Solicitação criada', description: 'A solicitação foi registrada com sucesso.' });
+      toast({ title: 'Prazo criado', description: 'O prazo foi registrado com sucesso.' });
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao criar solicitação', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro ao criar prazo', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -189,10 +189,10 @@ export function useSolicitacoes(filters?: SolicitacoesFilters) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['solicitacoes'] });
-      toast({ title: 'Solicitação atualizada' });
+      toast({ title: 'Prazo atualizado' });
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao atualizar solicitação', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro ao atualizar prazo', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -203,10 +203,10 @@ export function useSolicitacoes(filters?: SolicitacoesFilters) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['solicitacoes'] });
-      toast({ title: 'Solicitação removida' });
+      toast({ title: 'Prazo removido' });
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao remover solicitação', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro ao remover prazo', description: error.message, variant: 'destructive' });
     },
   });
 

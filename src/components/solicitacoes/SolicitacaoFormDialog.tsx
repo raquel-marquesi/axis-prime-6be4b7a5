@@ -58,13 +58,13 @@ export function SolicitacaoFormDialog({ open, onOpenChange, solicitacao, onSubmi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Editar Solicitação' : 'Nova Solicitação'}</DialogTitle>
-          <DialogDescription>{isEditing ? 'Atualize as informações da solicitação.' : 'Preencha os dados para criar uma nova solicitação.'}</DialogDescription>
+          <DialogTitle>{isEditing ? 'Editar Prazo' : 'Novo Prazo'}</DialogTitle>
+          <DialogDescription>{isEditing ? 'Atualize as informações do prazo.' : 'Preencha os dados para criar um novo prazo.'}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField control={form.control} name="titulo" render={({ field }) => (<FormItem><FormLabel>Título *</FormLabel><FormControl><Input placeholder="Ex: Novo cálculo trabalhista" {...field} /></FormControl><FormMessage /></FormItem>)} />
-            <FormField control={form.control} name="descricao" render={({ field }) => (<FormItem><FormLabel>Descrição</FormLabel><FormControl><Textarea placeholder="Descreva os detalhes da solicitação..." className="resize-none" rows={3} {...field} /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="descricao" render={({ field }) => (<FormItem><FormLabel>Descrição</FormLabel><FormControl><Textarea placeholder="Descreva os detalhes do prazo..." className="resize-none" rows={3} {...field} /></FormControl><FormMessage /></FormItem>)} />
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="prioridade" render={({ field }) => (<FormItem><FormLabel>Prioridade</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>{Object.entries(PRIORIDADE_LABELS).map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>{Object.entries(STATUS_LABELS).map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />

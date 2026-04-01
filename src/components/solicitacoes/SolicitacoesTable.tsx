@@ -24,7 +24,7 @@ export function SolicitacoesTable({ solicitacoes, onEdit, onView, onDelete, onSt
   const handleConfirmDelete = () => { if (selectedId) onDelete(selectedId); setDeleteDialogOpen(false); setSelectedId(null); };
 
   if (isLoading) return <div className="flex items-center justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
-  if (solicitacoes.length === 0) return <div className="text-center py-8 text-muted-foreground">Nenhuma solicitação encontrada.</div>;
+  if (solicitacoes.length === 0) return <div className="text-center py-8 text-muted-foreground">Nenhum prazo encontrado.</div>;
 
   return (
     <>
@@ -67,7 +67,7 @@ export function SolicitacoesTable({ solicitacoes, onEdit, onView, onDelete, onSt
         </Table>
       </div>
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Confirmar exclusão</AlertDialogTitle><AlertDialogDescription>Tem certeza que deseja excluir esta solicitação? Esta ação não pode ser desfeita.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDelete}>Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Confirmar exclusão</AlertDialogTitle><AlertDialogDescription>Tem certeza que deseja excluir este prazo? Esta ação não pode ser desfeita.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDelete}>Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
       </AlertDialog>
     </>
   );
