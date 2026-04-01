@@ -158,7 +158,7 @@ export function useAllProcessDeadlines(options: UseAllProcessDeadlinesOptions = 
             .from('profiles_safe' as any)
             .select('user_id')
             .eq('reports_to', profile.id);
-          const teamUserIds = teamProfiles?.map(p => p.user_id) || [];
+          const teamUserIds = (teamProfiles as any[])?.map((p: any) => p.user_id) || [];
           if (teamUserIds.length > 0) {
             query = query.in('assigned_to', [...teamUserIds, userId!]);
           } else {
