@@ -1,4 +1,5 @@
 import { Clock, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export function ManagerDashboard() {
   const { data: stats, isLoading } = useDashboardStats();
   const { session } = useAuth();
+  const navigate = useNavigate();
   const userEmail = session?.user?.email || '';
   if (isLoading) { return (<div className="space-y-6"><div className="grid gap-4 md:grid-cols-2">{[1,2].map(i => (<Card key={i}><CardHeader className="pb-2"><Skeleton className="h-4 w-24" /></CardHeader><CardContent><Skeleton className="h-8 w-16" /></CardContent></Card>))}</div></div>); }
   const prazoStats = [
