@@ -58,8 +58,8 @@ export function SolicitacaoFormDialog({ open, onOpenChange, solicitacao, onSubmi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Editar Solicitação' : 'Nova Solicitação'}</DialogTitle>
-          <DialogDescription>{isEditing ? 'Atualize as informações da solicitação.' : 'Preencha os dados para criar uma nova solicitação.'}</DialogDescription>
+          <DialogTitle>{isEditing ? 'Editar Prazo' : 'Novo Prazo'}</DialogTitle>
+          <DialogDescription>{isEditing ? 'Atualize as informações do prazo.' : 'Preencha os dados para criar um novo prazo.'}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
