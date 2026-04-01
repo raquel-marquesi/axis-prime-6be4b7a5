@@ -25,7 +25,7 @@ export function useOverdueDeadlines(options: { limit?: number } = {}) {
 
       const assignedUserIds = [...new Set(deadlines.map(d => d.assigned_to).filter((id): id is string => id !== null))];
       let userNames: Record<string, string> = {};
-      if (assignedUserIds.length > 0) { const { data: profiles } = await supabase.from('profiles').select('user_id, full_name').in('user_id', assignedUserIds); profiles?.forEach(p => { userNames[p.user_id] = p.full_name; }); }
+      if (assignedUserIds.length > 0) { const { data: profiles } = await supabase.from('profiles_safe' as any).select('user_id, full_name').in('user_id', assignedUserIds); (profiles as any[])?.forEach((p: any) => { userNames[p.user_id] = p.full_name; }); }
 
       const processIds = [...new Set(deadlines.map(d => d.process_id))];
       const earliestPrazo = deadlines.reduce((min, d) => d.data_prazo < min ? d.data_prazo : min, deadlines[0].data_prazo);

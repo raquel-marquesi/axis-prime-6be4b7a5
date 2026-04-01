@@ -14,7 +14,7 @@ export function useProdutividadeReport(filters: ProdutividadeFilters) {
     queryFn: async () => {
       const start = format(startOfMonth(month), 'yyyy-MM-dd');
       const end = format(endOfMonth(month), 'yyyy-MM-dd');
-      let profilesQuery = supabase.from('profiles').select('user_id, full_name, area, reports_to, id').eq('is_active', true);
+      let profilesQuery = supabase.from('profiles_safe' as any).select('user_id, full_name, area, reports_to, id').eq('is_active', true);
       if (areaFilter) profilesQuery = profilesQuery.eq('area', areaFilter as any);
       const { data: profiles } = await profilesQuery;
       if (!profiles?.length) return { rows: [], history: [] };

@@ -179,7 +179,7 @@ export function useAllProcessDeadlines(options: UseAllProcessDeadlinesOptions = 
       let userNames: Record<string, string> = {};
       if (allUserIds.length > 0) {
         const { data: profiles } = await supabase
-          .from('profiles')
+          .from('profiles_safe' as any)
           .select('user_id, full_name')
           .in('user_id', allUserIds);
         profiles?.forEach(p => { userNames[p.user_id] = p.full_name; });

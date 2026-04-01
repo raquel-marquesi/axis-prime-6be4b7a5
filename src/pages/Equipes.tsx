@@ -42,7 +42,7 @@ const Equipes = () => {
     queryKey: ["profiles-full"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("profiles" as any)
+        .from("profiles_safe" as any)
         .select("id, user_id, full_name, sigla, area, reports_to, is_active");
       if (error) throw error;
       return (data as unknown as ProfileRow[]) ?? [];
