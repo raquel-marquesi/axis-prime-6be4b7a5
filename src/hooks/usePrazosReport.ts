@@ -131,7 +131,7 @@ export function usePrazosPorEquipeReport() {
         if (d.is_completed) { groups[leaderId].concluidos++; }
         else {
           groups[leaderId].abertos++;
-          if (d.deadline_date && d.deadline_date < today) groups[leaderId].atrasados++;
+          if (d.data_prazo && d.data_prazo < today) groups[leaderId].atrasados++;
         }
       }
 
