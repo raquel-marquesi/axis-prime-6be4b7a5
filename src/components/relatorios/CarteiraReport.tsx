@@ -12,7 +12,7 @@ const CarteiraReport = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('clients')
-        .select('id, razao_social, nome, tipo, is_active, tipo_cadastro, contrato_data_inicio, contrato_data_vencimento')
+        .select('id, razao_social, nome, tipo, is_active, tipo_cadastro, contrato_data_inicio, contrato_data_vencimento, centro_custo')
         .eq('tipo_cadastro', 'cliente')
         .order('razao_social');
       if (error) throw error;
