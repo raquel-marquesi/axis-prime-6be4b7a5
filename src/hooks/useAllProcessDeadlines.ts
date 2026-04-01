@@ -59,10 +59,10 @@ export function useDeadlineCounts() {
     if (!isAdminOrManager() && !isFinanceiro()) {
       if (isCoordinatorOrAbove() && profile?.id) {
         const { data: teamProfiles } = await supabase
-          .from('profiles')
+          .from('profiles_safe' as any)
           .select('user_id')
           .eq('reports_to', profile.id);
-        const teamUserIds = teamProfiles?.map(p => p.user_id) || [];
+        const teamUserIds = teamProfiles?.map((p: any) => p.user_id) || [];
         if (teamUserIds.length > 0) {
           query = query.in('assigned_to', [...teamUserIds, userId!]);
         } else {
