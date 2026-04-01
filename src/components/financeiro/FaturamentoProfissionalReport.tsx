@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useFaturamentoProfissionalReport } from '@/hooks/useFinanceReports';
+import { ReportExportButton } from '@/components/relatorios/ReportExportButton';
 
 export function FaturamentoProfissionalReport() {
   const now = new Date();
