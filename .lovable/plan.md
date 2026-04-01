@@ -1,84 +1,56 @@
 
 
-## Corrigir `sync-email-agendamentos`: deadlines não sendo criados
+## Corrigir balanceamento de atribuição de prazos
 
-### Causa raiz
+### Problema
 
-O problema é um **timeout sequencial**. A função executa três fases em série:
+A função `assign_calculation` prioriza histórico (quem mais trabalhou com o cliente/tipo), criando um ciclo de acumulação. O balanceamento por carga (critério 4) quase nunca é acionado. Resultado: diferenças de até 50x na mesma área.
 
-1. **Leitura das 52 abas** do Google Sheets (~30s)
-2. **Insert de solicitações + `assign_calculation` RPC** para cada registro (chamada individual por registro → ~80-120s para 500+ registros)
-3. **Criação de `process_deadlines`** para os registros inseridos
+### Solução proposta
 
-A fase 2 demora tanto que a função atinge o timeout (~150s) antes de chegar à fase 3. Nos logs:
-- 1ª execução: 586 para inserir → **timeout antes dos deadlines**
-- 2ª execução: 387 para inserir → **timeout antes dos deadlines**
-- 3ª execução: apenas 2 novos → chegou aos deadlines mas `insertedIds` só continha 2 registros (que provavelmente não tinham `process_id` + `data_limite`)
+Modificar a função SQL `assign_calculation` para incorporar balanceamento em todos os critérios, não apenas no fallback.
 
-Resultado: **78 solicitações** têm `process_id` + `data_limite` mas nenhum `process_deadline` foi criado.
+**Mudanças na lógica:**
 
-### Plano de correção (2 etapas)
+1. **Critério 1 (mesmo cliente)**: Manter a preferência por profissionais com histórico no cliente, mas entre os candidatos, escolher o que tem **menor carga atual** (não o que tem mais histórico)
+2. **Critério 2 (mesmo tipo de cálculo)**: Idem — filtrar por experiência, ordenar por menor carga
+3. **Critério 3 (coordenador)**: Sem alteração (é uma atribuição de responsabilidade, não de carga)
+4. **Critério 4 (fallback)**: Sem alteração (já faz balanceamento)
 
-**Etapa 1 — Migration SQL: Criar os 78 deadlines faltantes agora**
-
-Inserir os `process_deadlines` para as 78 solicitações `email_sheet` que têm `process_id` + `data_limite` mas sem deadline vinculado:
+**SQL revisado (critérios 1 e 2):**
 
 ```sql
-WITH missing AS (
-  INSERT INTO process_deadlines (process_id, data_prazo, ocorrencia, detalhes, assigned_to, source, is_completed, solicitacao_id)
-  SELECT
-    s.process_id,
-    s.data_limite::date,
-    LEFT(s.titulo, 120),
-    LEFT(s.descricao, 500),
-    s.assigned_to,
-    'planilha_cliente',
-    false,
-    s.id
+-- Critério 1: profissional com histórico no cliente, menor carga atual
+SELECT s.assigned_to INTO v_assigned
   FROM solicitacoes s
-  WHERE s.origem = 'email_sheet'
-    AND s.process_id IS NOT NULL
-    AND s.data_limite IS NOT NULL
-    AND NOT EXISTS (
-      SELECT 1 FROM process_deadlines pd WHERE pd.solicitacao_id = s.id
-    )
-  ON CONFLICT (process_id, data_prazo, ocorrencia) WHERE is_completed = false
-  DO UPDATE SET solicitacao_id = EXCLUDED.solicitacao_id
-  RETURNING id
-)
-SELECT COUNT(*) FROM missing;
+  JOIN profiles p ON p.user_id = s.assigned_to AND p.is_active = true
+ WHERE s.client_id = v_client_id
+   AND s.assigned_to IS NOT NULL
+   AND s.id != p_solicitacao_id
+ GROUP BY s.assigned_to
+ HAVING COUNT(*) >= 2  -- tem experiência mínima com o cliente
+ ORDER BY (
+   SELECT COUNT(*) FROM solicitacoes sub
+    WHERE sub.assigned_to = s.assigned_to
+      AND sub.status IN ('pendente', 'em_andamento')
+ ) ASC
+ LIMIT 1;
 ```
 
-**Etapa 2 — Refatorar a Edge Function para evitar timeout futuro**
+A mesma lógica se aplica ao critério 2.
 
-Modificar `sync-email-agendamentos/index.ts`:
-
-1. **Mover a criação de deadlines para dentro do loop de insert** (linhas 348-375), criando o deadline imediatamente após cada solicitação ser inserida, em vez de acumular `insertedIds` e processar depois
-2. **Remover a chamada individual a `assign_calculation`** dentro do loop — usar um único UPDATE batch no final ou chamar o RPC apenas para registros com `client_id`
-3. **Criar deadline inline**: logo após o insert de cada solicitação, se ela tiver `process_id` + `data_limite`, fazer o upsert do deadline ali mesmo
-
-Estrutura simplificada:
-```
-for batch in toInsert:
-  insert batch → solicitacoes
-  for each inserted:
-    assign_calculation(id)        // mantém
-    if process_id + data_limite:  // NOVO: inline
-      upsert process_deadline     
-```
-
-Isso garante que mesmo com timeout, os deadlines já criados ficam no banco.
-
-### Arquivos
+### Arquivo
 
 | Arquivo | Ação |
 |---------|------|
-| Migration SQL | Criar 78 deadlines faltantes para solicitações `email_sheet` |
-| `supabase/functions/sync-email-agendamentos/index.ts` | Mover criação de deadlines para dentro do loop de insert (inline) |
+| Migration SQL | `CREATE OR REPLACE FUNCTION assign_calculation` com a lógica corrigida |
 
-### Resultado
+### Ação adicional: redistribuir carga atual
 
-- **78 deadlines** criados imediatamente via migration
-- Futuras execuções criarão deadlines em tempo real, resistentes a timeout
-- Total de deadlines `planilha_cliente` passará de ~1.095 para ~1.173
+Opcionalmente, executar um script de rebalanceamento dos 109 prazos sem atribuição, usando a nova lógica.
+
+### Resultado esperado
+
+- Novos prazos serão distribuídos de forma equilibrada entre profissionais com experiência
+- A concentração de carga em poucos profissionais será reduzida progressivamente
 
