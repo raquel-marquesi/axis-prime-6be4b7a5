@@ -33,7 +33,7 @@ const CarteiraReport = () => {
 
   const enrichedClients = clients.map((c: any) => ({
     ...c,
-    processo_count: (processCounts as any)[c.id] || 0,
+    processo_count: processCounts[c.id] || 0,
     display_name: c.razao_social || c.nome || '—',
     centro_custo_display: c.centro_custo || '',
   }));
