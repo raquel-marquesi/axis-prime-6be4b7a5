@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart3, Users, FileText, DollarSign, TrendingUp } from 'lucide-react';
+import { BarChart3, Users, FileText, DollarSign, TrendingUp, Clock } from 'lucide-react';
 import { DREReport } from '@/components/financeiro/DREReport';
 import { FaturamentoClienteReport } from '@/components/financeiro/FaturamentoClienteReport';
 import { FaturamentoProfissionalReport } from '@/components/financeiro/FaturamentoProfissionalReport';
 import { CentroCustosReport } from '@/components/financeiro/CentroCustosReport';
 import CarteiraReport from '@/components/relatorios/CarteiraReport';
+import { PrazosReport } from '@/components/relatorios/PrazosReport';
 
 export default function Relatorios() {
   return (
@@ -23,6 +24,7 @@ export default function Relatorios() {
           <TabsTrigger value="faturamento-profissional" className="flex items-center gap-2"><TrendingUp className="w-4 h-4" />Fat. por Profissional</TabsTrigger>
           <TabsTrigger value="centro-custos" className="flex items-center gap-2"><DollarSign className="w-4 h-4" />Centro de Custos</TabsTrigger>
           <TabsTrigger value="carteira" className="flex items-center gap-2"><FileText className="w-4 h-4" />Carteira</TabsTrigger>
+          <TabsTrigger value="prazos" className="flex items-center gap-2"><Clock className="w-4 h-4" />Prazos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dre"><DREReport /></TabsContent>
@@ -30,6 +32,7 @@ export default function Relatorios() {
         <TabsContent value="faturamento-profissional"><FaturamentoProfissionalReport /></TabsContent>
         <TabsContent value="centro-custos"><CentroCustosReport /></TabsContent>
         <TabsContent value="carteira"><CarteiraReport /></TabsContent>
+        <TabsContent value="prazos"><PrazosReport /></TabsContent>
       </Tabs>
     </div>
   );

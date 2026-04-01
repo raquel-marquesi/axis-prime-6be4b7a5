@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useFaturamentoClienteReport } from '@/hooks/useFinanceReports';
+import { ReportExportButton } from '@/components/relatorios/ReportExportButton';
 
 export function FaturamentoClienteReport() {
   const now = new Date();
@@ -19,6 +20,22 @@ export function FaturamentoClienteReport() {
         <div><Label>Data Início</Label><Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></div>
         <div><Label>Data Fim</Label><Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
       </div>
+      {data && data.length > 0 && (
+        <div className="flex justify-end">
+          <ReportExportButton
+            data={data}
+            columns={[
+              { key: 'accountName', label: 'Conta' },
+              { key: 'total', label: 'Total', format: (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` },
+              { key: 'emitidas', label: 'Emitidas', format: (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` },
+              { key: 'pagas', label: 'Pagas', format: (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` },
+              { key: 'emAtraso', label: 'Em Atraso', format: (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` },
+              { key: 'count', label: 'Qtd Notas' },
+            ]}
+            filename="faturamento-por-cliente"
+          />
+        </div>
+      )}
       {isLoading ? (
         <p className="text-center text-muted-foreground py-8">Carregando...</p>
       ) : !data || data.length === 0 ? (

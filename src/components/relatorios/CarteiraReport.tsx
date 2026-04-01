@@ -12,7 +12,7 @@ const CarteiraReport = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('clients')
-        .select('id, razao_social, nome, tipo, is_active, tipo_cadastro, contrato_data_inicio, contrato_data_vencimento')
+        .select('id, razao_social, nome, tipo, is_active, tipo_cadastro, contrato_data_inicio, contrato_data_vencimento, centro_custo')
         .eq('tipo_cadastro', 'cliente')
         .order('razao_social');
       if (error) throw error;
@@ -38,6 +38,7 @@ const CarteiraReport = () => {
     ...c,
     processo_count: (processCounts as any)[c.id] || 0,
     display_name: c.razao_social || c.nome || '—',
+    centro_custo_display: c.centro_custo || '',
   }));
 
   const exportColumns = [
@@ -45,6 +46,7 @@ const CarteiraReport = () => {
     { key: 'tipo', label: 'Tipo' },
     { key: 'processo_count', label: 'Processos' },
     { key: 'is_active', label: 'Status', format: (v: boolean) => v ? 'Ativo' : 'Inativo' },
+    { key: 'centro_custo_display', label: 'Centro de Custo' },
     { key: 'contrato_data_inicio', label: 'Início Contrato' },
     { key: 'contrato_data_vencimento', label: 'Vencimento Contrato' },
   ];

@@ -43,7 +43,20 @@ export function ContasReceberReport() {
               <SelectItem value="vencida">Vencida</SelectItem>
             </SelectContent>
           </Select>
-          <ReportExportButton data={filtered} columns={[{ key: 'numero_nf', label: 'NF' }, { key: 'descricao', label: 'Descrição' }, { key: 'valor', label: 'Valor', format: fmt }, { key: 'data_vencimento', label: 'Vencimento' }, { key: 'status', label: 'Status' }]} filename="contas-receber" />
+          <ReportExportButton data={filtered.map((i: any) => ({
+            ...i,
+            tomador: (i.billing_contact as any)?.razao_social || '',
+            centro_custo_nf: (i.billing_contact as any)?.centro_custo || '',
+          }))} columns={[
+            { key: 'numero_nf', label: 'NF' },
+            { key: 'descricao', label: 'Descrição' },
+            { key: 'tomador', label: 'Tomador' },
+            { key: 'valor', label: 'Valor', format: fmt },
+            { key: 'data_emissao', label: 'Data Emissão' },
+            { key: 'data_vencimento', label: 'Vencimento' },
+            { key: 'centro_custo_nf', label: 'Centro de Custo' },
+            { key: 'status', label: 'Status' },
+          ]} filename="contas-receber" />
         </div>
       </CardHeader>
       <CardContent>
