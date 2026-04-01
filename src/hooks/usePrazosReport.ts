@@ -86,7 +86,7 @@ export function usePrazosPorProfissionalReport() {
         if (d.is_completed) { groups[uid].concluidos++; }
         else {
           groups[uid].abertos++;
-          if (d.deadline_date && d.deadline_date < today) groups[uid].atrasados++;
+          if (d.data_prazo && d.data_prazo < today) groups[uid].atrasados++;
         }
       }
 
