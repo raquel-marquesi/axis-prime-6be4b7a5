@@ -4,14 +4,12 @@ import { useProcesses, Process } from '@/hooks/useProcesses';
 import ProcessesTable from '@/components/processes/ProcessesTable';
 import ProcessFormDialog from '@/components/processes/ProcessFormDialog';
 import ProcessDetailsDialog from '@/components/processes/ProcessDetailsDialog';
-import BatchImportProcessesDialog from '@/components/processes/BatchImportProcessesDialog';
-import BulkImportXlsxDialog from '@/components/processes/BulkImportXlsxDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Plus, Search, Upload, FileSpreadsheet } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AreaProcesso } from '@/hooks/useProcesses';
 
@@ -30,8 +28,6 @@ export default function Processes() {
   const [selectedProcess, setSelectedProcess] = useState<Process | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [editProcess, setEditProcess] = useState<Process | null>(null);
-  const [isImportOpen, setIsImportOpen] = useState(false);
-  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
   const filteredProcesses = useMemo(() => {
     return processes.filter((process) => {
@@ -64,17 +60,9 @@ export default function Processes() {
             <p className="text-sm text-muted-foreground">Gerencie processos trabalhistas</p>
           </div>
           {canEditProcesses && (
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsBulkImportOpen(true)}>
-                <FileSpreadsheet className="w-4 h-4 mr-2" />Importar XLSX/CSV
-              </Button>
-              <Button variant="outline" onClick={() => setIsImportOpen(true)}>
-                <Upload className="w-4 h-4 mr-2" />Importar Teste
-              </Button>
-              <Button onClick={() => setIsFormOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />Novo Processo
-              </Button>
-            </div>
+            <Button onClick={() => setIsFormOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />Novo Processo
+            </Button>
           )}
         </div>
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
@@ -111,8 +99,6 @@ export default function Processes() {
       </div>
       <ProcessFormDialog open={isFormOpen} onOpenChange={handleCloseForm} process={editProcess} />
       <ProcessDetailsDialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen} process={selectedProcess} onEdit={handleEdit} />
-      <BatchImportProcessesDialog open={isImportOpen} onOpenChange={setIsImportOpen} />
-      <BulkImportXlsxDialog open={isBulkImportOpen} onOpenChange={setIsBulkImportOpen} />
     </>
   );
 }
