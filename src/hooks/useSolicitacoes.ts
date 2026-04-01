@@ -172,7 +172,7 @@ export function useSolicitacoes(filters?: SolicitacoesFilters) {
       toast({ title: 'Prazo criado', description: 'O prazo foi registrado com sucesso.' });
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao criar solicitação', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro ao criar prazo', description: error.message, variant: 'destructive' });
     },
   });
 
