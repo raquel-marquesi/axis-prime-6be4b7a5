@@ -71,7 +71,7 @@ export default function Dashboard() {
     
     return (
       <div className="space-y-6">
-        <Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/solicitacoes')}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Prazos Pendentes
