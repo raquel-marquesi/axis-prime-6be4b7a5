@@ -72,7 +72,7 @@ export function usePrazosPorProfissionalReport() {
       if (error) throw error;
 
       const userIds = [...new Set((data || []).map(d => d.assigned_to).filter(Boolean))];
-      const { data: profiles } = await supabase.from('profiles' as any).select('user_id, full_name').in('user_id', userIds as string[]);
+      const { data: profiles } = await supabase.from('profiles_safe' as any).select('user_id, full_name').in('user_id', userIds as string[]);
       const profileMap: Record<string, string> = {};
       for (const p of ((profiles as any[]) || [])) profileMap[p.user_id] = p.full_name;
 
