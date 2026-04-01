@@ -20,23 +20,20 @@ const CarteiraReport = () => {
     },
   });
 
-  const { data: processCounts = [] } = useQuery({
+  const { data: processCounts = {} } = useQuery({
     queryKey: ['carteira-process-counts'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('processes')
-        .select('client_id')
-        .not('client_id', 'is', null);
+      const { data, error } = await supabase.rpc('get_process_counts_by_client');
       if (error) throw error;
       const counts: Record<string, number> = {};
-      data.forEach((p: any) => { counts[p.client_id] = (counts[p.client_id] || 0) + 1; });
+      (data || []).forEach((row: any) => { counts[row.client_id] = Number(row.process_count); });
       return counts;
     },
   });
 
   const enrichedClients = clients.map((c: any) => ({
     ...c,
-    processo_count: (processCounts as any)[c.id] || 0,
+    processo_count: processCounts[c.id] || 0,
     display_name: c.razao_social || c.nome || '—',
     centro_custo_display: c.centro_custo || '',
   }));
