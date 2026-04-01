@@ -189,7 +189,7 @@ export function useSolicitacoes(filters?: SolicitacoesFilters) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['solicitacoes'] });
-      toast({ title: 'Solicitação atualizada' });
+      toast({ title: 'Prazo atualizado' });
     },
     onError: (error: Error) => {
       toast({ title: 'Erro ao atualizar solicitação', description: error.message, variant: 'destructive' });
