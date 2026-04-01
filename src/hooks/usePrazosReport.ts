@@ -67,7 +67,7 @@ export function usePrazosPorProfissionalReport() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('process_deadlines')
-        .select('id, is_completed, deadline_date, assigned_to')
+        .select('id, is_completed, data_prazo, assigned_to')
         .not('assigned_to', 'is', null);
       if (error) throw error;
 
