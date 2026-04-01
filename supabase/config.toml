@@ -96,8 +96,5 @@ verify_jwt = false
 [functions.webhook-prazos]
 verify_jwt = false
 
-[functions.xlsx-direct-import]
-verify_jwt = false
-
 [functions.unify-historico]
 verify_jwt = false
