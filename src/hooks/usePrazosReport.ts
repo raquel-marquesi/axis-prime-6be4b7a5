@@ -43,14 +43,14 @@ export function usePrazosAbertosReport() {
 
       return (data || []).map(d => {
         const proc = processMap[d.process_id] || {};
-        const diasAtraso = d.deadline_date && d.deadline_date < todayStr ? differenceInDays(today, parseISO(d.deadline_date)) : 0;
-        const statusPrazo = d.deadline_date === todayStr ? 'Hoje' : diasAtraso > 0 ? 'Atrasado' : 'Futuro';
+        const diasAtraso = d.data_prazo && d.data_prazo < todayStr ? differenceInDays(today, parseISO(d.data_prazo)) : 0;
+        const statusPrazo = d.data_prazo === todayStr ? 'Hoje' : diasAtraso > 0 ? 'Atrasado' : 'Futuro';
         return {
           id: d.id,
           processo: proc.numero_processo || '—',
           cliente: clientMap[proc.client_id] || '—',
-          ocorrencia: d.occurrence || '—',
-          data_prazo: d.deadline_date,
+          ocorrencia: d.ocorrencia || '—',
+          data_prazo: d.data_prazo,
           responsavel: profileMap[d.assigned_to!] || 'Não atribuído',
           status_prazo: statusPrazo,
           dias_atraso: diasAtraso,
