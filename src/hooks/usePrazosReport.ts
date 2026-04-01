@@ -146,7 +146,7 @@ export function usePrazosPorClienteReport() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('process_deadlines')
-        .select('id, is_completed, deadline_date, process_id');
+        .select('id, is_completed, data_prazo, process_id');
       if (error) throw error;
 
       const processIds = [...new Set((data || []).map(d => d.process_id).filter(Boolean))];
