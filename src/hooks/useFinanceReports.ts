@@ -112,7 +112,7 @@ export function useFaturamentoProfissionalReport(startDate: string, endDate: str
       const { data, error } = await supabase.from('invoices').select('id, valor, created_by, data_vencimento').gte('data_vencimento', startDate).lte('data_vencimento', endDate).not('created_by', 'is', null);
       if (error) throw error;
       const userIds = [...new Set((data || []).map(i => i.created_by).filter(Boolean))];
-      const { data: profiles } = await supabase.from('profiles' as any).select('user_id, full_name').in('user_id', userIds as string[]);
+      const { data: profiles } = await supabase.from('profiles_safe' as any).select('user_id, full_name').in('user_id', userIds as string[]);
       const profileMap: Record<string, string> = {};
       for (const p of ((profiles as any[]) || [])) profileMap[p.user_id] = p.full_name;
       const groups: Record<string, { userId: string; name: string; total: number; count: number; average: number }> = {};

@@ -16,7 +16,7 @@ export function useOverdueDeadlines(options: { limit?: number } = {}) {
     queryFn: async (): Promise<OverdueDeadline[]> => {
       let query = supabase.from('process_deadlines').select(`id, process_id, data_prazo, ocorrencia, assigned_to, processes!inner (numero_processo, numero_pasta, reclamante_nome, area)`).lt('data_prazo', today).eq('is_completed', false).order('data_prazo', { ascending: true }).limit(limit);
       if (!isAdminOrManager() && !isFinanceiro()) {
-        if (isCoordinatorOrAbove() && profile?.id) { const { data: teamProfiles } = await supabase.from('profiles').select('user_id').eq('reports_to', profile.id); const teamUserIds = teamProfiles?.map(p => p.user_id) || []; if (teamUserIds.length > 0) query = query.in('assigned_to', [...teamUserIds, userId!]); else query = query.eq('assigned_to', userId!); }
+        if (isCoordinatorOrAbove() && profile?.id) { const { data: teamProfiles } = await supabase.from('profiles_safe' as any).select('user_id').eq('reports_to', profile.id); const teamUserIds = teamProfiles?.map((p: any) => p.user_id) || []; if (teamUserIds.length > 0) query = query.in('assigned_to', [...teamUserIds, userId!]); else query = query.eq('assigned_to', userId!); }
         else query = query.eq('assigned_to', userId!);
       }
       const { data: deadlines, error } = await query;
@@ -25,7 +25,7 @@ export function useOverdueDeadlines(options: { limit?: number } = {}) {
 
       const assignedUserIds = [...new Set(deadlines.map(d => d.assigned_to).filter((id): id is string => id !== null))];
       let userNames: Record<string, string> = {};
-      if (assignedUserIds.length > 0) { const { data: profiles } = await supabase.from('profiles').select('user_id, full_name').in('user_id', assignedUserIds); profiles?.forEach(p => { userNames[p.user_id] = p.full_name; }); }
+      if (assignedUserIds.length > 0) { const { data: profiles } = await supabase.from('profiles_safe' as any).select('user_id, full_name').in('user_id', assignedUserIds); (profiles as any[])?.forEach((p: any) => { userNames[p.user_id] = p.full_name; }); }
 
       const processIds = [...new Set(deadlines.map(d => d.process_id))];
       const earliestPrazo = deadlines.reduce((min, d) => d.data_prazo < min ? d.data_prazo : min, deadlines[0].data_prazo);

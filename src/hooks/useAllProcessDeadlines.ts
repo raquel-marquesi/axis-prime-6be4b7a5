@@ -59,10 +59,10 @@ export function useDeadlineCounts() {
     if (!isAdminOrManager() && !isFinanceiro()) {
       if (isCoordinatorOrAbove() && profile?.id) {
         const { data: teamProfiles } = await supabase
-          .from('profiles')
+          .from('profiles_safe' as any)
           .select('user_id')
           .eq('reports_to', profile.id);
-        const teamUserIds = teamProfiles?.map(p => p.user_id) || [];
+        const teamUserIds = teamProfiles?.map((p: any) => p.user_id) || [];
         if (teamUserIds.length > 0) {
           query = query.in('assigned_to', [...teamUserIds, userId!]);
         } else {
@@ -155,10 +155,10 @@ export function useAllProcessDeadlines(options: UseAllProcessDeadlinesOptions = 
       if (!isAdminOrManager() && !isFinanceiro()) {
         if (isCoordinatorOrAbove() && profile?.id) {
           const { data: teamProfiles } = await supabase
-            .from('profiles')
+            .from('profiles_safe' as any)
             .select('user_id')
             .eq('reports_to', profile.id);
-          const teamUserIds = teamProfiles?.map(p => p.user_id) || [];
+          const teamUserIds = (teamProfiles as any[])?.map((p: any) => p.user_id) || [];
           if (teamUserIds.length > 0) {
             query = query.in('assigned_to', [...teamUserIds, userId!]);
           } else {
@@ -179,10 +179,10 @@ export function useAllProcessDeadlines(options: UseAllProcessDeadlinesOptions = 
       let userNames: Record<string, string> = {};
       if (allUserIds.length > 0) {
         const { data: profiles } = await supabase
-          .from('profiles')
+          .from('profiles_safe' as any)
           .select('user_id, full_name')
           .in('user_id', allUserIds);
-        profiles?.forEach(p => { userNames[p.user_id] = p.full_name; });
+        (profiles as any[])?.forEach((p: any) => { userNames[p.user_id] = p.full_name; });
       }
 
       return deadlines.map((d: any) => {
