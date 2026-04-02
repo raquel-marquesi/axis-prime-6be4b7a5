@@ -396,9 +396,8 @@ Deno.serve(async (req) => {
     }
 
     // ── Pre-load reference data (shared across all sources) ──
-    const [profilesRes, processesRes, calcTypesRes] = await Promise.all([
+    const [profilesRes, calcTypesRes] = await Promise.all([
       supabase.from("profiles").select("user_id, full_name, sigla").eq("is_active", true),
-      supabase.from("processes").select("id, numero_processo").limit(15000),
       supabase.from("calculation_types").select("id, name").eq("is_active", true),
     ]);
 
@@ -407,10 +406,33 @@ Deno.serve(async (req) => {
       profileById.set(p.user_id, p.full_name || p.sigla || p.user_id);
     }
 
-    const processMap = new Map<string, string>();   // normalized numero → id; or uuid → id
-    for (const p of processesRes.data || []) {
-      if (p.numero_processo) processMap.set(p.numero_processo.replace(/[.\-\/\s]/g, ""), p.id);
-      processMap.set(p.id, p.id); // UUID direct lookup
+    // Paginated process loading — no limit
+    const processMap = new Map<string, string>();
+    let procOffset = 0;
+    while (true) {
+      const { data: procPage } = await supabase
+        .from("processes").select("id, numero_processo")
+        .range(procOffset, procOffset + 999);
+      if (!procPage || procPage.length === 0) break;
+      for (const p of procPage) {
+        if (p.numero_processo) processMap.set(p.numero_processo.replace(/[.\-\/\s]/g, ""), p.id);
+        processMap.set(p.id, p.id);
+      }
+      if (procPage.length < 1000) break;
+      procOffset += 1000;
+    }
+
+    // Client map for auto-create process
+    const { data: clientsData } = await supabase.from("clients").select("id, nome, razao_social, nome_fantasia");
+    const clientMap = new Map<string, string>();
+    for (const c of clientsData || []) {
+      for (const f of [c.nome, c.razao_social, c.nome_fantasia]) {
+        if (f) clientMap.set(f.toUpperCase().trim(), c.id);
+      }
+    }
+    const { data: clientAliases } = await supabase.from("client_aliases").select("alias, client_id");
+    for (const a of clientAliases || []) {
+      if (a.alias) clientMap.set(a.alias.toUpperCase().trim(), a.client_id);
     }
 
     const calcTypeMap = new Map<string, string>();  // normalized name → id
@@ -427,6 +449,30 @@ Deno.serve(async (req) => {
         if (key.includes(lower) || lower.includes(key)) return id;
       }
       return null;
+    }
+
+    async function autoCreateProcess(
+      numeroCnj: string, clientId: string, reclamante: string, area: "trabalhista" | "civel"
+    ): Promise<string | null> {
+      try {
+        const { data: newProc, error: procErr } = await supabase
+          .from("processes")
+          .insert({ numero_processo: numeroCnj.trim(), id_cliente: clientId, reclamante_nome: reclamante || "N/A", tipo_acao: "individual", area })
+          .select("id, numero_pasta").single();
+        if (procErr || !newProc) { allErrors.push(`Auto-create: ${procErr?.message} (${numeroCnj})`); return null; }
+        processMap.set(numeroCnj.replace(/[.\-\/\s]/g, ""), newProc.id);
+        try {
+          const { data: clientData } = await supabase.from("clients").select("razao_social, nome_fantasia, nome, tipo").eq("id", clientId).single();
+          const clientName = clientData?.tipo === "juridica" ? clientData.razao_social || clientData.nome_fantasia || "Cliente" : clientData?.nome || "Cliente";
+          const driveResp = await fetch(`${supabaseUrl}/functions/v1/google-drive`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRoleKey}` },
+            body: JSON.stringify({ action: "createProcessFolder", userEmail: "integracao@marquesi.adv.br", clientName, processNumber: numeroCnj, folderNumber: newProc.numero_pasta }),
+          });
+          if (driveResp.ok) { const d = await driveResp.json(); if (d?.processFolder?.id) await supabase.from("processes").update({ drive_folder_id: d.processFolder.id }).eq("id", newProc.id); }
+        } catch (driveErr) { console.error("Drive folder creation failed:", driveErr); }
+        return newProc.id;
+      } catch (e: any) { allErrors.push(`Auto-create: ${e.message} (${numeroCnj})`); return null; }
     }
 
     // ── Load existing pautas rows for dedup ──
@@ -491,6 +537,13 @@ Deno.serve(async (req) => {
           if (!processId && parsed.processoNumero) {
             const clean = parsed.processoNumero.replace(/[.\-\/\s]/g, "");
             processId = processMap.get(clean) || null;
+          }
+          // Auto-create process if CNJ present but not in DB
+          if (!processId && parsed.processoNumero) {
+            const clientId = parsed.processoCliente
+              ? (clientMap.get(parsed.processoCliente.toUpperCase().trim()) || null)
+              : null;
+            if (clientId) processId = await autoCreateProcess(parsed.processoNumero, clientId, parsed.processoParte, parsed.area);
           }
 
           const calcTypeId = resolveCalcType(parsed.calculoTipo);
