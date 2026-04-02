@@ -2555,13 +2555,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "team_clients_team_lead_id_fkey"
-            columns: ["team_lead_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_safe"
-            referencedColumns: ["id"]
-          },
         ]
       }
       timesheet_entries: {
@@ -2791,55 +2784,29 @@ export type Database = {
       profiles_safe: {
         Row: {
           area: Database["public"]["Enums"]["area_setor"] | null
-          avatar_url: string | null
-          branch_id: string | null
-          created_at: string | null
           email: string | null
           full_name: string | null
-          id: string | null
           is_active: boolean | null
-          reports_to: string | null
           sigla: string | null
-          updated_at: string | null
           user_id: string | null
         }
         Insert: {
           area?: Database["public"]["Enums"]["area_setor"] | null
-          avatar_url?: string | null
-          branch_id?: string | null
-          created_at?: string | null
           email?: string | null
           full_name?: string | null
-          id?: string | null
           is_active?: boolean | null
-          reports_to?: string | null
           sigla?: string | null
-          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
           area?: Database["public"]["Enums"]["area_setor"] | null
-          avatar_url?: string | null
-          branch_id?: string | null
-          created_at?: string | null
           email?: string | null
           full_name?: string | null
-          id?: string | null
           is_active?: boolean | null
-          reports_to?: string | null
           sigla?: string | null
-          updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Functions: {
