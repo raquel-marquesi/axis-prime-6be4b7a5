@@ -1,85 +1,132 @@
 
+Objetivo: restaurar a rota `/financeiro` conforme a regra histórica já aprovada no projeto: ela deve ser o hub central do módulo financeiro, separada do `FinanceDashboard` da home.
 
-## Plano: Corrigir Edge Function + Backfill + Cron
+Diagnóstico recuperado do histórico + código atual:
+- A decisão aprovada anteriormente foi: manter o Financeiro em 6 abas fixas — Visão Geral, Transações, Faturamento, Relatórios, Impostos e Configurações.
+- `src/pages/Financeiro.tsx` ainda tem essas 6 abas, mas parte da centralização se perdeu:
+  - `RentabilidadeChart` e `PremiacaoVsFaturamentoChart` estão implementados, porém presos ao `src/components/dashboard/FinanceDashboard.tsx`;
+  - `FaturamentoClienteReport` e `FaturamentoProfissionalReport` existem e funcionam, mas hoje só aparecem em `/relatorios`, não no painel financeiro;
+  - `InvoiceFormDialog`, `ExpenseFormDialog` e `BatchInvoiceDialog` existem no módulo, mas estão órfãos ou sem ponto de entrada claro na página Financeiro;
+  - o `FinanceDashboard` continua correto como widget resumido do Dashboard e não deve substituir `/financeiro`.
 
-### Parte 1 — Corrigir `sync-email-agendamentos`
+Plano de restauração
 
-**Arquivo:** `supabase/functions/sync-email-agendamentos/index.ts`
+1. Restaurar a composição da página Financeiro em `src/pages/Financeiro.tsx`
+- Preservar as 6 abas aprovadas.
+- Reorganizar apenas a composição/navegação, sem reescrever regras de negócio já existentes.
 
-Correções na inserção de `solicitacoes` (linhas 309-326):
-- Adicionar `ai_confidence` parseado da coluna CONFIANÇA IA
-- Adicionar `extracted_details` JSONB com: `remetente_nome`, `fase_processual`, `gcpj`, `reclamante`, `empresa_re`, `grupo_cliente`, `prazo_preventivo`, `prazo_fatal`, `lido_em`
-- Usar coluna GRUPO/CLIENTE para resolver `client_id` antes do fallback pelo nome da aba
+2. Fortalecer a aba Visão Geral
+- Manter:
+  - `FinanceSummary`
+  - `AnaliseFinanceiraTab`
+  - `RecebiveisWidget`
+  - `ProjecaoReceitaWidget`
+  - `FinanceCharts`
+- Reintegrar:
+  - `RentabilidadeChart`
+  - `PremiacaoVsFaturamentoChart`
+- Regra: esses componentes podem continuar também no Dashboard, mas `/financeiro` volta a concentrar a visão analítica completa.
 
-Correções na criação de `process_deadlines` (linhas 393-402):
-- Trocar `source: "planilha_cliente"` por `source: "sheet_agendamentos"`
-- Adicionar `solicitacao_id: sol.id`
-- Usar FASE PROCESSUAL como `ocorrencia` (via `extracted_details`), fallback para título
-- Usar `upsert` com `onConflict` (mesmo padrão de `sync-solicitacoes-sheet`)
+3. Restaurar entradas operacionais da aba Transações
+- Manter:
+  - `FinanceTable`
+  - `ExpensesTable`
+  - `AccountsTable`
+- Recolocar gatilhos visíveis para:
+  - `AddTransactionDialog`
+  - `ExpenseFormDialog`
+- Se necessário, ajustar cabeçalhos/ações dos blocos para que o usuário consiga lançar movimentações e despesas sem depender de caminhos indiretos.
 
-Correção na query de solicitações para deadlines (linha 375):
-- Incluir `extracted_details` no select para acessar `fase_processual`
+4. Restaurar a aba Faturamento como módulo operacional completo
+- Manter:
+  - `AgendaFaturamentoWidget`
+  - `InvoicesTable`
+  - `BoletosTab`
+  - `NfseTab`
+  - `ContratosTab`
+- Recolocar acessos explícitos a:
+  - `InvoiceFormDialog`
+  - `BatchInvoiceDialog`
+- Regra: criação manual e criação em lote de faturamento não podem ficar escondidas no codebase.
 
-### Parte 2 — Backfill dos 148 prazos existentes com source errado
+5. Expandir a aba Relatórios dentro do Financeiro
+- Manter as sub-abas já presentes:
+  - `DREReport`
+  - `FluxoCaixaReport`
+  - `ContasPagarReport`
+  - `ContasReceberReport`
+  - `CentroCustosReport`
+  - `TesourariaReport`
+- Adicionar as sub-abas já implementadas:
+  - `FaturamentoClienteReport`
+  - `FaturamentoProfissionalReport`
+- Regra: esses relatórios serão reutilizados, não movidos; continuam podendo existir também em `/relatorios`.
 
-**Migração SQL** para corrigir os prazos já criados:
-- Atualizar `source` de `"planilha_cliente"` para `"sheet_agendamentos"` nos deadlines que vieram de solicitações com `origem = 'email_sheet'`
-- Vincular `solicitacao_id` nos deadlines órfãos (match por `process_id` + `data_prazo` + `ocorrencia`)
+6. Preservar Impostos e Configurações
+- Manter:
+  - `ImpostosTab`
+  - `PlanoContasTab`
+  - `CompanyBankAccountsTab`
+  - `TreasuryTab`
+  - `BankReconciliation`
+- Apenas validar a ordem visual para seguir a lógica operacional aprovada.
 
-```sql
--- Fix source
-UPDATE process_deadlines pd
-SET source = 'sheet_agendamentos'
-FROM solicitacoes s
-WHERE s.origem = 'email_sheet'
-  AND s.process_id = pd.process_id
-  AND s.data_limite = pd.data_prazo
-  AND pd.source = 'planilha_cliente'
-  AND pd.solicitacao_id IS NULL;
+Arquivos principais
+- `src/pages/Financeiro.tsx` — restauração da arquitetura e reintegração dos módulos
+- Ajustes pontuais, se necessários, em:
+  - `src/components/financeiro/FinanceTable.tsx`
+  - `src/components/financeiro/ExpensesTable.tsx`
+  - `src/components/financeiro/InvoicesTable.tsx`
+para encaixar botões de ação e evitar módulos órfãos
 
--- Link solicitacao_id
-UPDATE process_deadlines pd
-SET solicitacao_id = s.id
-FROM solicitacoes s
-WHERE s.origem = 'email_sheet'
-  AND s.process_id = pd.process_id
-  AND s.data_limite = pd.data_prazo
-  AND pd.solicitacao_id IS NULL;
+Resultado esperado
+- `/financeiro` volta a refletir as regras já estabelecidas no histórico.
+- Nenhum componente financeiro importante fica sem acesso pela interface.
+- O Dashboard financeiro continua como visão resumida.
+- O painel financeiro volta a ser a central operacional e analítica do módulo.
+
+Detalhes técnicos
+```text
+/financeiro
+├─ Visão Geral
+│  ├─ FinanceSummary
+│  ├─ AnaliseFinanceiraTab
+│  ├─ RecebiveisWidget
+│  ├─ ProjecaoReceitaWidget
+│  ├─ FinanceCharts
+│  ├─ RentabilidadeChart
+│  └─ PremiacaoVsFaturamentoChart
+├─ Transações
+│  ├─ FinanceTable
+│  ├─ ExpensesTable
+│  ├─ AccountsTable
+│  └─ ações: AddTransactionDialog / ExpenseFormDialog
+├─ Faturamento
+│  ├─ AgendaFaturamentoWidget
+│  ├─ InvoicesTable
+│  ├─ ações: InvoiceFormDialog / BatchInvoiceDialog
+│  ├─ BoletosTab
+│  ├─ NfseTab
+│  └─ ContratosTab
+├─ Relatórios
+│  ├─ DREReport
+│  ├─ FluxoCaixaReport
+│  ├─ ContasPagarReport
+│  ├─ ContasReceberReport
+│  ├─ CentroCustosReport
+│  ├─ TesourariaReport
+│  ├─ FaturamentoClienteReport
+│  └─ FaturamentoProfissionalReport
+├─ Impostos
+└─ Configurações
+   ├─ PlanoContasTab
+   ├─ CompanyBankAccountsTab
+   ├─ TreasuryTab
+   └─ BankReconciliation
 ```
 
-### Parte 3 — Re-executar sync para trazer dados desde 20/03
-
-Após deploy da função corrigida, invocar a função via `curl_edge_functions`. A função já processa todas as abas e faz dedup por `email_id`, então re-executar é seguro — apenas registros novos (sem `email_id` existente) serão inseridos.
-
-### Parte 4 — Configurar Cron
-
-**Migração SQL** para habilitar extensões e agendar:
-
-```sql
-CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;
-CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
-
-SELECT cron.schedule(
-  'sync-email-agendamentos-hourly',
-  '0 */2 * * *',  -- a cada 2 horas
-  $$
-  SELECT net.http_post(
-    url := 'https://pojnrtgqigouahmdanze.supabase.co/functions/v1/sync-email-agendamentos',
-    headers := '{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBvam5ydGdxaWdvdWFobWRhbnplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NTYwNzgsImV4cCI6MjA5MDEzMjA3OH0.vVMmb87rE-d8Hv0YEXtAEk8I9PoguRmpi7bdYvnqbL0"}'::jsonb,
-    body := '{}'::jsonb
-  ) AS request_id;
-  $$
-);
-```
-
-Intervalo de 2 horas — equilibra atualidade dos dados vs. custo de API Google Sheets.
-
-### Resultado
-
-- Todos os campos da planilha mapeados corretamente
-- Deadlines com `source = "sheet_agendamentos"` e `solicitacao_id` vinculado
-- `ocorrencia` usando fase processual real
-- 148 deadlines existentes corrigidos (backfill)
-- Novos dados desde 20/03 importados automaticamente
-- Cron rodando a cada 2 horas
-
+Critério de aceite
+- a estrutura de 6 abas permanece;
+- os módulos implementados no histórico voltam a aparecer em `/financeiro`;
+- os diálogos financeiros deixam de ficar órfãos;
+- `/financeiro` e `FinanceDashboard` continuam com papéis distintos e coerentes.
