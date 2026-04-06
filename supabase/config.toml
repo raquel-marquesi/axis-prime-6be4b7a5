@@ -1,7 +1,7 @@
 project_id = "pojnrtgqigouahmdanze"
 
 [functions.google-calendar]
-verify_jwt = true
+verify_jwt = false
 
 [functions.google-drive]
 verify_jwt = true
