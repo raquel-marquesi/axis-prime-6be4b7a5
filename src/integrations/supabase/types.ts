@@ -2843,6 +2843,22 @@ export type Database = {
         Args: { _action: string; _module: string; _user_id: string }
         Returns: string
       }
+      get_prazos_abertos_report: {
+        Args: never
+        Returns: {
+          area: string
+          cliente: string
+          data_prazo: string
+          id: string
+          numero_pasta: string
+          ocorrencia: string
+          processo: string
+          reclamadas: string
+          reclamante: string
+          responsavel: string
+          source: string
+        }[]
+      }
       get_prazos_rows:
         | {
             Args: {
