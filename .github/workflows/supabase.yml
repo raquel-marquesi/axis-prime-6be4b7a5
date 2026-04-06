@@ -25,8 +25,22 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
-      - name: Reparar migration órfã no remoto
-        run: supabase migration repair --status reverted 20260402155704
+      - name: Sincronizar histórico de migrations com o banco remoto
+        run: |
+          # Marcar como reverted a migration órfã que existia apenas no remoto
+          supabase migration repair --status reverted 20260402155704
+          # Marcar como applied todas as migrations já aplicadas diretamente no banco
+          for version in \
+            20260331125257 20260331130442 20260331161221 \
+            20260331190054 20260331190657 20260331190724 \
+            20260331192454 20260331200046 \
+            20260401144004 20260401144648 20260401153145 \
+            20260401154123 20260401154651 20260401155144 \
+            20260401203954 20260401204626 20260401204653 \
+            20260401204715 20260401220559 \
+            20260402120000 20260402155706; do
+            supabase migration repair --status applied $version || true
+          done
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
