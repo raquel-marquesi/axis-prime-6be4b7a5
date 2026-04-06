@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
             numero_processo: numeroCnj.trim(),
             id_cliente: clientId,
             reclamante_nome: reclamante || "N/A",
-            tipo_acao: area,
+            tipo_acao: "individual",
             area,
           })
           .select("id, numero_pasta")
