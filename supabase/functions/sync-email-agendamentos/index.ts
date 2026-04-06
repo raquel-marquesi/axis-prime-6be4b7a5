@@ -301,10 +301,6 @@ Deno.serve(async (req) => {
           const resumo = cell(row, COL.RESUMO);
           const dataSolicitacao = parseDate(cell(row, COL.DATA_SOLICITACAO));
 
-          // Auto-create process if CNJ exists but not in DB
-          if (!processId && processoCnj && clientId) {
-            processId = await autoCreateProcess(processoCnj, clientId, reclamante, area);
-          }
 
           // Resolve client from GRUPO/CLIENTE column first, fallback to tab name
           const grupoCliente = cell(row, COL.GRUPO_CLIENTE);
