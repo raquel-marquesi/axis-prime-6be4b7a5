@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, FileText, Layers } from "lucide-react";
 
 // Visão Geral
 import FinanceSummary from "@/components/financeiro/FinanceSummary";
@@ -9,15 +9,20 @@ import { AnaliseFinanceiraTab } from "@/components/financeiro/AnaliseFinanceiraT
 import { RecebiveisWidget } from "@/components/financeiro/RecebiveisWidget";
 import { ProjecaoReceitaWidget } from "@/components/financeiro/ProjecaoReceitaWidget";
 import FinanceCharts from "@/components/financeiro/FinanceCharts";
+import { RentabilidadeChart } from "@/components/financeiro/RentabilidadeChart";
+import { PremiacaoVsFaturamentoChart } from "@/components/financeiro/PremiacaoVsFaturamentoChart";
 
 // Transações
 import FinanceTable from "@/components/financeiro/FinanceTable";
 import AddTransactionDialog from "@/components/financeiro/AddTransactionDialog";
 import { ExpensesTable } from "@/components/financeiro/ExpensesTable";
+import { ExpenseFormDialog } from "@/components/financeiro/ExpenseFormDialog";
 import { AccountsTable } from "@/components/financeiro/AccountsTable";
 
 // Faturamento
 import { InvoicesTable } from "@/components/financeiro/InvoicesTable";
+import { InvoiceFormDialog } from "@/components/financeiro/InvoiceFormDialog";
+import { BatchInvoiceDialog } from "@/components/financeiro/BatchInvoiceDialog";
 import { BoletosTab } from "@/components/financeiro/BoletosTab";
 import { NfseTab } from "@/components/financeiro/NfseTab";
 import { ContratosTab } from "@/components/financeiro/ContratosTab";
@@ -30,6 +35,8 @@ import { ContasPagarReport } from "@/components/financeiro/ContasPagarReport";
 import { ContasReceberReport } from "@/components/financeiro/ContasReceberReport";
 import { CentroCustosReport } from "@/components/financeiro/CentroCustosReport";
 import { TesourariaReport } from "@/components/financeiro/TesourariaReport";
+import { FaturamentoClienteReport } from "@/components/financeiro/FaturamentoClienteReport";
+import { FaturamentoProfissionalReport } from "@/components/financeiro/FaturamentoProfissionalReport";
 
 // Impostos
 import { ImpostosTab } from "@/components/financeiro/ImpostosTab";
@@ -42,6 +49,9 @@ import { BankReconciliation } from "@/components/financeiro/BankReconciliation";
 
 const Financeiro = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+  const [isBatchInvoiceOpen, setIsBatchInvoiceOpen] = useState(false);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -66,6 +76,7 @@ const Financeiro = () => {
           <TabsTrigger value="configuracoes">Configurações</TabsTrigger>
         </TabsList>
 
+        {/* Visão Geral */}
         <TabsContent value="visao-geral" className="space-y-6">
           <FinanceSummary />
           <AnaliseFinanceiraTab />
@@ -74,9 +85,24 @@ const Financeiro = () => {
             <ProjecaoReceitaWidget />
           </div>
           <FinanceCharts />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <RentabilidadeChart />
+            <PremiacaoVsFaturamentoChart />
+          </div>
         </TabsContent>
 
+        {/* Transações */}
         <TabsContent value="transacoes" className="space-y-6">
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setIsAddDialogOpen(true)} size="sm" className="gap-2">
+              <Plus className="h-4 w-4" />
+              Nova Transação
+            </Button>
+            <Button onClick={() => setIsExpenseDialogOpen(true)} size="sm" variant="outline" className="gap-2">
+              <Plus className="h-4 w-4" />
+              Nova Despesa
+            </Button>
+          </div>
           <FinanceTable />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ExpensesTable />
@@ -84,7 +110,18 @@ const Financeiro = () => {
           </div>
         </TabsContent>
 
+        {/* Faturamento */}
         <TabsContent value="faturamento" className="space-y-6">
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setIsInvoiceDialogOpen(true)} size="sm" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Nova Fatura
+            </Button>
+            <Button onClick={() => setIsBatchInvoiceOpen(true)} size="sm" variant="outline" className="gap-2">
+              <Layers className="h-4 w-4" />
+              Faturamento em Lote
+            </Button>
+          </div>
           <AgendaFaturamentoWidget />
           <InvoicesTable />
           <BoletosTab />
@@ -92,15 +129,18 @@ const Financeiro = () => {
           <ContratosTab />
         </TabsContent>
 
+        {/* Relatórios */}
         <TabsContent value="relatorios" className="space-y-6">
           <Tabs defaultValue="dre" className="space-y-4">
-            <TabsList>
+            <TabsList className="flex-wrap h-auto gap-1">
               <TabsTrigger value="dre">DRE</TabsTrigger>
               <TabsTrigger value="fluxo-caixa">Fluxo de Caixa</TabsTrigger>
               <TabsTrigger value="contas-pagar">Contas a Pagar</TabsTrigger>
               <TabsTrigger value="contas-receber">Contas a Receber</TabsTrigger>
               <TabsTrigger value="centro-custos">Centro de Custos</TabsTrigger>
               <TabsTrigger value="tesouraria">Tesouraria</TabsTrigger>
+              <TabsTrigger value="fat-cliente">Fat. por Cliente</TabsTrigger>
+              <TabsTrigger value="fat-profissional">Fat. por Profissional</TabsTrigger>
             </TabsList>
             <TabsContent value="dre"><DREReport /></TabsContent>
             <TabsContent value="fluxo-caixa"><FluxoCaixaReport /></TabsContent>
@@ -108,13 +148,17 @@ const Financeiro = () => {
             <TabsContent value="contas-receber"><ContasReceberReport /></TabsContent>
             <TabsContent value="centro-custos"><CentroCustosReport /></TabsContent>
             <TabsContent value="tesouraria"><TesourariaReport /></TabsContent>
+            <TabsContent value="fat-cliente"><FaturamentoClienteReport /></TabsContent>
+            <TabsContent value="fat-profissional"><FaturamentoProfissionalReport /></TabsContent>
           </Tabs>
         </TabsContent>
 
+        {/* Impostos */}
         <TabsContent value="impostos" className="space-y-6">
           <ImpostosTab />
         </TabsContent>
 
+        {/* Configurações */}
         <TabsContent value="configuracoes" className="space-y-6">
           <PlanoContasTab />
           <CompanyBankAccountsTab />
@@ -123,10 +167,10 @@ const Financeiro = () => {
         </TabsContent>
       </Tabs>
 
-      <AddTransactionDialog
-        open={isAddDialogOpen}
-        onOpenChange={setIsAddDialogOpen}
-      />
+      <AddTransactionDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
+      <ExpenseFormDialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen} />
+      <InvoiceFormDialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen} />
+      <BatchInvoiceDialog open={isBatchInvoiceOpen} onOpenChange={setIsBatchInvoiceOpen} />
     </div>
   );
 };
