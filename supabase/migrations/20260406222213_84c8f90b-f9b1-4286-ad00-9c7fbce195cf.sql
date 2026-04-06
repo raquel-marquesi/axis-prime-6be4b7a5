@@ -1,0 +1,1 @@
+GRANT USAGE, SELECT ON SEQUENCE public.processes_numero_pasta_seq TO anon, authenticated, service_role;
