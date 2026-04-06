@@ -1,78 +1,58 @@
 
 
-## Corrigir relatório de Prazos — dados ausentes
+## Adicionar filtros ao relatório de Prazos
 
-### Problemas encontrados
+### Arquivos
 
-| Problema | Impacto |
-|----------|---------|
-| Coluna `client_id` não existe na tabela `processes` — o nome correto é `id_cliente` | Nenhum nome de cliente aparece (todos "—") |
-| Query busca apenas `numero_processo` mas ignora `reclamante_nome`, `reclamadas`, `area`, `numero_pasta` | Relatório sem informações relevantes do processo |
-| 1.144 prazos abertos > limite de 1.000 do SDK Supabase | ~144 prazos nunca aparecem no relatório |
-| Sub-relatórios (por profissional, equipe, cliente) também usam `client_id` errado e sofrem do limite de 1.000 | Contagens incorretas em todos os sub-relatórios |
+| Arquivo | Ação |
+|---------|------|
+| `src/components/relatorios/PrazosReportFilters.tsx` | **Criar** — componente de filtros |
+| `src/components/relatorios/PrazosReport.tsx` | **Editar** — integrar filtros, filtrar dados no frontend |
 
-### Solução
+### 1. Criar `PrazosReportFilters.tsx`
 
-Criar uma função RPC no Postgres que faz o JOIN direto no servidor, eliminando o limite de 1.000 e retornando todos os campos relevantes de uma vez.
+Barra horizontal de filtros com:
+- **Data início / Data fim** — DatePickers com Popover + Calendar + pointer-events-auto
+- **Profissional** — Popover multi-select com checkboxes e busca
+- **Cliente** — Popover multi-select com checkboxes e busca  
+- **Área** — Popover multi-select com checkboxes e busca
+- **Status** — Popover multi-select (Atrasado, Hoje, Futuro)
+- **Botão Limpar** — reseta todos os filtros
 
-### 1. Migration SQL — criar RPC `get_prazos_abertos_report`
+Cada multi-select exibe badge com contagem de selecionados. Componente exporta interface `PrazosFilters` e constante `EMPTY_FILTERS`.
 
-```sql
-CREATE OR REPLACE FUNCTION public.get_prazos_abertos_report()
-RETURNS TABLE(
-  id uuid,
-  processo text,
-  numero_pasta text,
-  reclamante text,
-  reclamadas text,
-  area text,
-  cliente text,
-  ocorrencia text,
-  data_prazo date,
-  responsavel text,
-  source text
-)
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
-AS $$
-  SELECT
-    pd.id,
-    COALESCE(pr.numero_processo, '—'),
-    COALESCE(pr.numero_pasta, '—'),
-    COALESCE(pr.reclamante_nome, '—'),
-    COALESCE(array_to_string(pr.reclamadas, ', '), '—'),
-    COALESCE(pr.area, '—'),
-    COALESCE(c.razao_social, c.nome, '—'),
-    COALESCE(pd.ocorrencia, '—'),
-    pd.data_prazo,
-    COALESCE(p.full_name, 'Não atribuído'),
-    COALESCE(pd.source, '—')
-  FROM process_deadlines pd
-  LEFT JOIN processes pr ON pr.id = pd.process_id
-  LEFT JOIN clients c ON c.id = pr.id_cliente
-  LEFT JOIN profiles p ON p.user_id = pd.assigned_to
-  WHERE pd.is_completed = false
-  ORDER BY pd.data_prazo ASC;
-$$;
+### 2. Editar `PrazosReport.tsx`
+
+- Adicionar `useState<PrazosFilters>` no componente principal
+- Carregar dados do hook `usePrazosAbertosReport` no nível do `PrazosReport` (não dentro de cada tab)
+- Extrair listas únicas de profissionais, clientes e áreas dos dados brutos
+- Aplicar `.filter()` com a lógica:
+  - `dateFrom` / `dateTo` comparam com `data_prazo`
+  - Arrays verificam inclusão (OR dentro do grupo)
+  - Filtros vazios = sem restrição
+- Passar dados filtrados para cada sub-tab como props
+- Tabs "Por Profissional", "Por Equipe", "Por Cliente" recalculam agrupamentos a partir dos dados filtrados
+- Export CSV exporta dados filtrados
+- Contadores no cabeçalho refletem dados filtrados
+- Filtros persistem ao trocar entre abas
+
+### Lógica de filtragem
+
+```typescript
+const filtered = data.filter(d => {
+  if (dateFrom && d.data_prazo < format(dateFrom, 'yyyy-MM-dd')) return false;
+  if (dateTo && d.data_prazo > format(dateTo, 'yyyy-MM-dd')) return false;
+  if (profissionais.length && !profissionais.includes(d.responsavel)) return false;
+  if (clientes.length && !clientes.includes(d.cliente)) return false;
+  if (areas.length && !areas.includes(d.area)) return false;
+  if (status.length && !status.includes(d.status_prazo)) return false;
+  return true;
+});
 ```
-
-### 2. Editar `src/hooks/usePrazosReport.ts`
-
-**`usePrazosAbertosReport`** — substituir as múltiplas queries por uma chamada `supabase.rpc('get_prazos_abertos_report')`. Calcular `status_prazo` e `dias_atraso` no frontend a partir de `data_prazo`.
-
-**`usePrazosPorProfissionalReport`**, **`usePrazosPorEquipeReport`**, **`usePrazosPorClienteReport`** — corrigir `client_id` → `id_cliente` nas queries de processos. Usar paginação (range 0-4999) para superar o limite de 1.000 nos dados de `process_deadlines` usados nos agrupamentos.
-
-### 3. Editar `src/components/relatorios/PrazosReport.tsx`
-
-Adicionar colunas na tabela e no export CSV:
-- **Nº Pasta** (`numero_pasta`)
-- **Reclamante** (`reclamante`)
-- **Reclamada(s)** (`reclamadas`)
-- **Área** (`area`)
 
 ### Resultado
 
-- Todos os 1.144+ prazos abertos aparecerão no relatório (sem limite de 1.000)
-- Colunas de processo, reclamante, reclamadas, área e cliente preenchidas corretamente
-- Export CSV incluirá todos os campos relevantes
-- Sub-relatórios com contagens precisas
+- Filtros acima das abas, persistentes entre troca de aba
+- Seleção individual e múltipla em todos os critérios
+- Dados filtrados refletidos em tabela, contadores e CSV
 
