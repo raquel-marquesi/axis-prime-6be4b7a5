@@ -1,58 +1,72 @@
 
 
-## Adicionar filtros ao relatório de Prazos
+## Melhorar pesquisa e UX do relatório de Prazos
 
-### Arquivos
+### O que será feito
 
-| Arquivo | Ação |
-|---------|------|
-| `src/components/relatorios/PrazosReportFilters.tsx` | **Criar** — componente de filtros |
-| `src/components/relatorios/PrazosReport.tsx` | **Editar** — integrar filtros, filtrar dados no frontend |
+4 melhorias no relatório de Prazos para facilitar a pesquisa:
 
-### 1. Criar `PrazosReportFilters.tsx`
+### 1. Busca por texto livre
 
-Barra horizontal de filtros com:
-- **Data início / Data fim** — DatePickers com Popover + Calendar + pointer-events-auto
-- **Profissional** — Popover multi-select com checkboxes e busca
-- **Cliente** — Popover multi-select com checkboxes e busca  
-- **Área** — Popover multi-select com checkboxes e busca
-- **Status** — Popover multi-select (Atrasado, Hoje, Futuro)
-- **Botão Limpar** — reseta todos os filtros
+Adicionar um campo `Input` com ícone de lupa acima da tabela. Filtra instantaneamente por qualquer coluna: processo, reclamante, reclamadas, cliente, ocorrência, nº pasta. Lógica: `toLowerCase().includes(searchTerm)` aplicada sobre os dados já filtrados.
 
-Cada multi-select exibe badge com contagem de selecionados. Componente exporta interface `PrazosFilters` e constante `EMPTY_FILTERS`.
+### 2. KPIs resumidos no topo
 
-### 2. Editar `PrazosReport.tsx`
+Antes dos filtros, exibir 4 cards compactos lado a lado:
+- **Total** (todos os prazos filtrados)
+- **Atrasados** (badge destrutivo)
+- **Hoje** (badge padrão)
+- **Futuro** (badge secundário)
 
-- Adicionar `useState<PrazosFilters>` no componente principal
-- Carregar dados do hook `usePrazosAbertosReport` no nível do `PrazosReport` (não dentro de cada tab)
-- Extrair listas únicas de profissionais, clientes e áreas dos dados brutos
-- Aplicar `.filter()` com a lógica:
-  - `dateFrom` / `dateTo` comparam com `data_prazo`
-  - Arrays verificam inclusão (OR dentro do grupo)
-  - Filtros vazios = sem restrição
-- Passar dados filtrados para cada sub-tab como props
-- Tabs "Por Profissional", "Por Equipe", "Por Cliente" recalculam agrupamentos a partir dos dados filtrados
-- Export CSV exporta dados filtrados
-- Contadores no cabeçalho refletem dados filtrados
-- Filtros persistem ao trocar entre abas
+Cada card mostra o número e a porcentagem. Clicáveis para aplicar o filtro de status correspondente.
 
-### Lógica de filtragem
+### 3. Filtros rápidos predefinidos
+
+Linha de botões "chip" entre os KPIs e os filtros detalhados:
+- **Atrasados** — filtra status = Atrasado
+- **Hoje** — filtra status = Hoje
+- **Próximos 7 dias** — filtra dateTo = hoje + 7 dias
+- **Este mês** — filtra dateFrom = 1º do mês atual, dateTo = último dia do mês
+
+Cada chip é toggle: clica para ativar, clica de novo para desativar.
+
+### 4. Seletor de mês/ano nos date pickers
+
+Substituir a navegação mês a mês do Calendar por dropdowns de mês e ano no topo do calendário, usando as props `captionLayout="dropdown-buttons"` e `fromYear={2020}` `toYear={2030}` do `react-day-picker`, permitindo pular diretamente para qualquer mês/ano.
+
+### Arquivos a editar
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/relatorios/PrazosReport.tsx` | Adicionar KPIs, busca por texto, filtros rápidos |
+| `src/components/relatorios/PrazosReportFilters.tsx` | Adicionar `captionLayout="dropdown-buttons"` + `fromYear`/`toYear` nos Calendars; adicionar prop `searchTerm`/`onSearchChange` |
+
+### Lógica de busca
 
 ```typescript
-const filtered = data.filter(d => {
-  if (dateFrom && d.data_prazo < format(dateFrom, 'yyyy-MM-dd')) return false;
-  if (dateTo && d.data_prazo > format(dateTo, 'yyyy-MM-dd')) return false;
-  if (profissionais.length && !profissionais.includes(d.responsavel)) return false;
-  if (clientes.length && !clientes.includes(d.cliente)) return false;
-  if (areas.length && !areas.includes(d.area)) return false;
-  if (status.length && !status.includes(d.status_prazo)) return false;
-  return true;
+const searched = filtered.filter(d => {
+  if (!searchTerm) return true;
+  const term = searchTerm.toLowerCase();
+  return [d.processo, d.reclamante, d.reclamadas, d.cliente, d.ocorrencia, d.numero_pasta, d.responsavel]
+    .some(field => field.toLowerCase().includes(term));
 });
 ```
 
-### Resultado
+### Layout final
 
-- Filtros acima das abas, persistentes entre troca de aba
-- Seleção individual e múltipla em todos os critérios
-- Dados filtrados refletidos em tabela, contadores e CSV
+```text
+┌─────────────────────────────────────────────┐
+│  [Total: 1144] [Atrasados: 890] [Hoje: 12] [Futuro: 242]  ← KPI cards
+├─────────────────────────────────────────────┤
+│  [Atrasados] [Hoje] [Próx 7 dias] [Este mês]              ← Filtros rápidos
+├─────────────────────────────────────────────┤
+│  🔍 Buscar processo, reclamante, cliente...                ← Busca texto
+│  [Data início ▼] [Data fim ▼] [Profissional ▼] ...        ← Filtros detalhados
+├─────────────────────────────────────────────┤
+│  [Abertos] [Por Profissional] [Por Equipe] [Por Cliente]   ← Abas
+│  ┌─ Tabela ─────────────────────────────┐                  
+│  │ ...                                   │                  
+│  └───────────────────────────────────────┘                  
+└─────────────────────────────────────────────┘
+```
 
