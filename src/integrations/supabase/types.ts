@@ -2893,6 +2893,7 @@ export type Database = {
           pontos: number
         }[]
       }
+      get_profile_id_for_user: { Args: { _user_id: string }; Returns: string }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_admin_or_manager: { Args: { _user_id: string }; Returns: boolean }
       is_coordinator_or_above: { Args: { _user_id: string }; Returns: boolean }
@@ -2900,6 +2901,10 @@ export type Database = {
       is_leader_or_above: { Args: { _user_id: string }; Returns: boolean }
       reconcile_open_deadlines: { Args: never; Returns: Json }
       relink_orphan_timesheet_entries: { Args: never; Returns: Json }
+      reports_to_user: {
+        Args: { _manager_profile_id: string; _target_user_id: string }
+        Returns: boolean
+      }
       smart_assign_deadline: {
         Args: { p_deadline_id: string }
         Returns: {
