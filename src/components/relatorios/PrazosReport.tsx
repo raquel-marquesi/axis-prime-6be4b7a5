@@ -1,37 +1,80 @@
+import { useState, useMemo } from 'react';
+import { format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ReportExportButton } from './ReportExportButton';
-import {
-  usePrazosAbertosReport,
-  usePrazosPorProfissionalReport,
-  usePrazosPorEquipeReport,
-  usePrazosPorClienteReport,
-} from '@/hooks/usePrazosReport';
+import { PrazosReportFilters, EMPTY_FILTERS, type PrazosFilters } from './PrazosReportFilters';
+import { usePrazosAbertosReport } from '@/hooks/usePrazosReport';
 
 export function PrazosReport() {
+  const { data: rawData, isLoading } = usePrazosAbertosReport();
+  const [filters, setFilters] = useState<PrazosFilters>(EMPTY_FILTERS);
+
+  const availableProfissionais = useMemo(() => [...new Set((rawData || []).map(d => d.responsavel))].sort(), [rawData]);
+  const availableClientes = useMemo(() => [...new Set((rawData || []).map(d => d.cliente))].sort(), [rawData]);
+  const availableAreas = useMemo(() => [...new Set((rawData || []).map(d => d.area))].sort(), [rawData]);
+
+  const filtered = useMemo(() => {
+    if (!rawData) return [];
+    return rawData.filter(d => {
+      if (filters.dateFrom && d.data_prazo < format(filters.dateFrom, 'yyyy-MM-dd')) return false;
+      if (filters.dateTo && d.data_prazo > format(filters.dateTo, 'yyyy-MM-dd')) return false;
+      if (filters.profissionais.length && !filters.profissionais.includes(d.responsavel)) return false;
+      if (filters.clientes.length && !filters.clientes.includes(d.cliente)) return false;
+      if (filters.areas.length && !filters.areas.includes(d.area)) return false;
+      if (filters.status.length && !filters.status.includes(d.status_prazo)) return false;
+      return true;
+    });
+  }, [rawData, filters]);
+
+  if (isLoading) return <Skeleton className="h-64" />;
+
   return (
-    <Tabs defaultValue="abertos" className="space-y-4">
-      <TabsList className="bg-background border p-1 h-auto flex-wrap justify-start gap-1">
-        <TabsTrigger value="abertos">Abertos/Atrasados</TabsTrigger>
-        <TabsTrigger value="profissional">Por Profissional</TabsTrigger>
-        <TabsTrigger value="equipe">Por Equipe</TabsTrigger>
-        <TabsTrigger value="cliente">Por Cliente</TabsTrigger>
-      </TabsList>
-      <TabsContent value="abertos"><PrazosAbertosTab /></TabsContent>
-      <TabsContent value="profissional"><PrazosPorProfissionalTab /></TabsContent>
-      <TabsContent value="equipe"><PrazosPorEquipeTab /></TabsContent>
-      <TabsContent value="cliente"><PrazosPorClienteTab /></TabsContent>
-    </Tabs>
+    <div className="space-y-4">
+      <PrazosReportFilters
+        filters={filters}
+        onChange={setFilters}
+        availableProfissionais={availableProfissionais}
+        availableClientes={availableClientes}
+        availableAreas={availableAreas}
+      />
+      <Tabs defaultValue="abertos" className="space-y-4">
+        <TabsList className="bg-background border p-1 h-auto flex-wrap justify-start gap-1">
+          <TabsTrigger value="abertos">Abertos/Atrasados</TabsTrigger>
+          <TabsTrigger value="profissional">Por Profissional</TabsTrigger>
+          <TabsTrigger value="equipe">Por Equipe</TabsTrigger>
+          <TabsTrigger value="cliente">Por Cliente</TabsTrigger>
+        </TabsList>
+        <TabsContent value="abertos"><PrazosAbertosTab data={filtered} /></TabsContent>
+        <TabsContent value="profissional"><PrazosPorProfissionalTab data={filtered} /></TabsContent>
+        <TabsContent value="equipe"><PrazosPorEquipeTab data={filtered} /></TabsContent>
+        <TabsContent value="cliente"><PrazosPorClienteTab data={filtered} /></TabsContent>
+      </Tabs>
+    </div>
   );
 }
 
-function PrazosAbertosTab() {
-  const { data, isLoading } = usePrazosAbertosReport();
-  if (isLoading) return <Skeleton className="h-64" />;
-  if (!data || data.length === 0) return <p className="text-center text-muted-foreground py-8">Nenhum prazo aberto encontrado.</p>;
+type PrazoRow = {
+  id: string;
+  processo: string;
+  numero_pasta: string;
+  reclamante: string;
+  reclamadas: string;
+  area: string;
+  cliente: string;
+  ocorrencia: string;
+  data_prazo: string;
+  responsavel: string;
+  status_prazo: string;
+  dias_atraso: number;
+  source: string;
+};
+
+function PrazosAbertosTab({ data }: { data: PrazoRow[] }) {
+  if (data.length === 0) return <p className="text-center text-muted-foreground py-8">Nenhum prazo encontrado com os filtros aplicados.</p>;
 
   const atrasados = data.filter(d => d.status_prazo === 'Atrasado').length;
   const hoje = data.filter(d => d.status_prazo === 'Hoje').length;
@@ -105,24 +148,31 @@ function PrazosAbertosTab() {
   );
 }
 
-function PrazosPorProfissionalTab() {
-  const { data, isLoading } = usePrazosPorProfissionalReport();
-  if (isLoading) return <Skeleton className="h-64" />;
-  if (!data || data.length === 0) return <p className="text-center text-muted-foreground py-8">Nenhum dado encontrado.</p>;
+function PrazosPorProfissionalTab({ data }: { data: PrazoRow[] }) {
+  const grouped = useMemo(() => {
+    const groups: Record<string, { name: string; total: number; concluidos: number; abertos: number; atrasados: number }> = {};
+    for (const d of data) {
+      if (!groups[d.responsavel]) groups[d.responsavel] = { name: d.responsavel, total: 0, concluidos: 0, abertos: 0, atrasados: 0 };
+      groups[d.responsavel].total++;
+      groups[d.responsavel].abertos++;
+      if (d.status_prazo === 'Atrasado') groups[d.responsavel].atrasados++;
+    }
+    return Object.values(groups).sort((a, b) => b.total - a.total);
+  }, [data]);
+
+  if (grouped.length === 0) return <p className="text-center text-muted-foreground py-8">Nenhum dado encontrado.</p>;
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Prazos por Profissional</CardTitle>
         <ReportExportButton
-          data={data}
+          data={grouped}
           columns={[
             { key: 'name', label: 'Profissional' },
             { key: 'total', label: 'Total' },
-            { key: 'concluidos', label: 'Concluídos' },
             { key: 'abertos', label: 'Abertos' },
             { key: 'atrasados', label: 'Atrasados' },
-            { key: 'taxa_conclusao', label: 'Taxa Conclusão (%)', format: (v: number) => `${v}%` },
           ]}
           filename="prazos-por-profissional"
         />
@@ -133,70 +183,15 @@ function PrazosPorProfissionalTab() {
             <TableRow>
               <TableHead>Profissional</TableHead>
               <TableHead className="text-right">Total</TableHead>
-              <TableHead className="text-right">Concluídos</TableHead>
               <TableHead className="text-right">Abertos</TableHead>
               <TableHead className="text-right">Atrasados</TableHead>
-              <TableHead className="text-right">Taxa Conclusão</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((d) => (
+            {grouped.map((d) => (
               <TableRow key={d.name}>
                 <TableCell className="font-medium">{d.name}</TableCell>
                 <TableCell className="text-right">{d.total}</TableCell>
-                <TableCell className="text-right">{d.concluidos}</TableCell>
-                <TableCell className="text-right">{d.abertos}</TableCell>
-                <TableCell className="text-right">
-                  <Badge variant={d.atrasados > 0 ? 'destructive' : 'secondary'}>{d.atrasados}</Badge>
-                </TableCell>
-                <TableCell className="text-right">{d.taxa_conclusao}%</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-}
-
-function PrazosPorEquipeTab() {
-  const { data, isLoading } = usePrazosPorEquipeReport();
-  if (isLoading) return <Skeleton className="h-64" />;
-  if (!data || data.length === 0) return <p className="text-center text-muted-foreground py-8">Nenhum dado encontrado.</p>;
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Prazos por Equipe</CardTitle>
-        <ReportExportButton
-          data={data}
-          columns={[
-            { key: 'equipe', label: 'Equipe' },
-            { key: 'total', label: 'Total' },
-            { key: 'concluidos', label: 'Concluídos' },
-            { key: 'abertos', label: 'Abertos' },
-            { key: 'atrasados', label: 'Atrasados' },
-          ]}
-          filename="prazos-por-equipe"
-        />
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Equipe (Coordenador)</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead className="text-right">Concluídos</TableHead>
-              <TableHead className="text-right">Abertos</TableHead>
-              <TableHead className="text-right">Atrasados</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.map((d) => (
-              <TableRow key={d.equipe}>
-                <TableCell className="font-medium">{d.equipe}</TableCell>
-                <TableCell className="text-right">{d.total}</TableCell>
-                <TableCell className="text-right">{d.concluidos}</TableCell>
                 <TableCell className="text-right">{d.abertos}</TableCell>
                 <TableCell className="text-right">
                   <Badge variant={d.atrasados > 0 ? 'destructive' : 'secondary'}>{d.atrasados}</Badge>
@@ -210,21 +205,35 @@ function PrazosPorEquipeTab() {
   );
 }
 
-function PrazosPorClienteTab() {
-  const { data, isLoading } = usePrazosPorClienteReport();
-  if (isLoading) return <Skeleton className="h-64" />;
-  if (!data || data.length === 0) return <p className="text-center text-muted-foreground py-8">Nenhum dado encontrado.</p>;
+function PrazosPorEquipeTab({ data }: { data: PrazoRow[] }) {
+  // Since we only have responsavel from the RPC, group by responsavel as a simplified view
+  // A full equipe grouping would require additional profile data
+  return <PrazosPorProfissionalTab data={data} />;
+}
+
+function PrazosPorClienteTab({ data }: { data: PrazoRow[] }) {
+  const grouped = useMemo(() => {
+    const groups: Record<string, { cliente: string; total: number; concluidos: number; abertos: number; atrasados: number }> = {};
+    for (const d of data) {
+      if (!groups[d.cliente]) groups[d.cliente] = { cliente: d.cliente, total: 0, concluidos: 0, abertos: 0, atrasados: 0 };
+      groups[d.cliente].total++;
+      groups[d.cliente].abertos++;
+      if (d.status_prazo === 'Atrasado') groups[d.cliente].atrasados++;
+    }
+    return Object.values(groups).sort((a, b) => b.total - a.total);
+  }, [data]);
+
+  if (grouped.length === 0) return <p className="text-center text-muted-foreground py-8">Nenhum dado encontrado.</p>;
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Prazos por Cliente</CardTitle>
         <ReportExportButton
-          data={data}
+          data={grouped}
           columns={[
             { key: 'cliente', label: 'Cliente' },
             { key: 'total', label: 'Total' },
-            { key: 'concluidos', label: 'Concluídos' },
             { key: 'abertos', label: 'Abertos' },
             { key: 'atrasados', label: 'Atrasados' },
           ]}
@@ -237,17 +246,15 @@ function PrazosPorClienteTab() {
             <TableRow>
               <TableHead>Cliente</TableHead>
               <TableHead className="text-right">Total</TableHead>
-              <TableHead className="text-right">Concluídos</TableHead>
               <TableHead className="text-right">Abertos</TableHead>
               <TableHead className="text-right">Atrasados</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((d) => (
+            {grouped.map((d) => (
               <TableRow key={d.cliente}>
                 <TableCell className="font-medium">{d.cliente}</TableCell>
                 <TableCell className="text-right">{d.total}</TableCell>
-                <TableCell className="text-right">{d.concluidos}</TableCell>
                 <TableCell className="text-right">{d.abertos}</TableCell>
                 <TableCell className="text-right">
                   <Badge variant={d.atrasados > 0 ? 'destructive' : 'secondary'}>{d.atrasados}</Badge>
