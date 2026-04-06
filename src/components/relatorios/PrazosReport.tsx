@@ -36,6 +36,21 @@ function PrazosAbertosTab() {
   const atrasados = data.filter(d => d.status_prazo === 'Atrasado').length;
   const hoje = data.filter(d => d.status_prazo === 'Hoje').length;
 
+  const exportColumns = [
+    { key: 'processo', label: 'Processo' },
+    { key: 'numero_pasta', label: 'Nº Pasta' },
+    { key: 'reclamante', label: 'Reclamante' },
+    { key: 'reclamadas', label: 'Reclamada(s)' },
+    { key: 'area', label: 'Área' },
+    { key: 'cliente', label: 'Cliente' },
+    { key: 'ocorrencia', label: 'Ocorrência' },
+    { key: 'data_prazo', label: 'Data Prazo' },
+    { key: 'responsavel', label: 'Responsável' },
+    { key: 'status_prazo', label: 'Status' },
+    { key: 'dias_atraso', label: 'Dias Atraso' },
+    { key: 'source', label: 'Origem' },
+  ];
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -43,26 +58,17 @@ function PrazosAbertosTab() {
           <CardTitle>Prazos Abertos</CardTitle>
           <p className="text-sm text-muted-foreground">{data.length} prazos · {atrasados} atrasados · {hoje} para hoje</p>
         </div>
-        <ReportExportButton
-          data={data}
-          columns={[
-            { key: 'processo', label: 'Processo' },
-            { key: 'cliente', label: 'Cliente' },
-            { key: 'ocorrencia', label: 'Ocorrência' },
-            { key: 'data_prazo', label: 'Data Prazo' },
-            { key: 'responsavel', label: 'Responsável' },
-            { key: 'status_prazo', label: 'Status' },
-            { key: 'dias_atraso', label: 'Dias Atraso' },
-            { key: 'source', label: 'Origem' },
-          ]}
-          filename="prazos-abertos"
-        />
+        <ReportExportButton data={data} columns={exportColumns} filename="prazos-abertos" />
       </CardHeader>
-      <CardContent>
+      <CardContent className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Processo</TableHead>
+              <TableHead>Nº Pasta</TableHead>
+              <TableHead>Reclamante</TableHead>
+              <TableHead>Reclamada(s)</TableHead>
+              <TableHead>Área</TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead>Ocorrência</TableHead>
               <TableHead>Data Prazo</TableHead>
@@ -74,10 +80,14 @@ function PrazosAbertosTab() {
           <TableBody>
             {data.slice(0, 200).map((d) => (
               <TableRow key={d.id}>
-                <TableCell className="font-medium">{d.processo}</TableCell>
-                <TableCell>{d.cliente}</TableCell>
+                <TableCell className="font-medium whitespace-nowrap">{d.processo}</TableCell>
+                <TableCell>{d.numero_pasta}</TableCell>
+                <TableCell className="max-w-[150px] truncate">{d.reclamante}</TableCell>
+                <TableCell className="max-w-[150px] truncate">{d.reclamadas}</TableCell>
+                <TableCell>{d.area}</TableCell>
+                <TableCell className="max-w-[150px] truncate">{d.cliente}</TableCell>
                 <TableCell className="max-w-[200px] truncate">{d.ocorrencia}</TableCell>
-                <TableCell>{d.data_prazo}</TableCell>
+                <TableCell className="whitespace-nowrap">{d.data_prazo}</TableCell>
                 <TableCell>{d.responsavel}</TableCell>
                 <TableCell>
                   <Badge variant={d.status_prazo === 'Atrasado' ? 'destructive' : d.status_prazo === 'Hoje' ? 'default' : 'secondary'}>

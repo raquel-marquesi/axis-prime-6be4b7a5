@@ -6,52 +6,26 @@ export function usePrazosAbertosReport() {
   return useQuery({
     queryKey: ['prazos-abertos-report'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('process_deadlines')
-        .select('id, ocorrencia, data_prazo, is_completed, completed_at, assigned_to, process_id, source')
-        .eq('is_completed', false)
-        .order('data_prazo', { ascending: true });
+      const { data, error } = await supabase.rpc('get_prazos_abertos_report' as any);
       if (error) throw error;
-
-      const processIds = [...new Set((data || []).map(d => d.process_id).filter(Boolean))];
-      const userIds = [...new Set((data || []).map(d => d.assigned_to).filter(Boolean))];
-
-      const [processesRes, profilesRes] = await Promise.all([
-        processIds.length > 0
-          ? supabase.from('processes').select('id, numero_processo, client_id').in('id', processIds)
-          : { data: [], error: null },
-        userIds.length > 0
-          ? supabase.from('profiles_safe' as any).select('user_id, full_name').in('user_id', userIds as string[])
-          : { data: [], error: null },
-      ]);
-
-      const processMap: Record<string, any> = {};
-      for (const p of (processesRes.data || [])) processMap[p.id] = p;
-
-      const clientIds = [...new Set(Object.values(processMap).map((p: any) => p.client_id).filter(Boolean))];
-      const clientsRes = clientIds.length > 0
-        ? await supabase.from('clients').select('id, razao_social, nome').in('id', clientIds)
-        : { data: [] };
-      const clientMap: Record<string, string> = {};
-      for (const c of (clientsRes.data || [])) clientMap[c.id] = c.razao_social || c.nome || '—';
-
-      const profileMap: Record<string, string> = {};
-      for (const p of ((profilesRes.data as any[]) || [])) profileMap[p.user_id] = p.full_name;
 
       const today = new Date();
       const todayStr = format(today, 'yyyy-MM-dd');
 
-      return (data || []).map(d => {
-        const proc = processMap[d.process_id] || {};
+      return ((data as any[]) || []).map((d: any) => {
         const diasAtraso = d.data_prazo && d.data_prazo < todayStr ? differenceInDays(today, parseISO(d.data_prazo)) : 0;
         const statusPrazo = d.data_prazo === todayStr ? 'Hoje' : diasAtraso > 0 ? 'Atrasado' : 'Futuro';
         return {
           id: d.id,
-          processo: proc.numero_processo || '—',
-          cliente: clientMap[proc.client_id] || '—',
+          processo: d.processo || '—',
+          numero_pasta: d.numero_pasta || '—',
+          reclamante: d.reclamante || '—',
+          reclamadas: d.reclamadas || '—',
+          area: d.area || '—',
+          cliente: d.cliente || '—',
           ocorrencia: d.ocorrencia || '—',
           data_prazo: d.data_prazo,
-          responsavel: profileMap[d.assigned_to!] || 'Não atribuído',
+          responsavel: d.responsavel || 'Não atribuído',
           status_prazo: statusPrazo,
           dias_atraso: diasAtraso,
           source: d.source || '—',
@@ -68,7 +42,8 @@ export function usePrazosPorProfissionalReport() {
       const { data, error } = await supabase
         .from('process_deadlines')
         .select('id, is_completed, data_prazo, assigned_to')
-        .not('assigned_to', 'is', null);
+        .not('assigned_to', 'is', null)
+        .range(0, 4999);
       if (error) throw error;
 
       const userIds = [...new Set((data || []).map(d => d.assigned_to).filter(Boolean))];
@@ -104,7 +79,8 @@ export function usePrazosPorEquipeReport() {
       const { data, error } = await supabase
         .from('process_deadlines')
         .select('id, is_completed, data_prazo, assigned_to')
-        .not('assigned_to', 'is', null);
+        .not('assigned_to', 'is', null)
+        .range(0, 4999);
       if (error) throw error;
 
       const userIds = [...new Set((data || []).map(d => d.assigned_to).filter(Boolean))];
@@ -146,15 +122,16 @@ export function usePrazosPorClienteReport() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('process_deadlines')
-        .select('id, is_completed, data_prazo, process_id');
+        .select('id, is_completed, data_prazo, process_id')
+        .range(0, 4999);
       if (error) throw error;
 
       const processIds = [...new Set((data || []).map(d => d.process_id).filter(Boolean))];
       const { data: processes } = processIds.length > 0
-        ? await supabase.from('processes').select('id, client_id').in('id', processIds)
+        ? await supabase.from('processes').select('id, id_cliente').in('id', processIds)
         : { data: [] };
       const procClientMap: Record<string, string> = {};
-      for (const p of (processes || [])) if (p.client_id) procClientMap[p.id] = p.client_id;
+      for (const p of (processes || [])) if ((p as any).id_cliente) procClientMap[p.id] = (p as any).id_cliente;
 
       const clientIds = [...new Set(Object.values(procClientMap))];
       const { data: clients } = clientIds.length > 0
