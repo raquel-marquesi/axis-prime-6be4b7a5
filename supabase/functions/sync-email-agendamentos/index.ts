@@ -393,33 +393,37 @@ Deno.serve(async (req) => {
         const idBatch = insertedIds.slice(i, i + BATCH);
         const { data: sols } = await supabase
           .from("solicitacoes")
-          .select("id, process_id, data_limite, titulo, descricao, assigned_to")
+          .select("id, process_id, data_limite, titulo, descricao, assigned_to, extracted_details")
           .in("id", idBatch);
 
         for (const sol of sols || []) {
           if (!sol.process_id || !sol.data_limite) continue;
 
-          // Check if open deadline already exists (partial unique index)
+          // Use FASE PROCESSUAL as ocorrencia, fallback to titulo
+          const faseProcessual = (sol.extracted_details as any)?.fase_processual;
+          const ocorrencia = faseProcessual || sol.titulo || "Agendamento via e-mail";
+
+          // Check if open deadline already exists
           const { data: existingDl } = await supabase
             .from("process_deadlines")
             .select("id")
             .eq("process_id", sol.process_id)
             .eq("data_prazo", sol.data_limite)
-            .eq("ocorrencia", sol.titulo || "Agendamento via e-mail")
             .eq("is_completed", false)
             .maybeSingle();
 
-          if (existingDl) continue; // already exists
+          if (existingDl) continue;
 
           const { error: dlErr } = await supabase
             .from("process_deadlines")
             .insert({
               process_id: sol.process_id,
               data_prazo: sol.data_limite,
-              ocorrencia: sol.titulo || "Agendamento via e-mail",
+              ocorrencia,
               detalhes: sol.descricao?.substring(0, 500) || null,
               assigned_to: sol.assigned_to || null,
-              source: "planilha_cliente",
+              source: "sheet_agendamentos",
+              solicitacao_id: sol.id,
             });
 
           if (dlErr) {
