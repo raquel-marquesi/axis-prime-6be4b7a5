@@ -306,15 +306,28 @@ Deno.serve(async (req) => {
             processId = await autoCreateProcess(processoCnj, clientId, reclamante, area);
           }
 
+          // Resolve client from GRUPO/CLIENTE column first, fallback to tab name
+          const grupoCliente = cell(row, COL.GRUPO_CLIENTE);
+          const resolvedClientId = (grupoCliente && clientMap.get(grupoCliente.toUpperCase())) || clientId;
+
+          // Auto-create process if CNJ exists but not in DB (use resolvedClientId)
+          if (!processId && processoCnj && resolvedClientId) {
+            processId = await autoCreateProcess(processoCnj, resolvedClientId, reclamante, area);
+          }
+
+          // Parse ai_confidence
+          const confiancaRaw = cell(row, COL.CONFIANCA);
+          const aiConfidence = confiancaRaw ? parseFloat(confiancaRaw.replace(",", ".").replace("%", "")) : null;
+
           toInsert.push({
             titulo: assunto || `Solicitação ${tabName}`,
             descricao: resumo || null,
             origem: "email_sheet" as const,
             status,
             prioridade,
-            client_id: clientId,
+            client_id: resolvedClientId,
             process_id: processId,
-            assigned_to: null, // will be assigned via RPC
+            assigned_to: null,
             data_limite: dataLimite,
             email_id: emailId || null,
             email_from: emailRemetente || null,
@@ -323,6 +336,18 @@ Deno.serve(async (req) => {
             email_date: dataSolicitacao,
             area,
             calculation_type_id: calcTypeId,
+            ai_confidence: aiConfidence,
+            extracted_details: {
+              remetente_nome: remetente || null,
+              fase_processual: cell(row, COL.FASE_PROCESSUAL) || null,
+              gcpj: cell(row, COL.GCPJ) || null,
+              reclamante: reclamante || null,
+              empresa_re: cell(row, COL.EMPRESA_RE) || null,
+              grupo_cliente: grupoCliente || null,
+              prazo_preventivo: prazoPreventivo,
+              prazo_fatal: prazoFatal,
+              lido_em: cell(row, COL.LIDO_EM) || null,
+            },
           });
         }
       } catch (tabErr: any) {
