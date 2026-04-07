@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DeadlinesCalendarView } from './DeadlinesCalendarView';
-import { useAllProcessDeadlines, useDeadlineCounts, type DeadlineStatus, type ProcessDeadlineRow } from '@/hooks/useAllProcessDeadlines';
+import { useAllProcessDeadlines, type DeadlineStatus, type ProcessDeadlineRow } from '@/hooks/useAllProcessDeadlines';
 import { useOverdueTimesheetMap } from '@/hooks/useOverdueTimesheetMap';
 import { type Process } from '@/hooks/useProcesses';
 import { ProcessDetailsDialog } from '@/components/processes/ProcessDetailsDialog';
@@ -45,8 +45,19 @@ export function PrazosProcessuaisTab() {
   const [aiChatOpen, setAiChatOpen] = useState(false);
 
   const effectiveStatusFilter = cardFilter || (statusFilter === 'all' ? undefined : statusFilter);
-  const { data: deadlines = [], isLoading } = useAllProcessDeadlines({ statusFilter: effectiveStatusFilter, dateFrom: dateFrom || undefined, dateTo: dateTo || undefined, excludeCompleted: !cardFilter && statusFilter === 'all' });
-  const { data: counts = { atrasado: 0, hoje: 0, futuro: 0, concluido: 0 } } = useDeadlineCounts();
+  const { data: allDeadlines = [], isLoading } = useAllProcessDeadlines({ dateFrom: dateFrom || undefined, dateTo: dateTo || undefined, excludeCompleted: false });
+
+  const counts = useMemo(() => ({
+    atrasado: allDeadlines.filter(d => d.status === 'atrasado').length,
+    hoje: allDeadlines.filter(d => d.status === 'hoje').length,
+    futuro: allDeadlines.filter(d => d.status === 'futuro').length,
+    concluido: allDeadlines.filter(d => d.status === 'concluido').length,
+  }), [allDeadlines]);
+
+  const deadlines = useMemo(() => {
+    if (effectiveStatusFilter) return allDeadlines.filter(d => d.status === effectiveStatusFilter);
+    return allDeadlines.filter(d => d.status !== 'concluido');
+  }, [allDeadlines, effectiveStatusFilter]);
   const { profiles } = useProfiles();
   const { toast } = useToast();
   const showResponsavel = isCoordinatorOrAbove() || isAdminOrManager() || isFinanceiro();
