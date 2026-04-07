@@ -127,8 +127,7 @@ export function useAllProcessDeadlines(options: UseAllProcessDeadlinesOptions = 
             prioridade
           )
         `)
-        .order('data_prazo', { ascending: true })
-        .limit(5000);
+        .order('data_prazo', { ascending: true });
 
       if (options.dateFrom) {
         query = query.gte('data_prazo', options.dateFrom);
@@ -225,6 +224,6 @@ export function useAllProcessDeadlines(options: UseAllProcessDeadlinesOptions = 
       });
     },
     enabled: !!userId,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 30 * 1000,
   });
 }
