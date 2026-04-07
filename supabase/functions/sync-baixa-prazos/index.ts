@@ -6,7 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const SPREADSHEET_ID = "14HZnCn1bWUSkIOOQPtnxwv79V08s2veNNAUrn0uMQOo";
+const SPREADSHEET_IDS = [
+  "14HZnCn1bWUSkIOOQPtnxwv79V08s2veNNAUrn0uMQOo",
+  "1PA97XPvV4mzbVEo9bsSViaxK45jQErnp",
+];
 
 // ─── Google Auth (same pattern as sync-email-agendamentos) ────────
 function base64url(buf: ArrayBuffer): string {
