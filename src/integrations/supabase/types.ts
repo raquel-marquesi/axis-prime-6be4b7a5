@@ -2555,6 +2555,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "team_clients_team_lead_id_fkey"
+            columns: ["team_lead_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       timesheet_entries: {
@@ -2786,7 +2793,9 @@ export type Database = {
           area: Database["public"]["Enums"]["area_setor"] | null
           email: string | null
           full_name: string | null
+          id: string | null
           is_active: boolean | null
+          reports_to: string | null
           sigla: string | null
           user_id: string | null
         }
@@ -2794,7 +2803,9 @@ export type Database = {
           area?: Database["public"]["Enums"]["area_setor"] | null
           email?: string | null
           full_name?: string | null
+          id?: string | null
           is_active?: boolean | null
+          reports_to?: string | null
           sigla?: string | null
           user_id?: string | null
         }
@@ -2802,7 +2813,9 @@ export type Database = {
           area?: Database["public"]["Enums"]["area_setor"] | null
           email?: string | null
           full_name?: string | null
+          id?: string | null
           is_active?: boolean | null
+          reports_to?: string | null
           sigla?: string | null
           user_id?: string | null
         }
