@@ -29,7 +29,7 @@ type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 export function InvoiceFormDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { accounts } = useAccounts();
   const { createInvoice } = useInvoices();
-  const { clients } = useClients();
+  const { clients } = useClientsSafe();
 
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceSchema),
