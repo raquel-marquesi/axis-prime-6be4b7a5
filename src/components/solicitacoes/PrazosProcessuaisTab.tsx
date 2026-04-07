@@ -127,27 +127,36 @@ export function PrazosProcessuaisTab() {
             <CardContent>
               {isLoading ? <div className="space-y-3">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-12 w-full" />)}</div> : filteredDeadlines.length === 0 ? <p className="text-center text-muted-foreground py-8">Nenhum prazo processual encontrado.</p> : (
                  <Table>
-                  <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Status</TableHead><TableHead>Processo</TableHead><TableHead>Reclamante</TableHead><TableHead>Reclamada</TableHead><TableHead>Ocorrência</TableHead><TableHead>Origem</TableHead>{showResponsavel && <TableHead>Responsável</TableHead>}<TableHead>Atividades</TableHead><TableHead>Solicitante</TableHead><TableHead className="max-w-[150px]">Últ. Andamento</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow><TableHead className="py-1 text-xs">Data</TableHead><TableHead className="py-1 text-xs">Status</TableHead><TableHead className="py-1 text-xs">Processo</TableHead><TableHead className="py-1 text-xs">Reclamante</TableHead><TableHead className="py-1 text-xs">Reclamada</TableHead><TableHead className="py-1 text-xs">Ocorrência</TableHead><TableHead className="py-1 text-xs">Origem</TableHead>{showResponsavel && <TableHead className="py-1 text-xs">Responsável</TableHead>}<TableHead className="py-1 text-xs">Atividades</TableHead><TableHead className="py-1 text-xs">Solicitante</TableHead><TableHead className="py-1 text-xs max-w-[150px]">Últ. Andamento</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {filteredDeadlines.map((d) => {
-                      const cfg = STATUS_CONFIG[d.status]; const Icon = cfg.icon;
                       return (
-                        <TableRow key={d.id} className="cursor-pointer" onClick={() => handleRowClick(d)}>
-                          <TableCell className="whitespace-nowrap">{format(parseISO(d.data_prazo), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
-                          <TableCell><Badge variant={cfg.variant} className="gap-1"><Icon className="h-3 w-3" />{cfg.label}{d.status === 'atrasado' && d.dias_atraso > 0 && ` (${d.dias_atraso}d)`}</Badge></TableCell>
-                          <TableCell><span className="font-medium text-sm truncate max-w-[200px]">{d.numero_processo}</span></TableCell>
-                          <TableCell className="max-w-[180px] truncate">{d.reclamante_nome}</TableCell>
-                          <TableCell className="max-w-[180px] truncate">{d.reclamadas?.[0] || '—'}</TableCell>
-                          <TableCell className="max-w-[200px] truncate">{d.ocorrencia}</TableCell>
-                          <TableCell>{d.solicitacao_id ? <Tooltip><TooltipTrigger asChild><span className="inline-flex items-center gap-1 text-xs"><LinkIcon className="h-3 w-3 text-primary" /><span className="text-primary truncate max-w-[100px]"><TableCell>{d.solicitacao_id ? <Tooltip><TooltipTrigger asChild><span className="inline-flex items-center gap-1 text-xs"><LinkIcon className="h-3 w-3 text-primary" /><span className="text-primary truncate max-w-[100px]">{d.solicitacao_titulo || 'Prazo'}</span></span></TooltipTrigger><TooltipContent><p>Prioridade: {d.solicitacao_prioridade || '—'}</p></TooltipContent></Tooltip> : <span className="text-xs text-muted-foreground">Manual</span>}</TableCell></span></span></TooltipTrigger><TooltipContent><p>Prioridade: {d.solicitacao_prioridade || '—'}</p></TooltipContent></Tooltip> : <span className="text-xs text-muted-foreground">Manual</span>}</TableCell>
-                          {showResponsavel && <TableCell className="text-muted-foreground">{d.assigned_user_name || '—'}</TableCell>}
-                          <TableCell>
+                        <TableRow key={d.id} className="cursor-pointer h-8" onClick={() => handleRowClick(d)}>
+                          <TableCell className="whitespace-nowrap py-1 text-xs">{format(parseISO(d.data_prazo), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
+                          <TableCell className="py-1 text-xs">
                             {d.status === 'atrasado' ? (
-                              <Tooltip><TooltipTrigger asChild><span className="inline-flex items-center gap-1">{timesheetMap[d.process_id] ? (<><CheckCircle className="h-3.5 w-3.5 text-emerald-500" /><span className="text-xs text-emerald-600 dark:text-emerald-400">{timesheetMap[d.process_id].count} ativ.</span></>) : (<><XCircle className="h-3.5 w-3.5 text-destructive" /><span className="text-xs text-destructive">Sem ativ.</span></>)}</span></TooltipTrigger><TooltipContent side="top" className="max-w-[280px]"><p className="text-xs">{timesheetMap[d.process_id] ? `${timesheetMap[d.process_id].count} atividade(s) no timesheet` : 'Nenhuma atividade registrada'}</p></TooltipContent></Tooltip>
+                              <span className="text-destructive font-semibold text-xs">{d.dias_atraso}d</span>
+                            ) : d.status === 'hoje' ? (
+                              <Badge variant="default" className="py-0 px-1.5 text-[10px]">Hoje</Badge>
+                            ) : d.status === 'futuro' ? (
+                              <Badge variant="secondary" className="py-0 px-1.5 text-[10px]">Futuro</Badge>
+                            ) : (
+                              <Badge variant="outline" className="py-0 px-1.5 text-[10px]">Concluído</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-1 text-xs"><span className="font-medium truncate max-w-[200px]">{d.numero_processo}</span></TableCell>
+                          <TableCell className="max-w-[180px] truncate py-1 text-xs">{d.reclamante_nome}</TableCell>
+                          <TableCell className="max-w-[180px] truncate py-1 text-xs">{d.reclamadas?.[0] || '—'}</TableCell>
+                          <TableCell className="max-w-[200px] truncate py-1 text-xs">{d.ocorrencia}</TableCell>
+                          <TableCell className="py-1 text-xs">{d.solicitacao_id ? <Tooltip><TooltipTrigger asChild><span className="inline-flex items-center gap-1 text-xs"><LinkIcon className="h-3 w-3 text-primary" /><span className="text-primary truncate max-w-[100px]">{d.solicitacao_titulo || 'Prazo'}</span></span></TooltipTrigger><TooltipContent><p>Prioridade: {d.solicitacao_prioridade || '—'}</p></TooltipContent></Tooltip> : <span className="text-xs text-muted-foreground">Manual</span>}</TableCell>
+                          {showResponsavel && <TableCell className="text-muted-foreground py-1 text-xs">{d.assigned_user_name || '—'}</TableCell>}
+                          <TableCell className="py-1 text-xs">
+                            {d.status === 'atrasado' ? (
+                              <Tooltip><TooltipTrigger asChild><span className="inline-flex items-center gap-1">{timesheetMap[d.process_id] ? (<><CheckCircle className="h-3 w-3 text-emerald-500" /><span className="text-xs text-emerald-600 dark:text-emerald-400">{timesheetMap[d.process_id].count}</span></>) : (<><XCircle className="h-3 w-3 text-destructive" /><span className="text-xs text-destructive">0</span></>)}</span></TooltipTrigger><TooltipContent side="top" className="max-w-[280px]"><p className="text-xs">{timesheetMap[d.process_id] ? `${timesheetMap[d.process_id].count} atividade(s) no timesheet` : 'Nenhuma atividade registrada'}</p></TooltipContent></Tooltip>
                             ) : <span className="text-xs text-muted-foreground">—</span>}
                           </TableCell>
-                          <TableCell className="text-muted-foreground">{d.completed_by_name || '—'}</TableCell>
-                          <TableCell className="max-w-[150px] truncate text-muted-foreground">{d.ultimo_andamento || '—'}</TableCell>
+                          <TableCell className="text-muted-foreground py-1 text-xs">{d.completed_by_name || '—'}</TableCell>
+                          <TableCell className="max-w-[150px] truncate text-muted-foreground py-1 text-xs">{d.ultimo_andamento || '—'}</TableCell>
                         </TableRow>
                       );
                     })}
