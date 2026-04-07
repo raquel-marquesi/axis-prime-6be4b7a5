@@ -188,9 +188,7 @@ Deno.serve(async (req) => {
       byCNJ.get(key)!.push(rec);
     }
 
-    // 5. Fetch open deadlines from last 90 days with process info
-    const cutoffDate = new Date(Date.now() - 90 * 86400000).toISOString().substring(0, 10);
-    // 5. Fetch ALL open deadlines from last 90 days (paginate past 1000 limit)
+    // 5. Fetch ALL open deadlines (paginate past 1000 limit)
     let openDeadlines: any[] = [];
     let page = 0;
     const PAGE_SIZE = 1000;
@@ -199,7 +197,6 @@ Deno.serve(async (req) => {
         .from("process_deadlines")
         .select("id, process_id, data_prazo, ocorrencia, processes!inner(numero_processo)")
         .eq("is_completed", false)
-        .gte("data_prazo", cutoffDate)
         .order("data_prazo", { ascending: true })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       if (dlErr) throw new Error(`Fetch deadlines error: ${dlErr.message}`);
