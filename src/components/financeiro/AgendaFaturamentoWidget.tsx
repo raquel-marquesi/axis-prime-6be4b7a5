@@ -42,7 +42,7 @@ export function AgendaFaturamentoWidget() {
 
       // 2. Client-driven billing agenda (dia_emissao_nf / dia_vencimento)
       const { data: clientsData } = await supabase
-        .from('clients')
+        .from('clients_safe')
         .select('id, nome, razao_social, tipo, dia_emissao_nf, dia_vencimento, billing_reminder_enabled')
         .eq('is_active', true)
         .not('dia_emissao_nf', 'is', null);

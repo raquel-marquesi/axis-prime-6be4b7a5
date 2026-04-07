@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useAccounts } from '@/hooks/useAccounts';
 import { useBillingContacts } from '@/hooks/useBillingContacts';
 import { useInvoices } from '@/hooks/useInvoices';
-import { useClients } from '@/hooks/useClients';
+import { useClientsSafe } from '@/hooks/useClientsSafe';
 
 const invoiceSchema = z.object({
   client_id: z.string().optional(),
