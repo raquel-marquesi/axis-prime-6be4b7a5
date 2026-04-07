@@ -183,15 +183,24 @@ Deno.serve(async (req) => {
 
     // 5. Fetch open deadlines from last 90 days with process info
     const cutoffDate = new Date(Date.now() - 90 * 86400000).toISOString().substring(0, 10);
-    const { data: openDeadlines, error: dlErr } = await supabase
-      .from("process_deadlines")
-      .select("id, process_id, data_prazo, ocorrencia, processes!inner(numero_processo)")
-      .eq("is_completed", false)
-      .gte("data_prazo", cutoffDate)
-      .order("data_prazo", { ascending: true })
-      .limit(2000);
-
-    if (dlErr) throw new Error(`Fetch deadlines error: ${dlErr.message}`);
+    // 5. Fetch ALL open deadlines from last 90 days (paginate past 1000 limit)
+    let openDeadlines: any[] = [];
+    let page = 0;
+    const PAGE_SIZE = 1000;
+    while (true) {
+      const { data: batch, error: dlErr } = await supabase
+        .from("process_deadlines")
+        .select("id, process_id, data_prazo, ocorrencia, processes!inner(numero_processo)")
+        .eq("is_completed", false)
+        .gte("data_prazo", cutoffDate)
+        .order("data_prazo", { ascending: true })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+      if (dlErr) throw new Error(`Fetch deadlines error: ${dlErr.message}`);
+      if (!batch || batch.length === 0) break;
+      openDeadlines = openDeadlines.concat(batch);
+      if (batch.length < PAGE_SIZE) break;
+      page++;
+    }
     console.log(`[sync-baixa-prazos] Found ${openDeadlines?.length || 0} open deadlines to check`);
 
     // 6. Fetch profiles for name matching
