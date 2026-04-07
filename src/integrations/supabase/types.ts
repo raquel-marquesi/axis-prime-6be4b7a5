@@ -114,6 +114,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "accounts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       activity_types: {
@@ -810,6 +817,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_aliases_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       client_branches: {
@@ -838,6 +852,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_branches_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -890,6 +911,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       client_documents: {
@@ -931,6 +959,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_documents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       client_sla_rules: {
@@ -964,6 +999,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_sla_rules_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -1227,6 +1269,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contract_extractions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contract_extractions_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
@@ -1346,6 +1395,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_pricing_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -1736,6 +1792,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       monitored_emails: {
@@ -2083,6 +2146,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "processed_files_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "processed_files_extraction_id_fkey"
             columns: ["extraction_id"]
             isOneToOne: false
@@ -2152,6 +2222,13 @@ export type Database = {
             columns: ["id_cliente"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processes_id_cliente_fkey"
+            columns: ["id_cliente"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -2432,6 +2509,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "solicitacoes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "solicitacoes_process_id_fkey"
             columns: ["process_id"]
             isOneToOne: false
@@ -2549,6 +2633,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "team_clients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "team_clients_team_lead_id_fkey"
             columns: ["team_lead_id"]
             isOneToOne: false
@@ -2638,6 +2729,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
             referencedColumns: ["id"]
           },
           {
@@ -2788,6 +2886,141 @@ export type Database = {
       }
     }
     Views: {
+      clients_safe: {
+        Row: {
+          aplicar_grossup: boolean | null
+          bairro: string | null
+          billing_reminder_days: number | null
+          billing_reminder_enabled: boolean | null
+          canal_importacao: string | null
+          centro_custo: string | null
+          cep: string | null
+          cidade: string | null
+          cnpj: string | null
+          complemento: string | null
+          contract_key_id: string | null
+          contrato_condicoes_faturamento: string | null
+          contrato_data_inicio: string | null
+          contrato_data_vencimento: string | null
+          contrato_objeto: string | null
+          created_at: string | null
+          created_by: string | null
+          dia_emissao_nf: number | null
+          dia_vencimento: number | null
+          economic_group_id: string | null
+          estado: string | null
+          id: string | null
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
+          is_active: boolean | null
+          logradouro: string | null
+          metodo_pagamento: string | null
+          nome: string | null
+          nome_fantasia: string | null
+          numero: string | null
+          observacoes: string | null
+          razao_social: string | null
+          representante_legal: string | null
+          tipo: Database["public"]["Enums"]["pessoa_tipo"] | null
+          tipo_cadastro: Database["public"]["Enums"]["tipo_cadastro"] | null
+          tipo_grossup: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          aplicar_grossup?: boolean | null
+          bairro?: string | null
+          billing_reminder_days?: number | null
+          billing_reminder_enabled?: boolean | null
+          canal_importacao?: string | null
+          centro_custo?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string | null
+          complemento?: string | null
+          contract_key_id?: string | null
+          contrato_condicoes_faturamento?: string | null
+          contrato_data_inicio?: string | null
+          contrato_data_vencimento?: string | null
+          contrato_objeto?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          dia_emissao_nf?: number | null
+          dia_vencimento?: number | null
+          economic_group_id?: string | null
+          estado?: string | null
+          id?: string | null
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
+          is_active?: boolean | null
+          logradouro?: string | null
+          metodo_pagamento?: string | null
+          nome?: string | null
+          nome_fantasia?: string | null
+          numero?: string | null
+          observacoes?: string | null
+          razao_social?: string | null
+          representante_legal?: string | null
+          tipo?: Database["public"]["Enums"]["pessoa_tipo"] | null
+          tipo_cadastro?: Database["public"]["Enums"]["tipo_cadastro"] | null
+          tipo_grossup?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          aplicar_grossup?: boolean | null
+          bairro?: string | null
+          billing_reminder_days?: number | null
+          billing_reminder_enabled?: boolean | null
+          canal_importacao?: string | null
+          centro_custo?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string | null
+          complemento?: string | null
+          contract_key_id?: string | null
+          contrato_condicoes_faturamento?: string | null
+          contrato_data_inicio?: string | null
+          contrato_data_vencimento?: string | null
+          contrato_objeto?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          dia_emissao_nf?: number | null
+          dia_vencimento?: number | null
+          economic_group_id?: string | null
+          estado?: string | null
+          id?: string | null
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
+          is_active?: boolean | null
+          logradouro?: string | null
+          metodo_pagamento?: string | null
+          nome?: string | null
+          nome_fantasia?: string | null
+          numero?: string | null
+          observacoes?: string | null
+          razao_social?: string | null
+          representante_legal?: string | null
+          tipo?: Database["public"]["Enums"]["pessoa_tipo"] | null
+          tipo_cadastro?: Database["public"]["Enums"]["tipo_cadastro"] | null
+          tipo_grossup?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_contract_key_id_fkey"
+            columns: ["contract_key_id"]
+            isOneToOne: false
+            referencedRelation: "contract_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_economic_group_id_fkey"
+            columns: ["economic_group_id"]
+            isOneToOne: false
+            referencedRelation: "economic_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles_safe: {
         Row: {
           area: Database["public"]["Enums"]["area_setor"] | null
