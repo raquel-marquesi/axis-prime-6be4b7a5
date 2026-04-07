@@ -1,35 +1,36 @@
 
 
-## Corrigir Faturamento: `permission denied for view clients_safe`
+## Baixa de prazos via planilha `1PA97XPvV4mzbVEo9bsSViaxK45jQErnp`
 
-### Diagnóstico
+### Contexto
 
-O formulário de faturamento (`InvoiceFormDialog`) usa o hook `useClientsSafe` que consulta a view `clients_safe`. Essa view **não possui nenhum GRANT** de SELECT para nenhum role (nem `authenticated`, nem `anon`). Toda tentativa de abrir o formulário de faturamento falha silenciosamente com `permission denied for view clients_safe`.
+A planilha `1PA97XPvV4mzbVEo9bsSViaxK45jQErnp` tem a mesma estrutura da planilha de produção atual (`data_lancamento`, `numero_processo`, `profissional`, `tipo_atividade`, `descritivo`, etc.). Existem 750 prazos abertos no sistema (345 atrasados, 405 futuros).
 
-Os logs do Postgres confirmam: dezenas de erros consecutivos com essa mensagem.
+### Abordagem
 
-### Solução
+Modificar a Edge Function `sync-baixa-prazos` para ler de **ambas** as planilhas (a atual `14HZn...` e a nova `1PA97...`), unificando os registros antes de fazer o cruzamento com os prazos abertos. A lógica de matching (CNJ + janela ±7 dias) permanece idêntica.
 
-Uma migration SQL com dois comandos:
+### Implementação
 
-1. **GRANT SELECT** na view `clients_safe` para o role `authenticated`
-2. **Não conceder** ao role `anon` (a view expõe dados comerciais de clientes)
+**Arquivo: `supabase/functions/sync-baixa-prazos/index.ts`**
 
-```sql
-GRANT SELECT ON public.clients_safe TO authenticated;
+1. Substituir a constante `SPREADSHEET_ID` por um array:
+```typescript
+const SPREADSHEET_IDS = [
+  "14HZnCn1bWUSkIOOQPtnxwv79V08s2veNNAUrn0uMQOo",
+  "1PA97XPvV4mzbVEo9bsSViaxK45jQErnp",
+];
 ```
 
-### Arquivos
+2. No loop principal, iterar sobre ambas as planilhas, acumulando todos os registros em `allRecords`
 
-| Arquivo | Ação |
-|---------|------|
-| Migration SQL | `GRANT SELECT ON public.clients_safe TO authenticated` |
+3. Remover o filtro `cutoffDate` de 90 dias dos prazos abertos — buscar **todos** os prazos abertos independente da data, para não perder baixas de prazos antigos
 
-Nenhum arquivo de código precisa ser alterado — o hook `useClientsSafe` e o `InvoiceFormDialog` já estão corretos, apenas bloqueados pela falta de permissão no banco.
+4. O restante da lógica (matching por CNJ + janela ±7 dias, resolução de profissional, update no banco) permanece inalterada
 
 ### Resultado
 
-- Formulário de faturamento carrega a lista de clientes corretamente
-- `AccountFormDialog` (que também usa `useClientsSafe`) passa a funcionar
-- Sem impacto em segurança: a view já exclui campos sensíveis (PII) e só será acessível por usuários autenticados
+- A função passa a cruzar prazos abertos com registros de produção de **duas** planilhas
+- Prazos que já foram cumpridos conforme a nova planilha serão marcados como concluídos
+- O ciclo automático (cron a cada 2h) mantém a sincronia contínua
 
