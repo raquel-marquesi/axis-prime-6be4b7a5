@@ -267,25 +267,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 8. Batch update
+    // 8. Batch update (no individual detalhes fetch — write directly)
     for (const upd of updates) {
       const updateData: any = {
         is_completed: true,
         completed_at: upd.completed_at + "T12:00:00Z",
         updated_at: new Date().toISOString(),
+        detalhes: upd.completion_notes,
       };
       if (upd.completed_by) updateData.completed_by = upd.completed_by;
-      // Store notes in detalhes (append to existing)
-      const { data: existing } = await supabase
-        .from("process_deadlines")
-        .select("detalhes")
-        .eq("id", upd.id)
-        .single();
-      
-      const existingNotes = existing?.detalhes || "";
-      updateData.detalhes = existingNotes 
-        ? `${existingNotes}\n---\n${upd.completion_notes}`
-        : upd.completion_notes;
 
       const { error: updErr } = await supabase
         .from("process_deadlines")
