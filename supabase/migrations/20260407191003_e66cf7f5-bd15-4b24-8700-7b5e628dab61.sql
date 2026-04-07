@@ -1,0 +1,1 @@
+GRANT SELECT ON public.clients_safe TO authenticated;
