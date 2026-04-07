@@ -6,7 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const SPREADSHEET_ID = "14HZnCn1bWUSkIOOQPtnxwv79V08s2veNNAUrn0uMQOo";
+const SPREADSHEET_IDS = [
+  "14HZnCn1bWUSkIOOQPtnxwv79V08s2veNNAUrn0uMQOo",
+  "1PA97XPvV4mzbVEo9bsSViaxK45jQErnp",
+];
 
 // ─── Google Auth (same pattern as sync-email-agendamentos) ────────
 function base64url(buf: ArrayBuffer): string {
@@ -128,50 +131,54 @@ Deno.serve(async (req) => {
     const sa = JSON.parse(saRaw);
     const accessToken = await getGoogleAccessToken(sa);
 
-    // 2. Get all tabs
-    const tabs = await getSheetTabs(accessToken, SPREADSHEET_ID);
-    console.log(`[sync-baixa-prazos] Found ${tabs.length} tabs: ${tabs.join(", ")}`);
-
-    // 3. Read all rows from all tabs
+    // 2. Read all rows from all tabs of all spreadsheets
     const allRecords: SheetRecord[] = [];
-    for (const tab of tabs) {
+    for (const sheetId of SPREADSHEET_IDS) {
       try {
-        const rows = await readSheet(accessToken, SPREADSHEET_ID, `'${tab}'!A1:Z`);
-        if (rows.length < 2) continue;
-        const colMap = parseHeader(rows[0]);
-        
-        // Must have numero_processo column
-        const procIdx = colMap["numero_processo"] ?? colMap["nº_processo"] ?? colMap["processo"];
-        if (procIdx === undefined) {
-          console.log(`[sync-baixa-prazos] Tab "${tab}" has no numero_processo column, skipping`);
-          continue;
+        const tabs = await getSheetTabs(accessToken, sheetId);
+        console.log(`[sync-baixa-prazos] Sheet ${sheetId}: ${tabs.length} tabs`);
+
+        for (const tab of tabs) {
+          try {
+            const rows = await readSheet(accessToken, sheetId, `'${tab}'!A1:Z`);
+            if (rows.length < 2) continue;
+            const colMap = parseHeader(rows[0]);
+            
+            const procIdx = colMap["numero_processo"] ?? colMap["nº_processo"] ?? colMap["processo"];
+            if (procIdx === undefined) {
+              console.log(`[sync-baixa-prazos] Tab "${tab}" has no numero_processo column, skipping`);
+              continue;
+            }
+
+            for (let i = 1; i < rows.length; i++) {
+              const row = rows[i];
+              const cnj = cell(row, procIdx);
+              if (!cnj || normalizeCNJ(cnj).length < 10) continue;
+
+              const dataLanc = parseDate(cell(row, colMap["data_lancamento"]));
+              const dataVal = parseDate(cell(row, colMap["data"]));
+              const effectiveDate = dataLanc || dataVal;
+              if (!effectiveDate) continue;
+
+              allRecords.push({
+                data_lancamento: effectiveDate,
+                data: dataVal,
+                numero_processo: cnj,
+                profissional: cell(row, colMap["profissional"]),
+                tipo_atividade: cell(row, colMap["tipo_atividade"]),
+                descritivo: cell(row, colMap["descritivo"]),
+                cliente: cell(row, colMap["cliente"]),
+              });
+            }
+          } catch (tabErr) {
+            console.error(`[sync-baixa-prazos] Error reading tab "${tab}" from ${sheetId}:`, tabErr);
+          }
         }
-
-        for (let i = 1; i < rows.length; i++) {
-          const row = rows[i];
-          const cnj = cell(row, procIdx);
-          if (!cnj || normalizeCNJ(cnj).length < 10) continue;
-
-          const dataLanc = parseDate(cell(row, colMap["data_lancamento"]));
-          const dataVal = parseDate(cell(row, colMap["data"]));
-          const effectiveDate = dataLanc || dataVal;
-          if (!effectiveDate) continue;
-
-          allRecords.push({
-            data_lancamento: effectiveDate,
-            data: dataVal,
-            numero_processo: cnj,
-            profissional: cell(row, colMap["profissional"]),
-            tipo_atividade: cell(row, colMap["tipo_atividade"]),
-            descritivo: cell(row, colMap["descritivo"]),
-            cliente: cell(row, colMap["cliente"]),
-          });
-        }
-      } catch (tabErr) {
-        console.error(`[sync-baixa-prazos] Error reading tab "${tab}":`, tabErr);
+      } catch (sheetErr) {
+        console.error(`[sync-baixa-prazos] Error reading sheet ${sheetId}:`, sheetErr);
       }
     }
-    console.log(`[sync-baixa-prazos] Parsed ${allRecords.length} production records from sheet`);
+    console.log(`[sync-baixa-prazos] Parsed ${allRecords.length} production records from ${SPREADSHEET_IDS.length} sheets`);
 
     // 4. Index by normalized CNJ
     const byCNJ = new Map<string, SheetRecord[]>();
@@ -181,9 +188,7 @@ Deno.serve(async (req) => {
       byCNJ.get(key)!.push(rec);
     }
 
-    // 5. Fetch open deadlines from last 90 days with process info
-    const cutoffDate = new Date(Date.now() - 90 * 86400000).toISOString().substring(0, 10);
-    // 5. Fetch ALL open deadlines from last 90 days (paginate past 1000 limit)
+    // 5. Fetch ALL open deadlines (paginate past 1000 limit)
     let openDeadlines: any[] = [];
     let page = 0;
     const PAGE_SIZE = 1000;
@@ -192,7 +197,6 @@ Deno.serve(async (req) => {
         .from("process_deadlines")
         .select("id, process_id, data_prazo, ocorrencia, processes!inner(numero_processo)")
         .eq("is_completed", false)
-        .gte("data_prazo", cutoffDate)
         .order("data_prazo", { ascending: true })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       if (dlErr) throw new Error(`Fetch deadlines error: ${dlErr.message}`);
