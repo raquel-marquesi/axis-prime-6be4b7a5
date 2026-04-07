@@ -8,9 +8,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAccounts, Account } from '@/hooks/useAccounts';
+import { useClientsSafe } from '@/hooks/useClientsSafe';
 
 const accountSchema = z.object({
   nome: z.string().min(1, 'Nome é obrigatório'),
+  client_id: z.string().optional(),
   tipo_conta: z.string().optional(),
   responsavel_nome: z.string().min(1, 'Responsável é obrigatório'),
   responsavel_email: z.string().email('E-mail inválido').optional().or(z.literal('')),
@@ -25,13 +27,14 @@ interface AccountFormDialogProps { open: boolean; onOpenChange: (open: boolean) 
 
 export function AccountFormDialog({ open, onOpenChange, account }: AccountFormDialogProps) {
   const { createAccount, updateAccount } = useAccounts();
+  const { clients, isLoading: clientsLoading } = useClientsSafe();
   const isEditing = !!account;
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountSchema),
-    defaultValues: { nome: account?.nome || '', tipo_conta: account?.tipo_conta || '', responsavel_nome: account?.responsavel_nome || '', responsavel_email: account?.responsavel_email || '', responsavel_telefone: account?.responsavel_telefone || '', status: account?.status || 'ativa', observacoes: account?.observacoes || '' },
+    defaultValues: { nome: account?.nome || '', client_id: account?.client_id || '', tipo_conta: account?.tipo_conta || '', responsavel_nome: account?.responsavel_nome || '', responsavel_email: account?.responsavel_email || '', responsavel_telefone: account?.responsavel_telefone || '', status: account?.status || 'ativa', observacoes: account?.observacoes || '' },
   });
   const onSubmit = async (values: AccountFormValues) => {
-    const payload = { nome: values.nome, tipo_conta: values.tipo_conta || null, responsavel_nome: values.responsavel_nome, responsavel_email: values.responsavel_email || null, responsavel_telefone: values.responsavel_telefone || null, status: values.status, observacoes: values.observacoes || null, client_id: account?.client_id || null, branch_id: account?.branch_id || null };
+    const payload = { nome: values.nome, tipo_conta: values.tipo_conta || null, responsavel_nome: values.responsavel_nome, responsavel_email: values.responsavel_email || null, responsavel_telefone: values.responsavel_telefone || null, status: values.status, observacoes: values.observacoes || null, client_id: values.client_id || null, branch_id: account?.branch_id || null };
     if (isEditing) { await updateAccount.mutateAsync({ id: account.id, ...payload }); } else { await createAccount.mutateAsync(payload); }
     onOpenChange(false);
   };
@@ -42,6 +45,27 @@ export function AccountFormDialog({ open, onOpenChange, account }: AccountFormDi
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField control={form.control} name="nome" render={({ field }) => (<FormItem><FormLabel>Nome da Conta *</FormLabel><FormControl><Input placeholder="Ex: MCM Advogados" {...field} /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="client_id" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Cliente vinculado</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={clientsLoading ? 'Carregando...' : 'Nenhum (opcional)'} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {clients.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nome || c.razao_social || c.nome_fantasia || 'Sem nome'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="tipo_conta" render={({ field }) => (<FormItem><FormLabel>Tipo de Conta</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>{TIPOS_CONTA.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="ativa">Ativa</SelectItem><SelectItem value="inativa">Inativa</SelectItem><SelectItem value="prospeccao">Prospecção</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
