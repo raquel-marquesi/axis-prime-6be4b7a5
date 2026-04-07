@@ -2837,6 +2837,35 @@ export type Database = {
         Args: { p_batch_size?: number }
         Returns: number
       }
+      get_all_deadlines_with_details: {
+        Args: {
+          p_date_from?: string
+          p_date_to?: string
+          p_team_user_ids?: string[]
+          p_user_id?: string
+        }
+        Returns: {
+          area: string
+          assigned_to: string
+          assigned_user_name: string
+          completed_by: string
+          completed_by_name: string
+          data_prazo: string
+          detalhes: string
+          id: string
+          is_completed: boolean
+          numero_pasta: number
+          numero_processo: string
+          ocorrencia: string
+          process_id: string
+          reclamadas: string[]
+          reclamante_nome: string
+          solicitacao_id: string
+          solicitacao_prioridade: string
+          solicitacao_titulo: string
+          ultimo_andamento: string
+        }[]
+      }
       get_coordinator_for_client: {
         Args: { p_client_id: string }
         Returns: string
