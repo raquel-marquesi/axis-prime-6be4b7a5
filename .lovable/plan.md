@@ -1,60 +1,64 @@
 
 
-## Corrigir aba Prazos: limite de 1.000 registros do Supabase
+## Revisão do Faturamento: Problemas Encontrados
 
 ### Diagnóstico
 
-- `process_deadlines` tem **2.517 registros**
-- O SDK do Supabase retorna no máximo **1.000 linhas** por query (padrão)
-- A query em `useAllProcessDeadlines` ordena por `data_prazo ASC` sem paginação, retornando os 1.000 registros mais antigos (majoritariamente concluídos)
-- Os prazos atrasados/hoje/futuro ficam de fora porque estão além da posição 1.000
-- A aba Relatórios usa RPC (`get_prazos_abertos_report`) que roda no servidor sem esse limite — por isso mostra dados reais
+| # | Problema | Severidade | Causa |
+|---|----------|-----------|-------|
+| 1 | **Tabelas financeiras vazias** (0 invoices, 0 accounts, 0 billing_contacts) | Alta | Dados ainda nao foram cadastrados, mas o fluxo de criacao funciona |
+| 2 | **Policies de invoices usam role `public` em vez de `authenticated`** | Alta | INSERT/UPDATE/SELECT/DELETE em `invoices` permitem acesso anonimo |
+| 3 | **Policy de DELETE em billing_contacts usa role `public`** | Alta | Anonimos poderiam deletar contatos |
+| 4 | **Policy de DELETE em clients usa role `public`** | Alta | Anonimos poderiam deletar clientes |
+| 5 | **`useClients` consulta tabela `clients` diretamente** | Media | Usuarios sem role finance/admin/gerente nao veem clientes no formulario de fatura (a RLS bloqueia). O `InvoiceFormDialog` depende disso para listar clientes |
+| 6 | **Console warning: DialogFooter ref** | Baixa | `DialogFooter` dentro de `<form>` no `InvoiceFormDialog` gera warning de ref |
+| 7 | **AgendaFaturamentoWidget consulta `clients` diretamente** | Media | Agenda de faturamento invisivel para coordenadores/lideres pois a RLS de `clients` bloqueia |
+| 8 | **Faturamento em Lote cria invoices em loop sequencial** | Baixa | Sem tratamento de erro parcial; se uma falha, as anteriores ja foram criadas |
 
-### Solução
+### Plano de Correção
 
-Criar uma **função RPC** no Postgres que retorna todos os prazos com os JOINs necessários (processes, profiles), eliminando o limite de 1.000 linhas e reduzindo o número de queries no frontend.
+#### 1. Migration: corrigir policies com role `public`
 
-#### 1. Migration: criar RPC `get_all_deadlines_with_details`
-
-A função faz o JOIN de `process_deadlines` com `processes` e retorna todas as colunas necessárias, sem limite de linhas. Aceita parâmetros opcionais de filtro (`p_date_from`, `p_date_to`, `p_status`).
-
-#### 2. Ajustar `useAllProcessDeadlines.ts`
-
-Substituir a query `.from('process_deadlines').select(...)` por `supabase.rpc('get_all_deadlines_with_details', params)`. Isso elimina:
-- O limite de 1.000 linhas
-- A query extra para buscar nomes de usuários (o JOIN já traz)
-- A query extra para buscar equipe do coordenador (filtro por `assigned_to` feito no SQL)
-
-### Detalhes técnicos
+Trocar todas as policies de `invoices`, `billing_contacts` (DELETE) e `clients` (DELETE) que usam `public` para `authenticated`.
 
 ```sql
-CREATE OR REPLACE FUNCTION get_all_deadlines_with_details(
-  p_user_id uuid DEFAULT NULL,
-  p_team_user_ids uuid[] DEFAULT NULL,
-  p_date_from date DEFAULT NULL,
-  p_date_to date DEFAULT NULL
-)
-RETURNS TABLE (
-  id uuid, process_id uuid, data_prazo date, ocorrencia text,
-  detalhes text, is_completed boolean, assigned_to uuid,
-  completed_by uuid, ultimo_andamento text, solicitacao_id uuid,
-  numero_processo text, numero_pasta integer, reclamante_nome text,
-  reclamadas text[], area text,
-  assigned_user_name text, completed_by_name text,
-  solicitacao_titulo text, solicitacao_prioridade text
-) ...
+-- invoices: SELECT, INSERT, UPDATE, DELETE -> authenticated
+-- billing_contacts: DELETE -> authenticated  
+-- clients: DELETE -> authenticated
 ```
 
-### Arquivos
+#### 2. Migration: permitir coordenadores verem invoices
+
+Adicionar `is_coordinator_or_above` na policy SELECT de invoices para que coordenadores possam acompanhar o faturamento dos seus clientes.
+
+#### 3. Ajustar `InvoiceFormDialog` para usar `clients_safe`
+
+O formulário de nova fatura precisa listar clientes para vinculação. Como coordenadores nao tem acesso a `clients` (restrito a finance/admin/gerente), trocar para `clients_safe` no dropdown de seleção.
+
+- Criar um hook leve `useClientsSafe()` ou ajustar o `InvoiceFormDialog` para consultar `clients_safe` diretamente
+- Manter `useClients()` original para quem tem acesso completo
+
+#### 4. Ajustar `AgendaFaturamentoWidget`
+
+Trocar a query de `clients` para `clients_safe` na agenda de faturamento, pois ela so precisa de `nome`, `razao_social`, `dia_emissao_nf` e `dia_vencimento` -- todos expostos na view safe.
+
+#### 5. Corrigir warning de ref no InvoiceFormDialog
+
+Mover o `DialogFooter` para fora do componente `Form` ou envolver com `React.forwardRef`.
+
+### Arquivos afetados
 
 | Arquivo | Ação |
 |---------|------|
-| Migration SQL | Criar RPC `get_all_deadlines_with_details` |
-| `src/hooks/useAllProcessDeadlines.ts` | Usar `supabase.rpc(...)` em vez de `.from().select()` |
+| Migration SQL | Corrigir 6 policies com role `public` -> `authenticated`; adicionar coordenador ao SELECT de invoices |
+| `src/components/financeiro/InvoiceFormDialog.tsx` | Usar `clients_safe`; corrigir ref warning |
+| `src/components/financeiro/AgendaFaturamentoWidget.tsx` | Usar `clients_safe` |
+| `src/components/financeiro/BatchInvoiceDialog.tsx` | Sem alteracao (nao depende de clients) |
 
 ### Resultado
 
-- Cards de resumo mostram números reais (531 atrasados, 78 hoje, 378 futuros)
-- Consistência total entre aba Prazos e aba Relatórios
-- Performance melhor (1 query RPC em vez de 3 queries sequenciais)
+- Sem acesso anonimo a nenhuma tabela financeira
+- Coordenadores conseguem ver faturas e clientes no formulario
+- Agenda de faturamento visivel para todos os roles operacionais
+- Warning de console eliminado
 
