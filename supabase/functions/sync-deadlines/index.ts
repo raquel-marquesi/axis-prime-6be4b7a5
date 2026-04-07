@@ -147,8 +147,9 @@ Deno.serve(async (req) => {
       .from("processes")
       .select("id, id_cliente")
       .eq("numero_processo", body.numero_processo.trim())
+      .order("created_at", { ascending: true })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     let processId: string;
     let processCreated = false;
