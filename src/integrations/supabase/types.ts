@@ -2872,35 +2872,21 @@ export type Database = {
           source: string
         }[]
       }
-      get_prazos_rows:
-        | {
-            Args: {
-              p_month: string
-              p_page?: number
-              p_page_size?: number
-              p_responsavel_id?: string
-              p_search?: string
-              p_status?: string[]
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_assigned_to?: string
-              p_month?: string
-              p_page?: number
-              p_page_size?: number
-              p_search?: string
-              p_status_filters?: string[]
-            }
-            Returns: Json
-          }
-      get_prazos_summary:
-        | {
-            Args: { p_month: string; p_responsavel_id?: string }
-            Returns: Json
-          }
-        | { Args: { p_assigned_to?: string; p_month?: string }; Returns: Json }
+      get_prazos_rows: {
+        Args: {
+          p_month: string
+          p_page?: number
+          p_page_size?: number
+          p_responsavel_id?: string
+          p_search?: string
+          p_status?: string[]
+        }
+        Returns: Json
+      }
+      get_prazos_summary: {
+        Args: { p_month: string; p_responsavel_id?: string }
+        Returns: Json
+      }
       get_process_counts_by_client: {
         Args: never
         Returns: {
@@ -2928,8 +2914,12 @@ export type Database = {
       is_coordinator_or_above: { Args: { _user_id: string }; Returns: boolean }
       is_financeiro: { Args: { _user_id: string }; Returns: boolean }
       is_leader_or_above: { Args: { _user_id: string }; Returns: boolean }
-      reconcile_open_deadlines: { Args: never; Returns: Json }
-      relink_orphan_timesheet_entries: { Args: never; Returns: Json }
+      reconcile_open_deadlines:
+        | { Args: never; Returns: Json }
+        | { Args: { p_batch_size?: number }; Returns: Json }
+      relink_orphan_timesheet_entries:
+        | { Args: never; Returns: Json }
+        | { Args: { p_batch_size?: number }; Returns: Json }
       reports_to_user: {
         Args: { _manager_profile_id: string; _target_user_id: string }
         Returns: boolean
