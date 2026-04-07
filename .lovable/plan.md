@@ -1,132 +1,54 @@
+## Unificar contratos por cliente em cards com expansão
 
-Objetivo: restaurar a rota `/financeiro` conforme a regra histórica já aprovada no projeto: ela deve ser o hub central do módulo financeiro, separada do `FinanceDashboard` da home.
+### Situação atual
 
-Diagnóstico recuperado do histórico + código atual:
-- A decisão aprovada anteriormente foi: manter o Financeiro em 6 abas fixas — Visão Geral, Transações, Faturamento, Relatórios, Impostos e Configurações.
-- `src/pages/Financeiro.tsx` ainda tem essas 6 abas, mas parte da centralização se perdeu:
-  - `RentabilidadeChart` e `PremiacaoVsFaturamentoChart` estão implementados, porém presos ao `src/components/dashboard/FinanceDashboard.tsx`;
-  - `FaturamentoClienteReport` e `FaturamentoProfissionalReport` existem e funcionam, mas hoje só aparecem em `/relatorios`, não no painel financeiro;
-  - `InvoiceFormDialog`, `ExpenseFormDialog` e `BatchInvoiceDialog` existem no módulo, mas estão órfãos ou sem ponto de entrada claro na página Financeiro;
-  - o `FinanceDashboard` continua correto como widget resumido do Dashboard e não deve substituir `/financeiro`.
+A `ContractPricingTable` exibe uma tabela plana onde cada linha é um contrato individual, repetindo o nome do cliente várias vezes. Isso dificulta a visualização quando um cliente tem múltiplos contratos.
 
-Plano de restauração
+### O que será feito
 
-1. Restaurar a composição da página Financeiro em `src/pages/Financeiro.tsx`
-- Preservar as 6 abas aprovadas.
-- Reorganizar apenas a composição/navegação, sem reescrever regras de negócio já existentes.
+Substituir a tabela plana por um grid de cards agrupados por cliente. Cada card mostra apenas o nome do cliente e um resumo (quantidade de contratos, total de valor). Ao clicar ou passar o mouse, expande/revela os detalhes dos contratos daquele cliente.
 
-2. Fortalecer a aba Visão Geral
-- Manter:
-  - `FinanceSummary`
-  - `AnaliseFinanceiraTab`
-  - `RecebiveisWidget`
-  - `ProjecaoReceitaWidget`
-  - `FinanceCharts`
-- Reintegrar:
-  - `RentabilidadeChart`
-  - `PremiacaoVsFaturamentoChart`
-- Regra: esses componentes podem continuar também no Dashboard, mas `/financeiro` volta a concentrar a visão analítica completa.
+### Arquivo a editar
 
-3. Restaurar entradas operacionais da aba Transações
-- Manter:
-  - `FinanceTable`
-  - `ExpensesTable`
-  - `AccountsTable`
-- Recolocar gatilhos visíveis para:
-  - `AddTransactionDialog`
-  - `ExpenseFormDialog`
-- Se necessário, ajustar cabeçalhos/ações dos blocos para que o usuário consiga lançar movimentações e despesas sem depender de caminhos indiretos.
+`**src/components/financeiro/ContractPricingTable.tsx**` — reescrever o componente
 
-4. Restaurar a aba Faturamento como módulo operacional completo
-- Manter:
-  - `AgendaFaturamentoWidget`
-  - `InvoicesTable`
-  - `BoletosTab`
-  - `NfseTab`
-  - `ContratosTab`
-- Recolocar acessos explícitos a:
-  - `InvoiceFormDialog`
-  - `BatchInvoiceDialog`
-- Regra: criação manual e criação em lote de faturamento não podem ficar escondidas no codebase.
+### Lógica
 
-5. Expandir a aba Relatórios dentro do Financeiro
-- Manter as sub-abas já presentes:
-  - `DREReport`
-  - `FluxoCaixaReport`
-  - `ContasPagarReport`
-  - `ContasReceberReport`
-  - `CentroCustosReport`
-  - `TesourariaReport`
-- Adicionar as sub-abas já implementadas:
-  - `FaturamentoClienteReport`
-  - `FaturamentoProfissionalReport`
-- Regra: esses relatórios serão reutilizados, não movidos; continuam podendo existir também em `/relatorios`.
+1. Agrupar os `contracts` por `cliente_nome` (normalizado uppercase) em um `Map<string, ContractPricing[]>`
+2. Renderizar um grid responsivo de cards (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`)
+3. Cada card exibe:
+  - Nome do cliente (título)
+    &nbsp;
+4. Ao clicar no card, abre um `Collapsible` ou `Dialog` com a tabela detalhada dos contratos daquele cliente (contrato, tipo cálculo, valor, percentual, modalidade, processos em andamento/encerrados, status)
+5. Usar `Collapsible` do shadcn para expandir inline — mais fluido que um dialog para essa interação
 
-6. Preservar Impostos e Configurações
-- Manter:
-  - `ImpostosTab`
-  - `PlanoContasTab`
-  - `CompanyBankAccountsTab`
-  - `TreasuryTab`
-  - `BankReconciliation`
-- Apenas validar a ordem visual para seguir a lógica operacional aprovada.
+### Estrutura visual
 
-Arquivos principais
-- `src/pages/Financeiro.tsx` — restauração da arquitetura e reintegração dos módulos
-- Ajustes pontuais, se necessários, em:
-  - `src/components/financeiro/FinanceTable.tsx`
-  - `src/components/financeiro/ExpensesTable.tsx`
-  - `src/components/financeiro/InvoicesTable.tsx`
-para encaixar botões de ação e evitar módulos órfãos
-
-Resultado esperado
-- `/financeiro` volta a refletir as regras já estabelecidas no histórico.
-- Nenhum componente financeiro importante fica sem acesso pela interface.
-- O Dashboard financeiro continua como visão resumida.
-- O painel financeiro volta a ser a central operacional e analítica do módulo.
-
-Detalhes técnicos
 ```text
-/financeiro
-├─ Visão Geral
-│  ├─ FinanceSummary
-│  ├─ AnaliseFinanceiraTab
-│  ├─ RecebiveisWidget
-│  ├─ ProjecaoReceitaWidget
-│  ├─ FinanceCharts
-│  ├─ RentabilidadeChart
-│  └─ PremiacaoVsFaturamentoChart
-├─ Transações
-│  ├─ FinanceTable
-│  ├─ ExpensesTable
-│  ├─ AccountsTable
-│  └─ ações: AddTransactionDialog / ExpenseFormDialog
-├─ Faturamento
-│  ├─ AgendaFaturamentoWidget
-│  ├─ InvoicesTable
-│  ├─ ações: InvoiceFormDialog / BatchInvoiceDialog
-│  ├─ BoletosTab
-│  ├─ NfseTab
-│  └─ ContratosTab
-├─ Relatórios
-│  ├─ DREReport
-│  ├─ FluxoCaixaReport
-│  ├─ ContasPagarReport
-│  ├─ ContasReceberReport
-│  ├─ CentroCustosReport
-│  ├─ TesourariaReport
-│  ├─ FaturamentoClienteReport
-│  └─ FaturamentoProfissionalReport
-├─ Impostos
-└─ Configurações
-   ├─ PlanoContasTab
-   ├─ CompanyBankAccountsTab
-   ├─ TreasuryTab
-   └─ BankReconciliation
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│  CLIENTE A       │  │  CLIENTE B       │  │  CLIENTE C       │
+│  3 contratos     │  │  1 contrato      │  │  5 contratos     │
+│  R$ 12.500,00    │  │  R$ 800,00       │  │  R$ 45.000,00    │
+│  ▼ Ver detalhes  │  │  ▼ Ver detalhes  │  │  ▼ Ver detalhes  │
+└─────────────────┘  └─────────────────┘  └─────────────────┘
+
+Ao expandir CLIENTE A:
+┌─────────────────────────────────────────────────────┐
+│  CLIENTE A                                3 contratos│
+│  ┌─────────────────────────────────────────────────┐│
+│  │ Contrato   │ Tipo    │ Valor     │ %   │ Status ││
+│  │ CT-001     │ Fixo    │ R$ 5.000  │ —   │ Ativo  ││
+│  │ CT-002     │ %       │ —         │ 15% │ Ativo  ││
+│  │ CT-003     │ Misto   │ R$ 7.500  │ 5%  │ Inativo││
+│  └─────────────────────────────────────────────────┘│
+│  ▲ Recolher                                         │
+└─────────────────────────────────────────────────────┘
 ```
 
-Critério de aceite
-- a estrutura de 6 abas permanece;
-- os módulos implementados no histórico voltam a aparecer em `/financeiro`;
-- os diálogos financeiros deixam de ficar órfãos;
-- `/financeiro` e `FinanceDashboard` continuam com papéis distintos e coerentes.
+### Detalhes técnicos
+
+- Importar `Collapsible`, `CollapsibleTrigger`, `CollapsibleContent` do shadcn
+- Usar `ChevronDown`/`ChevronUp` do lucide-react para indicar estado
+- Estado local `openClients: Set<string>` para controlar quais cards estão expandidos
+- A prop `compact` continua funcionando (para uso dentro do formulário de clientes)
+- Manter a formatação `fmt` existente para valores monetários
