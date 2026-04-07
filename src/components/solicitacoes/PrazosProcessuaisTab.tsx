@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DeadlinesCalendarView } from './DeadlinesCalendarView';
-import { useAllProcessDeadlines, useDeadlineCounts, type DeadlineStatus, type ProcessDeadlineRow } from '@/hooks/useAllProcessDeadlines';
+import { useAllProcessDeadlines, type DeadlineStatus, type ProcessDeadlineRow } from '@/hooks/useAllProcessDeadlines';
 import { useOverdueTimesheetMap } from '@/hooks/useOverdueTimesheetMap';
 import { type Process } from '@/hooks/useProcesses';
 import { ProcessDetailsDialog } from '@/components/processes/ProcessDetailsDialog';
