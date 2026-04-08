@@ -1,51 +1,78 @@
+## Configuração Personalizada do Dashboard
+
+### Conceito
+
+Cada usuário poderá escolher quais widgets aparecem no seu dashboard principal, com as opções filtradas de acordo com seus perfis de acesso. As preferências são salvas na tabela `profiles` (novo campo JSONB `dashboard_config`) para persistência sem necessidade de nova tabela. Perfil de sócio tem visualização de todos os campos. 
+
+### Widgets disponíveis por perfil
 
 
-## Corrigir duplicação massiva de processos e prazos
+| Widget                   | Todos  | Coordenador+ | Gerente/Admin | Financeiro |
+| ------------------------ | ------ | ------------ | ------------- | ---------- |
+| Calendário Interno       | ✓      | ✓            | ✓             | ✓          |
+| Bônus/Premiação          | ✓      | ✓            | ✓             | &nbsp;     |
+| Prazos Pendentes         | ✓      | ✓            | ✓             | &nbsp;     |
+| Prazos Atrasados         | ✓      | ✓            | ✓             | &nbsp;     |
+| Produção                 | &nbsp; | ✓            | ✓             | &nbsp;     |
+| Meta da Equipe           | &nbsp; | ✓            | ✓             | &nbsp;     |
+| Prazos por Membro        | &nbsp; | ✓            | &nbsp;        | &nbsp;     |
+| Contratos a Vencer       | &nbsp; | &nbsp;       | ✓             | ✓          |
+| Google Calendar          | &nbsp; | ✓            | ✓             | &nbsp;     |
+| Recebíveis               | &nbsp; | &nbsp;       | &nbsp;        | ✓          |
+| Agenda Faturamento       | &nbsp; | &nbsp;       | &nbsp;        | ✓          |
+| Rentabilidade            | &nbsp; | &nbsp;       | &nbsp;        | ✓          |
+| Premiação vs Faturamento | &nbsp; | &nbsp;       | &nbsp;        | ✓          |
+| Projeção Receita         | &nbsp; | &nbsp;       | &nbsp;        | ✓          |
+| Clientes Ativos          | &nbsp; | &nbsp;       | &nbsp;        | ✓          |
 
-### Diagnóstico
 
-| Problema | Impacto | Causa Raiz |
-|----------|---------|------------|
-| 107 CNJs com processos duplicados | 750 registros, 643 são lixo | `processMap` carregado com limite de 1.000 rows; CNJs ausentes são recriados a cada ciclo |
-| Prazos duplicados vinculados | ~643 deadlines órfãos | Cada processo duplicado gera novo deadline (dedup usa `process_id` diferente) |
-| Pastas sequenciais criadas | `numero_pasta` inflado (20 → 687 para o mesmo CNJ) | Auto-increment sem verificação prévia |
+### Implementação
 
-### Plano de Correção
+#### 1. Migração SQL
 
-#### 1. Migração SQL — Limpeza dos dados duplicados
+- Adicionar coluna `dashboard_config jsonb DEFAULT null` na tabela `profiles`
+- Estrutura: `{ "widgets": ["calendar", "bonus", "deadlines_pending", ...], "layout": "default" }`
 
-Script que:
-- Para cada `numero_processo` com duplicatas, mantém o registro mais antigo (menor `created_at`)
-- Move todos os `process_deadlines` dos duplicados para o processo original
-- Move todos os `solicitacoes` dos duplicados para o processo original
-- Exclui os processos duplicados
+#### 2. Novo componente `DashboardSettings.tsx` em `src/components/configuracoes/`
 
-#### 2. `sync-email-agendamentos/index.ts` — Corrigir carregamento do processMap
+- Lista de checkboxes com todos os widgets disponíveis para o perfil do usuário
+- Usa `useAuth()` para filtrar widgets por role
+- Salva no campo `dashboard_config` do profile via Supabase update
+- Botão "Restaurar Padrão" para voltar à configuração original do role
+- Preview visual com a ordem dos widgets (drag opcional — v1 sem drag, apenas checkboxes)
 
-- Substituir `supabase.from("processes").select("id, numero_processo")` (limitado a 1.000) por paginação completa ou query RPC
-- Adicionar verificação no `autoCreateProcess`: antes de inserir, fazer SELECT direto por `numero_processo` para confirmar que não existe
+#### 3. Nova aba "Dashboard" na página Configurações
 
-```text
-Antes:  processMap = Map(1000 entries)  →  CNJ não encontrado  →  INSERT
-Depois: processMap = Map(ALL entries)   →  CNJ não encontrado  →  SELECT direto  →  só INSERT se realmente não existe
-```
+- Ícone `LayoutDashboard`
+- Renderiza `<DashboardSettings />`
 
-#### 3. `sync-deadlines/index.ts` — Corrigir busca de processo
+#### 4. Modificar `src/pages/Dashboard.tsx`
 
-- Substituir `.limit(1).single()` por `.limit(1).maybeSingle()` para não falhar com múltiplos
-- Adicionar ORDER BY `created_at ASC` para sempre pegar o mais antigo (canônico)
+- Ler `profile.dashboard_config` para obter a lista de widgets habilitados
+- Se `null`, usar o default do role (comportamento atual)
+- `renderRoleBasedDashboard()` passa a iterar sobre a lista de widgets configurados, renderizando cada um condicionalmente
+- Cada widget é um componente independente mapeado por um ID string
+
+#### 5. Registro de widgets (`src/lib/dashboardWidgets.ts`)
+
+- Objeto de definição: `{ id, label, component, requiredRoles[], defaultForRoles[] }`
+- Centraliza o catálogo de widgets disponíveis
+- Usado tanto pelo `DashboardSettings` (para exibir opções) quanto pelo `Dashboard` (para renderizar)
 
 ### Arquivos
 
-| Arquivo | Ação |
-|---------|------|
-| Migration SQL | Dedup de processes, reparent deadlines/solicitacoes, delete duplicatas |
-| `supabase/functions/sync-email-agendamentos/index.ts` | Paginar processMap; guard no autoCreateProcess |
-| `supabase/functions/sync-deadlines/index.ts` | Usar `.maybeSingle()` + ORDER BY |
+
+| Arquivo                                              | Ação                                                                  |
+| ---------------------------------------------------- | --------------------------------------------------------------------- |
+| Migration SQL                                        | `ALTER TABLE profiles ADD COLUMN dashboard_config jsonb DEFAULT null` |
+| `src/lib/dashboardWidgets.ts`                        | Criar — registro de widgets                                           |
+| `src/components/configuracoes/DashboardSettings.tsx` | Criar — UI de configuração                                            |
+| `src/pages/Configuracoes.tsx`                        | Adicionar aba "Dashboard"                                             |
+| `src/pages/Dashboard.tsx`                            | Ler config e renderizar widgets dinamicamente                         |
+
 
 ### Resultado
 
-- 643 processos duplicados eliminados
-- Prazos e solicitações consolidados nos processos canônicos
-- Prevenção permanente contra recriação
-
+- Cada usuário personaliza seu dashboard com os widgets que mais usa
+- Widgets filtrados por role — ninguém vê opções que não pode acessar
+- Sem config salva = comportamento atual (retrocompatível)
