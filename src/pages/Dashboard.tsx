@@ -49,22 +49,7 @@ export default function Dashboard() {
 
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
 
-  const { data: pendingDeadlinesCount } = useQuery({
-    queryKey: ['dashboard-pending-deadlines', userId],
-    queryFn: async () => {
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const in7days = format(addDays(new Date(), 7), 'yyyy-MM-dd');
-      const { count } = await supabase
-        .from('process_deadlines')
-        .select('*', { count: 'exact', head: true })
-        .eq('assigned_to', userId!)
-        .eq('is_completed', false)
-        .gte('data_prazo', today)
-        .lte('data_prazo', in7days);
-      return count || 0;
-    },
-    enabled: !!userId,
-  });
+  
 
   // Determine active widgets
   const config = (profile as any)?.dashboard_config as { widgets?: string[] } | null;
