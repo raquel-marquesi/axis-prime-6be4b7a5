@@ -25,6 +25,7 @@ export const BillingPreviewTab: React.FC = () => {
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [comboboxOpen, setComboboxOpen] = useState(false);
+  const [groupComboboxOpen, setGroupComboboxOpen] = useState(false);
   const [referenceMonth, setReferenceMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -151,17 +152,34 @@ export const BillingPreviewTab: React.FC = () => {
             {/* Grupo Econômico filter */}
             <div className="space-y-1 min-w-[200px]">
               <label className="text-xs text-muted-foreground">Grupo Econômico</label>
-              <Select value={selectedGroupId} onValueChange={(v) => { setSelectedGroupId(v === '_all' ? '' : v); setSelectedClientIds([]); }}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_all">Todos</SelectItem>
-                  {groups.map(g => (
-                    <SelectItem key={g.id} value={g.id}>{g.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={groupComboboxOpen} onOpenChange={setGroupComboboxOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={groupComboboxOpen} className="h-9 w-full justify-between font-normal">
+                    {selectedGroupId ? groups.find(g => g.id === selectedGroupId)?.nome : "Todos"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[250px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar grupo..." />
+                    <CommandList>
+                      <CommandEmpty>Grupo não encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem value="todos" onSelect={() => { setSelectedGroupId(''); setSelectedClientIds([]); setGroupComboboxOpen(false); }}>
+                          Todos
+                          {!selectedGroupId && <Check className="ml-auto h-4 w-4" />}
+                        </CommandItem>
+                        {groups.map(g => (
+                          <CommandItem key={g.id} value={g.nome} onSelect={() => { setSelectedGroupId(g.id); setSelectedClientIds([]); setGroupComboboxOpen(false); }}>
+                            {g.nome}
+                            {selectedGroupId === g.id && <Check className="ml-auto h-4 w-4" />}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Filial filter */}
