@@ -19,7 +19,7 @@ export const BillingPreviewTab: React.FC = () => {
   });
   const [activePreviewId, setActivePreviewId] = useState<string | null>(null);
 
-  const { data: clients = [], isLoading: loadingClients } = useClientsSafe();
+  const { clients, isLoading: loadingClients } = useClientsSafe();
   const { previews, isLoadingPreviews, items, isLoadingItems, generatePreview, updateItemBillable, approvePreview } = useBillingPreview(activePreviewId || undefined);
 
   const handleGenerate = () => {
