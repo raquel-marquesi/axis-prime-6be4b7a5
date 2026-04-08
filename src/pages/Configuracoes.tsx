@@ -25,6 +25,10 @@ const Configuracoes = () => {
             <Settings className="w-4 h-4" />
             Geral
           </TabsTrigger>
+          <TabsTrigger value="dashboard" className="flex items-center gap-2">
+            <LayoutDashboard className="w-4 h-4" />
+            Dashboard
+          </TabsTrigger>
           <TabsTrigger value="empresa" className="flex items-center gap-2">
             <Building2 className="w-4 h-4" />
             Empresa
@@ -53,6 +57,10 @@ const Configuracoes = () => {
 
         <TabsContent value="geral">
           <GeneralSettings />
+        </TabsContent>
+
+        <TabsContent value="dashboard">
+          <DashboardSettings />
         </TabsContent>
 
         <TabsContent value="empresa">
