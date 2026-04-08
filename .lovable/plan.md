@@ -1,41 +1,131 @@
 
 
-## Diagnóstico: Dados dos Cards do Dashboard
+## Simulação de Faturamento de Cálculos — Fluxo Completo
 
-### Problemas Encontrados
+### Diagnóstico da Situação Atual
 
-| Card | Status | Problema |
+| Item | Estado | Problema |
 |------|--------|----------|
-| **Prazos Pendentes** | ⚠️ Parcial | O card principal usa query filtrada por `assigned_to = userId` (só prazos do próprio usuário). O fallback `stats.pendingDeadlines` conta **todos** os prazos pendentes (131), sem filtro de `assigned_to`. Inconsistência de escopo. |
-| **Prazos Atrasados** | ⚠️ Incorreto | `useDashboardStats` conta **todos** os 326 prazos atrasados do sistema, sem filtro por `assigned_to`. Para usuários comuns, deveria mostrar apenas os seus. |
-| **Clientes Ativos** | ✅ OK | Contagem correta (212 clientes ativos). |
-| **Contratos a Vencer** | ❌ Sempre 0 | `useDashboardStats` **não calcula** `contractsExpiring30/60/90`. O campo não existe no objeto `stats`. O card sempre mostra 0. |
-| **Prazos por Membro** | ❌ Nunca exibe | `useDashboardStats` **não calcula** `deadlinesByUser`. O widget verifica `stats?.deadlinesByUser` que é sempre `undefined`, então o card nunca renderiza. |
+| Dados de produção (Março/RAIA DROGASIL) | ✅ 508 lançamentos, 225 processos | Existe base real |
+| Lançamentos duplicados | ⚠️ ~10 pares duplicados identificados | Mesmo processo/data/descrição |
+| Lançamentos sem tipo de atividade | ❌ 296 de 508 (58%) | Não são classificáveis para faturamento |
+| Conta de faturamento | ❌ 0 contas cadastradas | Impossível criar fatura |
+| Contato de faturamento | ❌ 0 contatos | Impossível criar fatura |
+| Contrato de precificação | ❌ Sem contrato para RAIA DROGASIL | Não existe valor unitário/fixo definido |
+| Faturas | ❌ 0 faturas no sistema | Nunca foi emitida nenhuma |
+| Relatório de pré-faturamento | ❌ Não existe | Não há tela para consolidar produção por cliente antes de faturar |
+| Fluxo de validação/remoção | ❌ Não existe | Não há etapa intermediária de revisão |
 
-### Correções
+### O que Funciona Hoje
 
-#### 1. `useDashboardStats.ts` — Adicionar dados faltantes e filtrar por contexto
+1. **Formulário de fatura individual** — funciona se já existir Conta + Contato
+2. **Faturamento em lote** — funciona (gera faturas por contato dentro de uma conta)
+3. **Emissão de NFS-e** — dialog implementado, depende de config do prestador
+4. **Tabela de faturas** — exibe, marca como paga, exclui
 
-- **Contratos a vencer**: Adicionar 3 queries em `clients` filtrando `contrato_data_vencimento` nos intervalos de 30, 60 e 90 dias
-- **Prazos por membro** (para coordenadores+): Query agrupada em `process_deadlines` com join em `profiles` para obter `full_name`, contando pendentes e atrasados por `assigned_to`
-- **Prazos atrasados**: Para usuários não-coordenadores, filtrar por `assigned_to = userId`. Para coordenadores+, manter contagem global ou da equipe.
-- **Prazos pendentes**: Alinhar o escopo — o card diz "Próximos 7 dias", então `useDashboardStats.pendingDeadlines` deveria usar a mesma janela de 7 dias (atualmente conta todos os futuros)
+### O que Falta (Gaps Críticos)
 
-#### 2. `Dashboard.tsx` — Remover query duplicada
+O sistema **não possui** o fluxo principal de faturamento por produção:
 
-- A query inline `pendingDeadlinesCount` (linhas 52-67) duplica parcialmente o que `useDashboardStats` deveria fazer. Mover essa lógica para dentro do hook e remover a query avulsa.
+1. **Relatório de Produção por Cliente/Mês** — Tela que consolida todos os cálculos realizados no mês para um cliente, agrupados por tipo de atividade, com totais e valores baseados no contrato de precificação
+2. **Pré-Relatório de Validação** — Etapa intermediária onde o gestor revisa a lista, identifica duplicatas e marca itens como "não faturável"
+3. **Geração Automática de Fatura** — A partir do pré-relatório aprovado, gerar a fatura com valor calculado automaticamente
+4. **Dados cadastrais do RAIA DROGASIL** — Faltam: Conta, Contato de Faturamento e Contrato de Precificação
 
-### Arquivos a Modificar
+### Plano de Implementação
+
+#### 1. Migração SQL — Tabela `billing_preview_items`
+
+Criar tabela intermediária para o pré-relatório de faturamento:
+
+```text
+billing_previews (id, client_id, reference_month, status [draft/approved/invoiced], total_items, total_value, created_by, created_at)
+billing_preview_items (id, preview_id, timesheet_entry_id, process_id, numero_processo, reclamante, tipo_atividade, data_atividade, descricao, quantidade, valor_unitario, valor_total, is_duplicate, is_billable, exclusion_reason)
+```
+
+RLS: apenas `authenticated` com scope de coordenador+ pode acessar.
+
+#### 2. Nova página/aba "Pré-Faturamento" no módulo Financeiro
+
+Componente `BillingPreviewTab.tsx`:
+- Filtros: Cliente (select), Mês/Ano (date picker)
+- Botão "Gerar Pré-Relatório" que:
+  - Busca todos os `timesheet_entries` do mês para o cliente
+  - Detecta duplicatas automaticamente (mesmo processo + mesma data + mesma descrição)
+  - Marca lançamentos sem `activity_type_id` como "não classificado"
+  - Aplica valor unitário do `contract_pricing` (se existir)
+- Tabela interativa com:
+  - Checkbox para marcar/desmarcar como faturável
+  - Badge "Duplicata" em vermelho
+  - Badge "Sem tipo" em amarelo
+  - Coluna de valor calculado
+  - Totalizadores no rodapé
+- Botão "Aprovar e Gerar Fatura" → cria invoice automaticamente
+
+#### 3. Componente `BillingPreviewTable.tsx`
+
+Tabela detalhada dos itens do pré-relatório com:
+- Seleção em massa (select all / deselect duplicatas)
+- Filtro rápido por status (duplicata, sem tipo, faturável)
+- Exportar para Excel (opcional v1)
+
+#### 4. Hook `useBillingPreview.ts`
+
+- `generatePreview(clientId, month)` — busca timesheet + detecta duplicatas + calcula valores
+- `updateItemBillable(itemId, isBillable, reason)` — marca/desmarca
+- `approveAndInvoice(previewId)` — cria a fatura a partir do preview aprovado
+
+#### 5. Aba "Faturamento" no Financeiro
+
+Adicionar sub-aba "Pré-Faturamento" junto com as existentes (Faturas, Boletos, NFS-e, Contratos).
+
+### Arquivos a Criar/Modificar
 
 | Arquivo | Ação |
 |---------|------|
-| `src/hooks/useDashboardStats.ts` | Adicionar `contractsExpiring30/60/90`, `deadlinesByUser[]`, filtro por role nos prazos, janela de 7 dias |
-| `src/pages/Dashboard.tsx` | Remover query duplicada `pendingDeadlinesCount`, usar apenas `stats` |
+| Migration SQL | Criar `billing_previews` + `billing_preview_items` com RLS |
+| `src/hooks/useBillingPreview.ts` | Novo — lógica de geração e aprovação |
+| `src/components/financeiro/BillingPreviewTab.tsx` | Novo — UI principal do pré-faturamento |
+| `src/components/financeiro/BillingPreviewTable.tsx` | Novo — tabela detalhada dos itens |
+| `src/pages/Financeiro.tsx` | Adicionar sub-aba "Pré-Faturamento" na aba Faturamento |
+
+### Fluxo Visual
+
+```text
+Selecionar Cliente + Mês
+        │
+        ▼
+  [Gerar Pré-Relatório]
+        │
+        ▼
+  ┌─────────────────────────────────┐
+  │ Pré-Relatório de Faturamento    │
+  │                                 │
+  │ ✅ Cálculo Liquidação  (150x)   │
+  │ ✅ Embargos Execução   (30x)    │
+  │ ⚠️ Sem tipo atividade  (296x)  │
+  │ 🔴 Duplicatas          (10x)    │
+  │                                 │
+  │ Total faturável: 180 cálculos   │
+  │ Valor: R$ XX.XXX,XX             │
+  └─────────────────────────────────┘
+        │
+        ▼
+  [Revisar → Remover duplicatas]
+  [Marcar não-faturáveis]
+        │
+        ▼
+  [Aprovar e Gerar Fatura]
+        │
+        ▼
+  Fatura criada → NFS-e
+```
 
 ### Resultado
 
-- Todos os cards exibem dados reais e corretos
-- "Contratos a Vencer" mostra contagem real (atualmente 0 porque nenhum contrato vence nos próximos 90 dias, mas o cálculo passará a existir)
-- "Prazos por Membro" renderiza a lista de membros da equipe com suas contagens
-- Prazos filtrados por escopo do usuário (próprio vs equipe vs global)
+- Fluxo completo: Produção → Pré-relatório → Validação → Fatura → NFS-e
+- Detecção automática de duplicatas
+- Gestão visual de itens faturáveis/não-faturáveis
+- Cálculo automático de valor baseado no contrato de precificação
+- Rastreabilidade total (cada item da fatura liga a um timesheet_entry)
 
