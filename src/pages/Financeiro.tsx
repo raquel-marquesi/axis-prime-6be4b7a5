@@ -27,6 +27,7 @@ import { BoletosTab } from "@/components/financeiro/BoletosTab";
 import { NfseTab } from "@/components/financeiro/NfseTab";
 import { ContratosTab } from "@/components/financeiro/ContratosTab";
 import { AgendaFaturamentoWidget } from "@/components/financeiro/AgendaFaturamentoWidget";
+import { BillingPreviewTab } from "@/components/financeiro/BillingPreviewTab";
 
 // Relatórios
 import { DREReport } from "@/components/financeiro/DREReport";
@@ -112,21 +113,35 @@ const Financeiro = () => {
 
         {/* Faturamento */}
         <TabsContent value="faturamento" className="space-y-6">
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => setIsInvoiceDialogOpen(true)} size="sm" className="gap-2">
-              <FileText className="h-4 w-4" />
-              Nova Fatura
-            </Button>
-            <Button onClick={() => setIsBatchInvoiceOpen(true)} size="sm" variant="outline" className="gap-2">
-              <Layers className="h-4 w-4" />
-              Faturamento em Lote
-            </Button>
-          </div>
-          <AgendaFaturamentoWidget />
-          <InvoicesTable />
-          <BoletosTab />
-          <NfseTab />
-          <ContratosTab />
+          <Tabs defaultValue="pre-faturamento" className="space-y-4">
+            <TabsList className="flex-wrap h-auto gap-1">
+              <TabsTrigger value="pre-faturamento">Pré-Faturamento</TabsTrigger>
+              <TabsTrigger value="faturas">Faturas</TabsTrigger>
+              <TabsTrigger value="boletos">Boletos</TabsTrigger>
+              <TabsTrigger value="nfse">NFS-e</TabsTrigger>
+              <TabsTrigger value="contratos">Contratos</TabsTrigger>
+            </TabsList>
+            <TabsContent value="pre-faturamento">
+              <BillingPreviewTab />
+            </TabsContent>
+            <TabsContent value="faturas" className="space-y-6">
+              <div className="flex justify-end gap-2">
+                <Button onClick={() => setIsInvoiceDialogOpen(true)} size="sm" className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Nova Fatura
+                </Button>
+                <Button onClick={() => setIsBatchInvoiceOpen(true)} size="sm" variant="outline" className="gap-2">
+                  <Layers className="h-4 w-4" />
+                  Faturamento em Lote
+                </Button>
+              </div>
+              <AgendaFaturamentoWidget />
+              <InvoicesTable />
+            </TabsContent>
+            <TabsContent value="boletos"><BoletosTab /></TabsContent>
+            <TabsContent value="nfse"><NfseTab /></TabsContent>
+            <TabsContent value="contratos"><ContratosTab /></TabsContent>
+          </Tabs>
         </TabsContent>
 
         {/* Relatórios */}
