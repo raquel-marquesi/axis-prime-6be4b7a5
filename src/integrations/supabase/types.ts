@@ -2277,6 +2277,7 @@ export type Database = {
           conta_digito: string | null
           cpf: string | null
           created_at: string
+          dashboard_config: Json | null
           email: string
           full_name: string
           id: string
@@ -2297,6 +2298,7 @@ export type Database = {
           conta_digito?: string | null
           cpf?: string | null
           created_at?: string
+          dashboard_config?: Json | null
           email: string
           full_name: string
           id?: string
@@ -2317,6 +2319,7 @@ export type Database = {
           conta_digito?: string | null
           cpf?: string | null
           created_at?: string
+          dashboard_config?: Json | null
           email?: string
           full_name?: string
           id?: string
