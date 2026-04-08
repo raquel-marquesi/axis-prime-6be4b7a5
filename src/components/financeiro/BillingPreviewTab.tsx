@@ -1,18 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { FileText, CheckCircle, Loader2, ArrowLeft } from 'lucide-react';
-import { useClientsSafe } from '@/hooks/useClientsSafe';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { FileText, CheckCircle, Loader2, ArrowLeft, ChevronsUpDown, Check } from 'lucide-react';
+import { useClientsSafe, ClientSafe } from '@/hooks/useClientsSafe';
 import { useBillingPreview } from '@/hooks/useBillingPreview';
+import { useBranches } from '@/hooks/useBranches';
+import { useEconomicGroups } from '@/hooks/useEconomicGroups';
 import { BillingPreviewTable } from './BillingPreviewTable';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export const BillingPreviewTab: React.FC = () => {
   const [selectedClientId, setSelectedClientId] = useState('');
+  const [selectedGroupId, setSelectedGroupId] = useState('');
+  const [selectedBranchId, setSelectedBranchId] = useState('');
+  const [comboboxOpen, setComboboxOpen] = useState(false);
   const [referenceMonth, setReferenceMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -20,7 +30,39 @@ export const BillingPreviewTab: React.FC = () => {
   const [activePreviewId, setActivePreviewId] = useState<string | null>(null);
 
   const { clients, isLoading: loadingClients } = useClientsSafe();
+  const { activeBranches } = useBranches();
+  const { groups } = useEconomicGroups();
   const { previews, isLoadingPreviews, items, isLoadingItems, generatePreview, updateItemBillable, approvePreview } = useBillingPreview(activePreviewId || undefined);
+
+  // Fetch client_branches map
+  const { data: clientBranchesMap = {} } = useQuery({
+    queryKey: ['client-branches-map'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('client_branches').select('client_id, branch_id');
+      if (error) throw error;
+      const map: Record<string, string[]> = {};
+      for (const row of data || []) {
+        if (!map[row.client_id]) map[row.client_id] = [];
+        map[row.client_id].push(row.branch_id);
+      }
+      return map;
+    },
+  });
+
+  // Filter clients based on group and branch
+  const filteredClients = useMemo(() => {
+    let list = clients;
+    if (selectedGroupId) {
+      list = list.filter(c => c.economic_group_id === selectedGroupId);
+    }
+    if (selectedBranchId) {
+      list = list.filter(c => (clientBranchesMap[c.id] || []).includes(selectedBranchId));
+    }
+    return list;
+  }, [clients, selectedGroupId, selectedBranchId, clientBranchesMap]);
+
+  const selectedClient = clients.find(c => c.id === selectedClientId);
+  const clientLabel = (c: ClientSafe) => c.razao_social || c.nome || c.nome_fantasia || 'Sem nome';
 
   const handleGenerate = () => {
     if (!selectedClientId || !referenceMonth) return;
@@ -36,7 +78,7 @@ export const BillingPreviewTab: React.FC = () => {
     switch (status) {
       case 'draft': return <Badge variant="secondary">Rascunho</Badge>;
       case 'approved': return <Badge className="bg-primary text-primary-foreground">Aprovado</Badge>;
-      case 'invoiced': return <Badge className="bg-emerald-600 text-white">Faturado</Badge>;
+      case 'invoiced': return <Badge className="bg-emerald-600 text-primary-foreground">Faturado</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
     }
   };
@@ -56,21 +98,78 @@ export const BillingPreviewTab: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-end gap-4">
-            <div className="space-y-1 min-w-[250px]">
-              <label className="text-xs text-muted-foreground">Cliente</label>
-              <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+            {/* Grupo Econômico filter */}
+            <div className="space-y-1 min-w-[200px]">
+              <label className="text-xs text-muted-foreground">Grupo Econômico</label>
+              <Select value={selectedGroupId} onValueChange={(v) => { setSelectedGroupId(v === '_all' ? '' : v); setSelectedClientId(''); }}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Selecione o cliente" />
+                  <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  {clients.map((c: any) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.nome || c.razao_social || c.nome_fantasia || 'Sem nome'}
-                    </SelectItem>
+                  <SelectItem value="_all">Todos</SelectItem>
+                  {groups.map(g => (
+                    <SelectItem key={g.id} value={g.id}>{g.nome}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Filial filter */}
+            <div className="space-y-1 min-w-[180px]">
+              <label className="text-xs text-muted-foreground">Filial</label>
+              <Select value={selectedBranchId} onValueChange={(v) => { setSelectedBranchId(v === '_all' ? '' : v); setSelectedClientId(''); }}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all">Todas</SelectItem>
+                  {activeBranches.map(b => (
+                    <SelectItem key={b.id} value={b.id}>{b.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Client combobox */}
+            <div className="space-y-1 min-w-[280px]">
+              <label className="text-xs text-muted-foreground">Cliente</label>
+              <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={comboboxOpen} className="h-9 w-full justify-between font-normal">
+                    {selectedClient ? clientLabel(selectedClient) : 'Buscar cliente...'}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[350px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Digite para buscar..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        {filteredClients.map(c => {
+                          const group = c.economic_group_id ? groups.find(g => g.id === c.economic_group_id) : null;
+                          return (
+                            <CommandItem
+                              key={c.id}
+                              value={`${c.razao_social || ''} ${c.nome || ''} ${c.nome_fantasia || ''}`}
+                              onSelect={() => { setSelectedClientId(c.id); setComboboxOpen(false); }}
+                            >
+                              <Check className={cn('mr-2 h-4 w-4', selectedClientId === c.id ? 'opacity-100' : 'opacity-0')} />
+                              <div className="flex flex-col">
+                                <span className="text-sm">{clientLabel(c)}</span>
+                                {group && <span className="text-xs text-muted-foreground">{group.nome}</span>}
+                              </div>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Month */}
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">Mês de Referência</label>
               <Input
@@ -80,6 +179,7 @@ export const BillingPreviewTab: React.FC = () => {
                 className="h-9 w-[180px]"
               />
             </div>
+
             <Button
               onClick={handleGenerate}
               disabled={!selectedClientId || !referenceMonth || generatePreview.isPending}
