@@ -86,7 +86,7 @@ export default function Dashboard() {
                   <div className="p-2 rounded-lg bg-orange-500/10"><Clock className="h-4 w-4 text-orange-500" /></div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{pendingDeadlinesCount ?? stats?.pendingDeadlines ?? 0}</div>
+                  <div className="text-2xl font-bold">{stats?.pendingDeadlines ?? 0}</div>
                   <p className="text-xs text-muted-foreground mt-1">Próximos 7 dias</p>
                 </CardContent>
               </Card>
