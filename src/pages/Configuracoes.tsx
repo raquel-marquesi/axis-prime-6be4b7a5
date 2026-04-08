@@ -1,11 +1,12 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Users, Building2, ShieldCheck, Bell, Database, Cog } from "lucide-react";
+import { Settings, Users, Building2, ShieldCheck, Bell, Database, Cog, LayoutDashboard } from "lucide-react";
 import { GeneralSettings } from "@/components/configuracoes/GeneralSettings";
 import { UserRolesSettings } from "@/components/configuracoes/UserRolesSettings";
 import { CompanySettings } from "@/components/configuracoes/CompanySettings";
 import { NotificationSettings } from "@/components/configuracoes/NotificationSettings";
 import { BackupSettings } from "@/components/configuracoes/BackupSettings";
 import { OperationalSettings } from "@/components/configuracoes/OperationalSettings";
+import { DashboardSettings } from "@/components/configuracoes/DashboardSettings";
 import UserManagement from "@/pages/UserManagement";
 
 const Configuracoes = () => {
