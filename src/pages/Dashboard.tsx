@@ -30,9 +30,6 @@ import { ProjecaoReceitaWidget } from '@/components/financeiro/ProjecaoReceitaWi
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { getAvailableWidgets, getDefaultWidgetIds } from '@/lib/dashboardWidgets';
 
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { addDays, format } from 'date-fns';
 import type { CalendarEvent } from '@/types/calendar';
 
 export default function Dashboard() {
@@ -49,22 +46,7 @@ export default function Dashboard() {
 
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
 
-  const { data: pendingDeadlinesCount } = useQuery({
-    queryKey: ['dashboard-pending-deadlines', userId],
-    queryFn: async () => {
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const in7days = format(addDays(new Date(), 7), 'yyyy-MM-dd');
-      const { count } = await supabase
-        .from('process_deadlines')
-        .select('*', { count: 'exact', head: true })
-        .eq('assigned_to', userId!)
-        .eq('is_completed', false)
-        .gte('data_prazo', today)
-        .lte('data_prazo', in7days);
-      return count || 0;
-    },
-    enabled: !!userId,
-  });
+  
 
   // Determine active widgets
   const config = (profile as any)?.dashboard_config as { widgets?: string[] } | null;
@@ -101,7 +83,7 @@ export default function Dashboard() {
                   <div className="p-2 rounded-lg bg-orange-500/10"><Clock className="h-4 w-4 text-orange-500" /></div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{pendingDeadlinesCount ?? stats?.pendingDeadlines ?? 0}</div>
+                  <div className="text-2xl font-bold">{stats?.pendingDeadlines ?? 0}</div>
                   <p className="text-xs text-muted-foreground mt-1">Próximos 7 dias</p>
                 </CardContent>
               </Card>
