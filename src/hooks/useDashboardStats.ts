@@ -9,7 +9,7 @@ interface DeadlineByUser {
   overdue: number;
 }
 
-interface DashboardStats {
+export interface DashboardStats {
   activeClients: number;
   totalProcesses: number;
   pendingDeadlines: number;
@@ -18,6 +18,11 @@ interface DashboardStats {
   contractsExpiring60: number;
   contractsExpiring90: number;
   deadlinesByUser: DeadlineByUser[];
+  clientsByType: { fisica: number; juridica: number };
+  teamMembers: number;
+  teamPendingDeadlines: number;
+  teamOverdueDeadlines: number;
+  teamMonthlyActivities: number;
 }
 
 export function useDashboardStats() {
@@ -34,11 +39,23 @@ export function useDashboardStats() {
   return useQuery({
     queryKey: ['dashboard-stats', userId, isCoordPlus],
     queryFn: async (): Promise<DashboardStats> => {
-      // Active clients
+      // Active clients + by type
       const { count: activeClients } = await supabase
         .from('clients')
         .select('*', { count: 'exact', head: true })
         .eq('is_active', true);
+
+      const { count: pfCount } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true)
+        .eq('tipo', 'fisica');
+
+      const { count: pjCount } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true)
+        .eq('tipo', 'juridica');
 
       // Pending deadlines (next 7 days) — scoped by role
       let pendingQuery = supabase
@@ -74,27 +91,40 @@ export function useDashboardStats() {
         contractQuery(in90days),
       ]);
 
-      // Deadlines by user (for coordinators+)
+      // Deadlines by user + team stats (for coordinators+)
       let deadlinesByUser: DeadlineByUser[] = [];
+      let teamMembers = 0;
       if (isCoordPlus) {
+        // Get profile id for current user
+        const { data: myProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', userId!)
+          .maybeSingle();
+
+        if (myProfile) {
+          // Count team members
+          const { count: membersCount } = await supabase
+            .from('profiles')
+            .select('*', { count: 'exact', head: true })
+            .eq('reports_to', myProfile.id)
+            .eq('is_active', true);
+          teamMembers = membersCount || 0;
+        }
+
         const { data: rawDeadlines } = await supabase
           .from('process_deadlines')
           .select('assigned_to, data_prazo, is_completed')
           .eq('is_completed', false);
 
         if (rawDeadlines && rawDeadlines.length > 0) {
-          // Get unique assigned_to ids
           const userIds = [...new Set(rawDeadlines.map(d => d.assigned_to).filter(Boolean))] as string[];
-
-          // Fetch profile names
           const { data: profiles } = await supabase
             .from('profiles')
             .select('user_id, full_name')
             .in('user_id', userIds);
 
           const nameMap = new Map((profiles || []).map(p => [p.user_id, p.full_name]));
-
-          // Group by user
           const grouped = new Map<string, { pending: number; overdue: number }>();
           for (const d of rawDeadlines) {
             if (!d.assigned_to) continue;
@@ -122,6 +152,11 @@ export function useDashboardStats() {
         contractsExpiring60: c60.count || 0,
         contractsExpiring90: c90.count || 0,
         deadlinesByUser,
+        clientsByType: { fisica: pfCount || 0, juridica: pjCount || 0 },
+        teamMembers,
+        teamPendingDeadlines: pendingDeadlines || 0,
+        teamOverdueDeadlines: overdueDeadlines || 0,
+        teamMonthlyActivities: 0,
       };
     },
     enabled: !!userId,
