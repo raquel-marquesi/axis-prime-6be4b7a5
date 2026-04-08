@@ -30,9 +30,6 @@ import { ProjecaoReceitaWidget } from '@/components/financeiro/ProjecaoReceitaWi
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { getAvailableWidgets, getDefaultWidgetIds } from '@/lib/dashboardWidgets';
 
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { addDays, format } from 'date-fns';
 import type { CalendarEvent } from '@/types/calendar';
 
 export default function Dashboard() {
