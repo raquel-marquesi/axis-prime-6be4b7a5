@@ -1,26 +1,48 @@
 
 
-## Substituir Select de Grupo Econômico por Combobox com busca por digitação
+## Deduplicação de Clientes
 
-### Mudança
+### Diagnóstico
 
-O filtro de Grupo Econômico usa um `Select` simples (linhas 152-164). Substituir por um **Combobox** (Popover + Command + CommandInput) idêntico ao padrão já usado no seletor de clientes logo abaixo, permitindo digitar parte do nome do grupo e refinar as opções em tempo real.
+- **18 pares** de duplicatas verdadeiras (mesmo nome, sem CNPJ, registros idênticos) — 18 registros a eliminar
+- **14 grupos** com mesma razão social mas CNPJs diferentes — são filiais legítimas, não devem ser mesclados
 
-### Implementação em `src/components/financeiro/BillingPreviewTab.tsx`
+### Plano
 
-1. Adicionar estado `groupComboboxOpen` (boolean)
-2. Substituir o bloco `Select` de Grupo Econômico (linhas 152-164) por um `Popover` + `Command` com:
-   - `CommandInput` com placeholder "Buscar grupo..."
-   - `CommandItem` para "Todos" (limpa seleção)
-   - `CommandItem` para cada grupo, com `value={g.nome}` para busca textual
-   - Check icon ao lado do grupo selecionado
-3. Label do botão: nome do grupo selecionado ou "Todos"
+**Etapa 1 — Migration SQL: Mesclar duplicatas verdadeiras**
 
-Mesma largura e altura (`min-w-[200px]`, `h-9`) para manter o layout.
+Para cada par sem documento:
+1. Identificar o registro mais antigo (`created_at`) como canônico
+2. Migrar referências do duplicado para o canônico:
+   - `processes.client_id`
+   - `timesheet_entries.client_id` (se existir)
+   - `process_deadlines` (via process)
+   - `client_branches`
+   - `client_contacts`
+   - `billing_previews.client_id`
+   - `contract_pricing.client_id`
+3. Deletar o registro duplicado
+
+**Etapa 2 — Adicionar proteção contra futuras duplicatas**
+
+Criar um índice parcial unique na tabela `clients`:
+```sql
+CREATE UNIQUE INDEX idx_clients_unique_razao_social_no_doc
+ON clients (UPPER(TRIM(razao_social)))
+WHERE cnpj IS NULL AND cpf IS NULL AND is_active = true;
+```
+
+Isso impede criação de clientes com mesmo nome quando não há documento.
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `src/components/financeiro/BillingPreviewTab.tsx` | Substituir Select por Combobox no filtro de Grupo Econômico |
+| Migration SQL | Consolidar 18 pares duplicados + índice de proteção |
+
+### Resultado
+
+- 18 registros duplicados eliminados
+- Referências (processos, prazos, timesheet, contratos) preservadas no registro canônico
+- Proteção contra recriação futura de duplicatas sem documento
 
