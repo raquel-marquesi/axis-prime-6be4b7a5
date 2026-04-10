@@ -648,6 +648,54 @@ export type Database = {
           },
         ]
       }
+      billing_provisions: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          month: string
+          status: string
+          total_value: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          month: string
+          status?: string
+          total_value?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          month?: string
+          status?: string
+          total_value?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_provisions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_provisions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       boletos: {
         Row: {
           amount: number
@@ -769,6 +817,42 @@ export type Database = {
           status?: Database["public"]["Enums"]["bonus_status"]
           total_weighted?: number
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      bonus_provisions: {
+        Row: {
+          calculation_details: Json | null
+          created_at: string | null
+          id: string
+          month: string
+          payout_date: string
+          status: string
+          total_value: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          calculation_details?: Json | null
+          created_at?: string | null
+          id?: string
+          month: string
+          payout_date: string
+          status?: string
+          total_value?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          calculation_details?: Json | null
+          created_at?: string | null
+          id?: string
+          month?: string
+          payout_date?: string
+          status?: string
+          total_value?: number | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -1178,6 +1262,8 @@ export type Database = {
           is_active: boolean | null
           logradouro: string | null
           metodo_pagamento: string | null
+          metodo_recepcao: string | null
+          monitorar_contrato: boolean | null
           nome: string | null
           nome_fantasia: string | null
           numero: string | null
@@ -1232,6 +1318,8 @@ export type Database = {
           is_active?: boolean | null
           logradouro?: string | null
           metodo_pagamento?: string | null
+          metodo_recepcao?: string | null
+          monitorar_contrato?: boolean | null
           nome?: string | null
           nome_fantasia?: string | null
           numero?: string | null
@@ -1286,6 +1374,8 @@ export type Database = {
           is_active?: boolean | null
           logradouro?: string | null
           metodo_pagamento?: string | null
+          metodo_recepcao?: string | null
+          monitorar_contrato?: boolean | null
           nome?: string | null
           nome_fantasia?: string | null
           numero?: string | null
@@ -1965,8 +2055,10 @@ export type Database = {
       nfse_config: {
         Row: {
           aliquota_iss: number
+          certificado_a1_base64: string | null
           cnpj: string
           codigo_servico: string
+          codigo_tributacao_municipio: string | null
           created_at: string
           email_contato: string | null
           endereco_bairro: string | null
@@ -1979,16 +2071,20 @@ export type Database = {
           id: string
           inscricao_municipal: string
           is_active: boolean
+          natureza_operacao: number | null
           provider: string
           provider_api_url: string | null
           razao_social: string
           regime_tributario: string
+          senha_certificado: string | null
           updated_at: string
         }
         Insert: {
           aliquota_iss?: number
+          certificado_a1_base64?: string | null
           cnpj: string
           codigo_servico?: string
+          codigo_tributacao_municipio?: string | null
           created_at?: string
           email_contato?: string | null
           endereco_bairro?: string | null
@@ -2001,16 +2097,20 @@ export type Database = {
           id?: string
           inscricao_municipal: string
           is_active?: boolean
+          natureza_operacao?: number | null
           provider?: string
           provider_api_url?: string | null
           razao_social: string
           regime_tributario?: string
+          senha_certificado?: string | null
           updated_at?: string
         }
         Update: {
           aliquota_iss?: number
+          certificado_a1_base64?: string | null
           cnpj?: string
           codigo_servico?: string
+          codigo_tributacao_municipio?: string | null
           created_at?: string
           email_contato?: string | null
           endereco_bairro?: string | null
@@ -2023,10 +2123,12 @@ export type Database = {
           id?: string
           inscricao_municipal?: string
           is_active?: boolean
+          natureza_operacao?: number | null
           provider?: string
           provider_api_url?: string | null
           razao_social?: string
           regime_tributario?: string
+          senha_certificado?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -2787,6 +2889,8 @@ export type Database = {
       timesheet_entries: {
         Row: {
           activity_type_id: string | null
+          approved_at: string | null
+          approved_by: string | null
           client_id: string | null
           codigo_externo: string | null
           created_at: string
@@ -2807,6 +2911,8 @@ export type Database = {
         }
         Insert: {
           activity_type_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           client_id?: string | null
           codigo_externo?: string | null
           created_at?: string
@@ -2827,6 +2933,8 @@ export type Database = {
         }
         Update: {
           activity_type_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           client_id?: string | null
           codigo_externo?: string | null
           created_at?: string
@@ -3190,6 +3298,12 @@ export type Database = {
         Returns: string
       }
       calculate_monthly_bonus: { Args: { p_month: string }; Returns: number }
+      calculate_monthly_provisions: {
+        Args: { p_month: string }
+        Returns: undefined
+      }
+      core_complete_deadline: { Args: { payload: Json }; Returns: Json }
+      core_create_deadline: { Args: { payload: Json }; Returns: Json }
       create_timesheet_unique_index: { Args: never; Returns: string }
       delete_timesheet_duplicates_batch: {
         Args: { p_batch_size?: number }
