@@ -38,7 +38,13 @@ jobs:
             20260401154123 20260401154651 20260401155144 \
             20260401203954 20260401204626 20260401204653 \
             20260401204715 20260401220559 \
-            20260402120000 20260402155706; do
+            20260402120000 20260402155706 \
+            20260406144514 20260406181542 20260406191152 20260406222213 \
+            20260407120801 20260407122759 20260407165309 20260407173111 \
+            20260407173622 20260407180954 20260407181633 20260407184412 \
+            20260407185014 20260407191003 20260407201147 \
+            20260408122126 20260408132527 \
+            20260409114106; do
             supabase migration repair --status applied $version || true
           done
         env:
@@ -46,7 +52,7 @@ jobs:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
 
       - name: Aplicar migrations
-        run: supabase db push
+        run: supabase db push --include-all
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
