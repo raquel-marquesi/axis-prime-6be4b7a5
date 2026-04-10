@@ -25,6 +25,7 @@ export interface UserProfile {
   pix_key?: string | null;
   branch_id?: string | null;
   branch_name?: string | null;
+  dashboard_config?: { widgets?: string[] } | null;
 }
 
 export interface UserRole {

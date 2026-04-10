@@ -522,6 +522,132 @@ export type Database = {
           },
         ]
       }
+      billing_preview_items: {
+        Row: {
+          created_at: string
+          data_atividade: string | null
+          descricao: string | null
+          exclusion_reason: string | null
+          id: string
+          is_billable: boolean
+          is_duplicate: boolean
+          numero_processo: string | null
+          preview_id: string
+          process_id: string | null
+          quantidade: number
+          reclamante: string | null
+          timesheet_entry_id: string | null
+          tipo_atividade: string | null
+          valor_total: number
+          valor_unitario: number
+        }
+        Insert: {
+          created_at?: string
+          data_atividade?: string | null
+          descricao?: string | null
+          exclusion_reason?: string | null
+          id?: string
+          is_billable?: boolean
+          is_duplicate?: boolean
+          numero_processo?: string | null
+          preview_id: string
+          process_id?: string | null
+          quantidade?: number
+          reclamante?: string | null
+          timesheet_entry_id?: string | null
+          tipo_atividade?: string | null
+          valor_total?: number
+          valor_unitario?: number
+        }
+        Update: {
+          created_at?: string
+          data_atividade?: string | null
+          descricao?: string | null
+          exclusion_reason?: string | null
+          id?: string
+          is_billable?: boolean
+          is_duplicate?: boolean
+          numero_processo?: string | null
+          preview_id?: string
+          process_id?: string | null
+          quantidade?: number
+          reclamante?: string | null
+          timesheet_entry_id?: string | null
+          tipo_atividade?: string | null
+          valor_total?: number
+          valor_unitario?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_preview_items_preview_id_fkey"
+            columns: ["preview_id"]
+            isOneToOne: false
+            referencedRelation: "billing_previews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_previews: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          invoice_id: string | null
+          reference_month: string
+          status: string
+          total_items: number
+          total_value: number
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invoice_id?: string | null
+          reference_month: string
+          status?: string
+          total_items?: number
+          total_value?: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invoice_id?: string | null
+          reference_month?: string
+          status?: string
+          total_items?: number
+          total_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_previews_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_previews_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_previews_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       boletos: {
         Row: {
           amount: number
@@ -2277,6 +2403,7 @@ export type Database = {
           conta_digito: string | null
           cpf: string | null
           created_at: string
+          dashboard_config: Json | null
           email: string
           full_name: string
           id: string
@@ -2297,6 +2424,7 @@ export type Database = {
           conta_digito?: string | null
           cpf?: string | null
           created_at?: string
+          dashboard_config?: Json | null
           email: string
           full_name: string
           id?: string
@@ -2317,6 +2445,7 @@ export type Database = {
           conta_digito?: string | null
           cpf?: string | null
           created_at?: string
+          dashboard_config?: Json | null
           email?: string
           full_name?: string
           id?: string

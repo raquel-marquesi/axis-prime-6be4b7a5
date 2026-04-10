@@ -98,6 +98,7 @@ export default function Dashboard() {
                     <span className="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block" />
                     Próximos 7 dias
                   </p>
+
                 </CardContent>
               </Card>
             )}
@@ -123,6 +124,7 @@ export default function Dashboard() {
                     <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
                     Requerem atenção
                   </p>
+
                 </CardContent>
               </Card>
             )}
@@ -166,6 +168,9 @@ export default function Dashboard() {
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
                       Próximos 30 dias
                     </p>
+                  </CardContent>
+                </Card>
+
                   </CardContent>
                 </Card>
               </>

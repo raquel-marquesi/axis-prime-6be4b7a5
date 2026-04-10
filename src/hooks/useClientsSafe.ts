@@ -18,6 +18,7 @@ export interface ClientSafe {
   dia_emissao_nf: number | null;
   dia_vencimento: number | null;
   billing_reminder_enabled: boolean | null;
+  economic_group_id: string | null;
 }
 
 export function useClientsSafe() {

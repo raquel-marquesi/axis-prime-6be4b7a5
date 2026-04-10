@@ -1,11 +1,12 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Users, Building2, ShieldCheck, Bell, Database, Cog } from "lucide-react";
+import { Settings, Users, Building2, ShieldCheck, Bell, Database, Cog, LayoutDashboard } from "lucide-react";
 import { GeneralSettings } from "@/components/configuracoes/GeneralSettings";
 import { UserRolesSettings } from "@/components/configuracoes/UserRolesSettings";
 import { CompanySettings } from "@/components/configuracoes/CompanySettings";
 import { NotificationSettings } from "@/components/configuracoes/NotificationSettings";
 import { BackupSettings } from "@/components/configuracoes/BackupSettings";
 import { OperationalSettings } from "@/components/configuracoes/OperationalSettings";
+import { DashboardSettings } from "@/components/configuracoes/DashboardSettings";
 import UserManagement from "@/pages/UserManagement";
 
 const Configuracoes = () => {
@@ -23,6 +24,10 @@ const Configuracoes = () => {
           <TabsTrigger value="geral" className="flex items-center gap-2">
             <Settings className="w-4 h-4" />
             Geral
+          </TabsTrigger>
+          <TabsTrigger value="dashboard" className="flex items-center gap-2">
+            <LayoutDashboard className="w-4 h-4" />
+            Dashboard
           </TabsTrigger>
           <TabsTrigger value="empresa" className="flex items-center gap-2">
             <Building2 className="w-4 h-4" />
@@ -52,6 +57,10 @@ const Configuracoes = () => {
 
         <TabsContent value="geral">
           <GeneralSettings />
+        </TabsContent>
+
+        <TabsContent value="dashboard">
+          <DashboardSettings />
         </TabsContent>
 
         <TabsContent value="empresa">

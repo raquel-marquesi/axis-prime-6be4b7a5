@@ -165,11 +165,23 @@ Deno.serve(async (req: Request) => {
       if (a.alias) clientMap.set(a.alias.toUpperCase().trim(), a.client_id);
     }
 
-    const { data: processes } = await supabase.from("processes").select("id, numero_processo");
+    // Paginate ALL processes to avoid 1000-row limit
     const processMap = new Map<string, string>();
-    for (const p of processes || []) {
-      if (p.numero_processo) processMap.set(p.numero_processo.replace(/[.\-\/\s]/g, ""), p.id);
+    let processPage = 0;
+    const PAGE_SIZE = 1000;
+    while (true) {
+      const { data: processes } = await supabase
+        .from("processes")
+        .select("id, numero_processo")
+        .range(processPage * PAGE_SIZE, (processPage + 1) * PAGE_SIZE - 1);
+      if (!processes || processes.length === 0) break;
+      for (const p of processes) {
+        if (p.numero_processo) processMap.set(p.numero_processo.replace(/[.\-\/\s]/g, ""), p.id);
+      }
+      if (processes.length < PAGE_SIZE) break;
+      processPage++;
     }
+    console.log(`Loaded ${processMap.size} processes into map`);
 
     const { data: calcTypes } = await supabase.from("calculation_types").select("id, name").eq("is_active", true);
     const calcTypeMap = new Map<string, string>();
@@ -182,6 +194,20 @@ Deno.serve(async (req: Request) => {
       numeroCnj: string, clientId: string, reclamante: string, area: "trabalhista" | "civel"
     ): Promise<string | null> {
       try {
+        // Guard: double-check DB before inserting (processMap may be stale within this run)
+        const cleanCnj = numeroCnj.trim();
+        const { data: existingProc } = await supabase
+          .from("processes")
+          .select("id")
+          .eq("numero_processo", cleanCnj)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (existingProc) {
+          processMap.set(cleanCnj.replace(/[.\-\/\s]/g, ""), existingProc.id);
+          return existingProc.id;
+        }
+
         const { data: newProc, error: procErr } = await supabase
           .from("processes")
           .insert({
