@@ -113,33 +113,13 @@ export function Sidebar() {
                     'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150',
                     'cursor-pointer select-none',
                     isActive
-                      ? [
-                          'text-sidebar-primary font-semibold',
-                          'bg-gradient-to-r from-sidebar-primary/20 to-sidebar-primary/8',
-                          'border-l-2 border-sidebar-primary',
-                        ].join(' ')
-                      : [
-                          'text-sidebar-foreground/70 font-medium',
-                          'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                          'border-l-2 border-transparent',
-                        ].join(' ')
+                      ? 'text-sidebar-primary font-semibold bg-sidebar-primary/15 border-l-2 border-sidebar-primary'
+                      : 'text-sidebar-foreground/70 font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border-l-2 border-transparent'
                   )
                 }
               >
-                {({ isActive }) => (
-                  <>
-                    <item.icon
-                      className={cn(
-                        'shrink-0 transition-colors',
-                        collapsed ? 'w-5 h-5' : 'w-4 h-4',
-                        isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/50'
-                      )}
-                    />
-                    {!collapsed && (
-                      <span className="text-sm truncate">{item.label}</span>
-                    )}
-                  </>
-                )}
+                <item.icon className={cn('shrink-0', collapsed ? 'w-5 h-5' : 'w-4 h-4')} />
+                {!collapsed && <span className="text-sm truncate">{item.label}</span>}
               </NavLink>
             </li>
           ))}
