@@ -170,9 +170,6 @@ export default function Dashboard() {
                     </p>
                   </CardContent>
                 </Card>
-
-                  </CardContent>
-                </Card>
               </>
             )}
           </div>
