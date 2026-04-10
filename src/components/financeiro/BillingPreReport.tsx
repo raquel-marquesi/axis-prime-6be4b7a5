@@ -23,7 +23,7 @@ export function BillingPreReport() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
   const { clients } = useClients();
-  const { entries, isLoading } = usePendingTimesheet({
+  const { data: entries, isLoading } = usePendingTimesheet({
     client_id: clientId === "all" ? undefined : clientId,
     startDate,
     endDate
