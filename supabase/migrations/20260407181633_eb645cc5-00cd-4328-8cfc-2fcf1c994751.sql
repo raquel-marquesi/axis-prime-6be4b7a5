@@ -7,7 +7,7 @@ CREATE POLICY "Admins managers and finance can insert custom_roles" ON custom_ro
 
 -- 2. Fix bank_accounts_config (SELECT skipped due to remote exists)
 DROP POLICY IF EXISTS "Authenticated users can view bank_accounts_config" ON bank_accounts_config;
--- CREATE POLICY "Finance and admins can view bank_accounts_config"
+CREATE POLICY "Finance and admins can view bank_accounts_config"
   ON bank_accounts_config FOR SELECT TO authenticated
   USING (is_financeiro(auth.uid()) OR has_role(auth.uid(), 'admin') OR has_role(auth.uid(), 'gerente'));
 
