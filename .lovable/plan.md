@@ -1,48 +1,30 @@
 
 
-## Deduplicação de Clientes
+## Fix build errors in edge functions
 
-### Diagnóstico
+### Issues identified
 
-- **18 pares** de duplicatas verdadeiras (mesmo nome, sem CNPJ, registros idênticos) — 18 registros a eliminar
-- **14 grupos** com mesma razão social mas CNPJs diferentes — são filiais legítimas, não devem ser mesclados
+1. **`supabase/functions/import-timesheet-csv/index.ts`** — File contains corrupted git diff text instead of valid TypeScript. Needs full restoration from the diff content (the actual source is visible as deleted lines).
 
-### Plano
+2. **`supabase/functions/delete-user/index.ts`** (line 93) — `catch(error)` is untyped (`unknown`). Fix: cast to `(error as Error).message` or use `String(error)`.
 
-**Etapa 1 — Migration SQL: Mesclar duplicatas verdadeiras**
+3. **`supabase/functions/parse-bank-statement/index.ts`** (line 286) — Same `unknown` error type issue.
 
-Para cada par sem documento:
-1. Identificar o registro mais antigo (`created_at`) como canônico
-2. Migrar referências do duplicado para o canônico:
-   - `processes.client_id`
-   - `timesheet_entries.client_id` (se existir)
-   - `process_deadlines` (via process)
-   - `client_branches`
-   - `client_contacts`
-   - `billing_previews.client_id`
-   - `contract_pricing.client_id`
-3. Deletar o registro duplicado
+4. **`getClaims` errors** in `ai-agent`, `batch-import-users`, `cross-check-calendar`, `google-calendar`, `google-drive`, `google-gmail` — `getClaims` doesn't exist on the Supabase JS v2 auth client. Replace with `getUser()` which returns the authenticated user from the JWT.
 
-**Etapa 2 — Adicionar proteção contra futuras duplicatas**
+### Plan
 
-Criar um índice parcial unique na tabela `clients`:
-```sql
-CREATE UNIQUE INDEX idx_clients_unique_razao_social_no_doc
-ON clients (UPPER(TRIM(razao_social)))
-WHERE cnpj IS NULL AND cpf IS NULL AND is_active = true;
-```
+| File | Fix |
+|------|-----|
+| `import-timesheet-csv/index.ts` | Restore valid TS from the diff (strip `-` prefixes from lines 11-378) |
+| `delete-user/index.ts` | `catch (error: any)` or `(error as Error).message` |
+| `parse-bank-statement/index.ts` | Same catch fix |
+| `ai-agent/index.ts` | Replace `getClaims` with `getUser` |
+| `batch-import-users/index.ts` | Replace `getClaims` with `getUser` |
+| `cross-check-calendar/index.ts` | Replace `getClaims` with `getUser` |
+| `google-calendar/index.ts` | Replace `getClaims` with `getUser` |
+| `google-drive/index.ts` | Replace `getClaims` with `getUser` |
+| `google-gmail/index.ts` | Replace `getClaims` with `getUser` |
 
-Isso impede criação de clientes com mesmo nome quando não há documento.
-
-### Arquivos
-
-| Arquivo | Ação |
-|---------|------|
-| Migration SQL | Consolidar 18 pares duplicados + índice de proteção |
-
-### Resultado
-
-- 18 registros duplicados eliminados
-- Referências (processos, prazos, timesheet, contratos) preservadas no registro canônico
-- Proteção contra recriação futura de duplicatas sem documento
+All changes are minimal — just fixing TypeScript type errors to pass the Deno type checker.
 
