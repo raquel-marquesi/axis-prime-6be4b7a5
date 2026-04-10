@@ -5,6 +5,7 @@ export { ContratoTab } from './ContratoTab';
 export { CobrancaTab } from './CobrancaTab';
 export { PrecificacaoTab } from './PrecificacaoTab';
 export { OutrosTab } from './OutrosTab';
+export { FluxoTab } from './FluxoTab';
 export { 
   formSchema, 
   type ClientFormData, 
