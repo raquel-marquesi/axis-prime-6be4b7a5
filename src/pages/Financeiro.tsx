@@ -20,6 +20,7 @@ import { ExpenseFormDialog } from "@/components/financeiro/ExpenseFormDialog";
 import { AccountsTable } from "@/components/financeiro/AccountsTable";
 
 // Faturamento
+import { BillingPreReport } from "@/components/financeiro/BillingPreReport";
 import { InvoicesTable } from "@/components/financeiro/InvoicesTable";
 import { InvoiceFormDialog } from "@/components/financeiro/InvoiceFormDialog";
 import { BatchInvoiceDialog } from "@/components/financeiro/BatchInvoiceDialog";
@@ -70,6 +71,7 @@ const Financeiro = () => {
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>
           <TabsTrigger value="transacoes">Transações</TabsTrigger>
+          <TabsTrigger value="pre-relatorio">Pré-relatório</TabsTrigger>
           <TabsTrigger value="faturamento">Faturamento</TabsTrigger>
           <TabsTrigger value="relatorios">Relatórios</TabsTrigger>
           <TabsTrigger value="impostos">Impostos</TabsTrigger>
@@ -108,6 +110,11 @@ const Financeiro = () => {
             <ExpensesTable />
             <AccountsTable />
           </div>
+        </TabsContent>
+
+        {/* Pré-relatório */}
+        <TabsContent value="pre-relatorio" className="space-y-6">
+          <BillingPreReport />
         </TabsContent>
 
         {/* Faturamento */}

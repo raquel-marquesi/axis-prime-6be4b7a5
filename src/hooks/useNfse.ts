@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
-export interface NfseConfig { id: string; razao_social: string; cnpj: string; inscricao_municipal: string; codigo_servico: string; aliquota_iss: number; regime_tributario: string; endereco_logradouro: string | null; endereco_numero: string | null; endereco_complemento: string | null; endereco_bairro: string | null; endereco_cidade: string | null; endereco_estado: string | null; endereco_cep: string | null; email_contato: string | null; provider: string; provider_api_url: string | null; is_active: boolean; created_at: string; updated_at: string; }
+export interface NfseConfig { id: string; razao_social: string; cnpj: string; inscricao_municipal: string; codigo_servico: string; codigo_tributacao_municipio: string | null; natureza_operacao: number | null; certificado_a1_base64: string | null; senha_certificado: string | null; aliquota_iss: number; regime_tributario: string; endereco_logradouro: string | null; endereco_numero: string | null; endereco_complemento: string | null; endereco_bairro: string | null; endereco_cidade: string | null; endereco_estado: string | null; endereco_cep: string | null; email_contato: string | null; provider: string; provider_api_url: string | null; is_active: boolean; created_at: string; updated_at: string; }
 export type NfseConfigInsert = Omit<NfseConfig, 'id' | 'created_at' | 'updated_at'>;
 
 export function useNfse() {

@@ -30,17 +30,17 @@ function base64url(buf: ArrayBuffer): string {
 
 async function getGoogleAccessToken(sa: any): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  const header = base64url(new TextEncoder().encode(JSON.stringify({ alg: "RS256", typ: "JWT" })));
+  const header = base64url(new TextEncoder().encode(JSON.stringify({ alg: "RS256", typ: "JWT" })).buffer);
   const payload = base64url(new TextEncoder().encode(JSON.stringify({
     iss: sa.client_email,
     scope: "https://www.googleapis.com/auth/spreadsheets.readonly",
     aud: "https://oauth2.googleapis.com/token",
     iat: now, exp: now + 3600,
-  })));
+  })).buffer);
   const pem = sa.private_key.replace(/-----BEGIN PRIVATE KEY-----/, "").replace(/-----END PRIVATE KEY-----/, "").replace(/\n/g, "");
   const binaryKey = Uint8Array.from(atob(pem), (c) => c.charCodeAt(0));
   const cryptoKey = await crypto.subtle.importKey("pkcs8", binaryKey, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
-  const sig = base64url(await crypto.subtle.sign("RSASSA-PKCS1-v1_5", cryptoKey, new TextEncoder().encode(`${header}.${payload}`)));
+  const sig = base64url(await crypto.subtle.sign("RSASSA-PKCS1-v1_5", cryptoKey, new TextEncoder().encode(`${header}.${payload}`).buffer));
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -110,7 +110,8 @@ function detectArea(tipoCalculo: string, assunto: string): "trabalhista" | "cive
 }
 
 // ─── Main Handler ─────────────────────────────────────────────────
-Deno.serve(async (req) => {
+// @ts-ignore: Deno is defined in Supabase Edge Functions environment
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -145,11 +146,18 @@ Deno.serve(async (req) => {
     console.log(`Found ${tabNames.length} client tabs to process`);
 
     // ─── Load lookup maps ────────────────────────────────────────
-    const { data: clients } = await supabase.from("clients").select("id, nome, razao_social, nome_fantasia");
+    const { data: clients } = await supabase.from("clients").select("id, nome, razao_social, nome_fantasia, metodo_recepcao");
     const clientMap = new Map<string, string>();
+    const clientMethodMap = new Map<string, string>();
+    
     for (const c of clients || []) {
+      const method = (c as any).metodo_recepcao || 'email';
       for (const f of [c.nome, c.razao_social, c.nome_fantasia]) {
-        if (f) clientMap.set(f.toUpperCase().trim(), c.id);
+        if (f) {
+          const key = f.toUpperCase().trim();
+          clientMap.set(key, c.id);
+          clientMethodMap.set(c.id, method);
+        }
       }
     }
     const { data: aliases } = await supabase.from("client_aliases").select("alias, client_id");
@@ -248,6 +256,11 @@ Deno.serve(async (req) => {
         for (let i = 1; i < rows.length; i++) {
           const row = rows[i];
           if (!row || row.length === 0) continue;
+
+          // Check if this client allows email reception
+          if (clientId && clientMethodMap.get(clientId) !== 'email') {
+            continue; 
+          }
 
           const emailId = cell(row, COL.ID_EMAIL);
           const assunto = cell(row, COL.ASSUNTO);
@@ -403,33 +416,22 @@ Deno.serve(async (req) => {
           const faseProcessual = (sol.extracted_details as any)?.fase_processual;
           const ocorrencia = faseProcessual || sol.titulo || "Agendamento via e-mail";
 
-          // Check if open deadline already exists
-          const { data: existingDl } = await supabase
-            .from("process_deadlines")
-            .select("id")
-            .eq("process_id", sol.process_id)
-            .eq("data_prazo", sol.data_limite)
-            .eq("is_completed", false)
-            .maybeSingle();
-
-          if (existingDl) continue;
-
-          const { error: dlErr } = await supabase
-            .from("process_deadlines")
-            .insert({
+          const { data: result, error: rpcError } = await supabase.rpc("core_create_deadline", {
+            payload: {
               process_id: sol.process_id,
               data_prazo: sol.data_limite,
               ocorrencia,
               detalhes: sol.descricao?.substring(0, 500) || null,
               assigned_to: sol.assigned_to || null,
               source: "sheet_agendamentos",
-              solicitacao_id: sol.id,
-            });
+              solicitacao_id: sol.id
+            }
+          });
 
-          if (dlErr) {
-            errors.push(`Deadline: ${dlErr.message} (${sol.titulo?.substring(0, 20)})`);
+          if (rpcError || (result && !result.success)) {
+            errors.push(`Deadline RPC: ${rpcError?.message || result?.error} (${sol.titulo?.substring(0, 20)})`);
           } else {
-            deadlinesCreated++;
+            if (result?.action === "inserted") deadlinesCreated++;
           }
         }
       }

@@ -59,6 +59,8 @@ const baseSchema = {
   dia_vencimento: z.coerce.number().min(1).max(31).optional().or(z.literal('')),
   aplicar_grossup: z.boolean().optional().default(false),
   tipo_grossup: z.string().optional(),
+  metodo_recepcao: z.enum(['email', 'portal_api', 'manual']).default('email'),
+  monitorar_contrato: z.boolean().default(false),
 };
 
 export const pessoaFisicaSchema = z.object({

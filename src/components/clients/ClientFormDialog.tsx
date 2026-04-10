@@ -36,6 +36,7 @@ import {
   CobrancaTab,
   PrecificacaoTab,
   OutrosTab,
+  FluxoTab,
   formSchema,
   ClientFormData,
   getDefaultValues,
@@ -143,6 +144,8 @@ export function ClientFormDialog({ open, onOpenChange, client }: ClientFormDialo
         dia_vencimento: (client as any).dia_vencimento || '',
         aplicar_grossup: (client as any).aplicar_grossup || false,
         tipo_grossup: (client as any).tipo_grossup || '',
+        metodo_recepcao: (client as any).metodo_recepcao || 'email',
+        monitorar_contrato: (client as any).monitorar_contrato || false,
       } as ClientFormData);
     } else {
       setTipo('fisica');
@@ -238,6 +241,8 @@ export function ClientFormDialog({ open, onOpenChange, client }: ClientFormDialo
       dia_vencimento: (data as any).dia_vencimento ? Number((data as any).dia_vencimento) : undefined,
       aplicar_grossup: (data as any).aplicar_grossup || false,
       tipo_grossup: (data as any).tipo_grossup || undefined,
+      metodo_recepcao: (data as any).metodo_recepcao || 'email',
+      monitorar_contrato: (data as any).monitorar_contrato || false,
     };
 
     const submitData: HookClientFormData = data.tipo === 'fisica'
@@ -366,6 +371,7 @@ export function ClientFormDialog({ open, onOpenChange, client }: ClientFormDialo
                 <TabsTrigger value="cobranca" className="flex-1 min-w-0">Cobrança</TabsTrigger>
                 <TabsTrigger value="contrato" className="flex-1 min-w-0">Contrato</TabsTrigger>
                 <TabsTrigger value="precificacao" className="flex-1 min-w-0">Precificação</TabsTrigger>
+                <TabsTrigger value="fluxo" className="flex-1 min-w-0">Fluxo</TabsTrigger>
                 <TabsTrigger value="outros" className="flex-1 min-w-0">Outros</TabsTrigger>
               </TabsList>
 
@@ -401,6 +407,10 @@ export function ClientFormDialog({ open, onOpenChange, client }: ClientFormDialo
 
               <TabsContent value="precificacao" className="mt-4">
                 <PrecificacaoTab clientId={client?.id} />
+              </TabsContent>
+
+              <TabsContent value="fluxo" className="mt-4">
+                <FluxoTab form={form} />
               </TabsContent>
 
               <TabsContent value="outros" className="mt-4">

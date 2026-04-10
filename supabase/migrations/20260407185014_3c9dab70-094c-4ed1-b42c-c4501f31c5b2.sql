@@ -4,6 +4,9 @@ DROP POLICY IF EXISTS "Financeiro and leaders can view invoices" ON invoices;
 DROP POLICY IF EXISTS "Financeiro and leaders can insert invoices" ON invoices;
 DROP POLICY IF EXISTS "Financeiro and leaders can update invoices" ON invoices;
 DROP POLICY IF EXISTS "Only admins can delete invoices" ON invoices;
+DROP POLICY IF EXISTS "Authenticated finance leaders coordinators can view invoices" ON invoices;
+DROP POLICY IF EXISTS "Finance and leaders can insert invoices" ON invoices;
+DROP POLICY IF EXISTS "Finance and leaders can update invoices" ON invoices;
 
 CREATE POLICY "Authenticated finance leaders coordinators can view invoices"
   ON invoices FOR SELECT TO authenticated

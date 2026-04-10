@@ -1,196 +1,182 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import * as forge from 'https://esm.sh/node-forge@1.3.1';
+import { SignedXml } from 'https://esm.sh/xml-crypto@3.0.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+// @ts-ignore: Deno is available in Supabase Edge Functions
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
+    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
     const { invoice_id, codigo_servico, discriminacao, aliquota_iss, deducoes } = await req.json();
 
-    if (!invoice_id) {
-      return new Response(JSON.stringify({ error: 'invoice_id é obrigatório' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // 1. Fetch invoice with billing contact
     const { data: invoice, error: invError } = await supabase
       .from('invoices')
       .select('*, billing_contacts(*), accounts(nome)')
       .eq('id', invoice_id)
       .single();
-
-    if (invError || !invoice) {
-      return new Response(JSON.stringify({ error: 'Invoice não encontrada' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // 2. Fetch nfse_config
+      
     const { data: config, error: cfgError } = await supabase
       .from('nfse_config')
       .select('*')
       .eq('is_active', true)
-      .limit(1)
       .single();
 
-    if (cfgError || !config) {
-      return new Response(JSON.stringify({ error: 'Configuração NFS-e não encontrada. Configure os dados do emitente primeiro.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    if (!invoice || !config) throw new Error('Invoice ou Configuração não encontrada');
 
-    // 3. Get provider credentials from secrets
-    const apiKey = Deno.env.get('NFSE_PROVIDER_API_KEY');
-    const apiSecret = Deno.env.get('NFSE_PROVIDER_API_SECRET');
+    // Paulistana Direct Integration
+    if (config.provider === 'paulistana') {
+      const pfxBase64 = Deno.env.get('PFX_CERT_BASE64');
+      const pfxPass = Deno.env.get('PFX_PASSWORD');
+      
+      if (!pfxBase64 || !pfxPass) throw new Error('Certificado Digital não configurado (PFX_CERT_BASE64/PFX_PASSWORD).');
 
-    if (!apiKey) {
-      // Update status to error if no credentials
-      await supabase.from('invoices').update({ nfe_status: 'erro' }).eq('id', invoice_id);
-      return new Response(JSON.stringify({ error: 'Credenciais do provedor NFS-e não configuradas. Adicione NFSE_PROVIDER_API_KEY nos secrets.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+      const xml = buildPaulistanaXML(invoice, config, { codigo_servico, discriminacao, aliquota_iss, deducoes });
+      const signedXml = signPaulistanaXML(xml, pfxBase64, pfxPass);
+      
+      const soapEnvelope = `<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <EnvioLoteRPS xmlns="http://www.prefeitura.sp.gov.br/nfe">
+      <VersaoSchema>1</VersaoSchema>
+      <MensagemXML>${signedXml.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</MensagemXML>
+    </EnvioLoteRPS>
+  </soap:Body>
+</soap:Envelope>`;
 
-    // 4. Build payload based on provider
-    const billingContact = invoice.billing_contacts;
-    const valorServicos = invoice.valor || 0;
-    const ded = deducoes || 0;
-    const baseCalculo = valorServicos - ded;
-    const aliquota = aliquota_iss || config.aliquota_iss || 5;
-    const valorIss = baseCalculo * (aliquota / 100);
-
-    const payload: Record<string, any> = {
-      // Prestador
-      prestador: {
-        cnpj: config.cnpj,
-        inscricao_municipal: config.inscricao_municipal,
-        razao_social: config.razao_social,
-        endereco: {
-          logradouro: config.endereco_logradouro,
-          numero: config.endereco_numero,
-          complemento: config.endereco_complemento,
-          bairro: config.endereco_bairro,
-          cidade: config.endereco_cidade,
-          estado: config.endereco_estado,
-          cep: config.endereco_cep,
-        },
-      },
-      // Tomador
-      tomador: {
-        cpf_cnpj: billingContact?.cpf_cnpj,
-        razao_social: billingContact?.razao_social,
-        inscricao_municipal: billingContact?.inscricao_municipal,
-        email: billingContact?.email_nf,
-        endereco: {
-          logradouro: billingContact?.endereco_logradouro,
-          numero: billingContact?.endereco_numero,
-          complemento: billingContact?.endereco_complemento,
-          bairro: billingContact?.endereco_bairro,
-          cidade: billingContact?.endereco_cidade,
-          estado: billingContact?.endereco_estado,
-          cep: billingContact?.endereco_cep,
-        },
-      },
-      // Serviço
-      servico: {
-        codigo_servico: codigo_servico || config.codigo_servico,
-        discriminacao: discriminacao || invoice.descricao || '',
-        valor_servicos: valorServicos,
-        valor_deducoes: ded,
-        base_calculo: baseCalculo,
-        aliquota_iss: aliquota,
-        valor_iss: valorIss,
-      },
-      // Regime tributário
-      regime_tributario: config.regime_tributario,
-    };
-
-    // 5. Send to provider API
-    const providerUrl = config.provider_api_url || getDefaultProviderUrl(config.provider);
-
-    // Update status to processando before sending
-    await supabase.from('invoices').update({ nfe_status: 'processando' }).eq('id', invoice_id);
-
-    try {
-      const providerResponse = await fetch(providerUrl, {
+      const response = await fetch('https://nfe.prefeitura.sp.gov.br/ws/lote.asmx', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          ...(apiSecret ? { 'X-Api-Secret': apiSecret } : {}),
+          'Content-Type': 'text/xml; charset=utf-8',
+          'SOAPAction': 'http://www.prefeitura.sp.gov.br/nfe/EnvioLoteRPS',
         },
-        body: JSON.stringify(payload),
+        body: soapEnvelope,
       });
 
-      const result = await providerResponse.json();
-
-      if (!providerResponse.ok || result.error || result.erro) {
-        const errorMsg = result.error || result.erro || result.message || 'Erro desconhecido do provedor';
-        await supabase.from('invoices').update({
-          nfe_status: 'erro',
-        }).eq('id', invoice_id);
-
-        return new Response(JSON.stringify({ error: errorMsg, details: result }), {
-          status: 422,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+      const responseText = await response.text();
+      const protocolMatch = responseText.match(/<Protocolo>(.*?)<\/Protocolo>/);
+      
+      if (protocolMatch) {
+         await supabase.from('invoices').update({ 
+           nfe_status: 'processando',
+           nfe_protocol: protocolMatch[1],
+           updated_at: new Date().toISOString()
+         }).eq('id', invoice_id);
+         return new Response(JSON.stringify({ success: true, protocol: protocolMatch[1] }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      } else {
+         const errorMatch = responseText.match(/<Descricao>(.*?)<\/Descricao>/);
+         throw new Error(errorMatch ? errorMatch[1] : 'Erro na comunicação com a Prefeitura de SP. Valide o XML ou Certificado.');
       }
-
-      // 6. Update invoice with success data
-      const updateData: Record<string, any> = {
-        nfe_status: result.status === 'processando' ? 'processando' : 'autorizada',
-      };
-      if (result.protocolo || result.protocol) updateData.nfe_protocol = result.protocolo || result.protocol;
-      if (result.pdf_url || result.pdf) updateData.nfe_pdf_url = result.pdf_url || result.pdf;
-      if (result.xml_url || result.xml) updateData.nfe_xml_url = result.xml_url || result.xml;
-      if (result.numero_nfse) updateData.numero_nf = String(result.numero_nfse);
-
-      await supabase.from('invoices').update(updateData).eq('id', invoice_id);
-
-      return new Response(JSON.stringify({ success: true, ...updateData, provider_response: result }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-
-    } catch (fetchError: any) {
-      await supabase.from('invoices').update({ nfe_status: 'erro' }).eq('id', invoice_id);
-      return new Response(JSON.stringify({ error: `Erro ao conectar com provedor: ${fetchError.message}` }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
     }
 
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    // Default provider logic (Webmania/Focus/etc)
+    const apiKey = Deno.env.get('NFSE_PROVIDER_API_KEY');
+    const providerUrl = config.provider_api_url || getDefaultProviderUrl(config.provider);
+
+    const payload = {
+      prestador: { cnpj: config.cnpj.replace(/\D/g, ''), inscricao_municipal: config.inscricao_municipal },
+      tomador: {
+        cpf_cnpj: invoice.billing_contacts?.cpf_cnpj.replace(/\D/g, ''),
+        razao_social: invoice.billing_contacts?.razao_social,
+        email: invoice.billing_contacts?.email_nf,
+      },
+      servico: {
+        codigo_servico: codigo_servico || config.codigo_servico,
+        discriminacao: discriminacao || invoice.descricao,
+        valor_servicos: invoice.valor,
+        aliquota_iss: aliquota_iss || config.aliquota_iss,
+      }
+    };
+
+    const providerResponse = await fetch(providerUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify(payload),
     });
+
+    const result = await providerResponse.json();
+    return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
 
+function buildPaulistanaXML(invoice: any, config: any, overrides: any) {
+  const cnpj = config.cnpj.replace(/\D/g, '');
+  const tomadorCpfCnpj = invoice.billing_contacts?.cpf_cnpj.replace(/\D/g, '') || '';
+  const valor = invoice.valor || 0;
+  
+  return `<PedidoEnvioLoteRPS xmlns="http://www.prefeitura.sp.gov.br/nfe">
+  <Cabecalho Versao="1">
+    <CPFCNPJRemetente><CNPJ>${cnpj}</CNPJ></CPFCNPJRemetente>
+    <transacao>false</transacao>
+    <dtInicio>${new Date().toISOString().split('T')[0]}</dtInicio>
+    <dtFim>${new Date().toISOString().split('T')[0]}</dtFim>
+    <QtdRPS>1</QtdRPS>
+    <ValorTotalServicos>${valor.toFixed(2)}</ValorTotalServicos>
+    <ValorTotalDeducoes>${(overrides.deducoes || 0).toFixed(2)}</ValorTotalDeducoes>
+  </Cabecalho>
+  <LoteRPS ID="L1">
+    <RPS>
+      <ChaveRPS>
+        <InscricaoPrestador>${config.inscricao_municipal.replace(/\D/g, '')}</InscricaoPrestador>
+        <SerieRPS>1</SerieRPS>
+        <NumeroRPS>${Math.floor(Date.now()/1000)}</NumeroRPS>
+      </ChaveRPS>
+      <TipoRPS>RPS</TipoRPS>
+      <DataEmissao>${new Date().toISOString().split('T')[0]}</DataEmissao>
+      <StatusRPS>N</StatusRPS>
+      <TributacaoRPS>T</TributacaoRPS>
+      <ValorServicos>${valor.toFixed(2)}</ValorServicos>
+      <ValorDeducoes>${(overrides.deducoes || 0).toFixed(2)}</ValorDeducoes>
+      <CodigoServico>${overrides.codigo_servico || config.codigo_servico}</CodigoServico>
+      <AliquotaServicos>${(overrides.aliquota_iss || config.aliquota_iss || 0.05).toFixed(4)}</AliquotaServicos>
+      <ISSRetido>false</ISSRetido>
+      <CPFCNPJTomador>
+        ${tomadorCpfCnpj.length <= 11 ? `<CPF>${tomadorCpfCnpj}</CPF>` : `<CNPJ>${tomadorCpfCnpj}</CNPJ>`}
+      </CPFCNPJTomador>
+      <RazaoSocialTomador>${invoice.billing_contacts?.razao_social}</RazaoSocialTomador>
+      <Discriminacao>${overrides.discriminacao || invoice.descricao}</Discriminacao>
+    </RPS>
+  </LoteRPS>
+</PedidoEnvioLoteRPS>`;
+}
+
+function signPaulistanaXML(xml: string, pfxBase64: string, pfxPass: string) {
+  const pfxDer = forge.util.decode64(pfxBase64);
+  const p12Asn1 = forge.asn1.fromDer(pfxDer);
+  const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, pfxPass);
+  
+  const bags = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag });
+  const keyBag = bags[forge.pki.oids.pkcs8ShroudedKeyBag]?.[0];
+  const privateKey = keyBag.key;
+  const privateKeyPem = forge.pki.privateKeyToPem(privateKey);
+
+  const certBags = p12.getBags({ bagType: forge.pki.oids.certBag });
+  const certBag = certBags[forge.pki.oids.certBag]?.[0];
+  const certPem = forge.pki.certificateToPem(certBag.cert);
+
+  const sig = new SignedXml();
+  sig.addReference("//*[local-name(.)='LoteRPS']");
+  sig.addReference("//*[local-name(.)='PedidoEnvioLoteRPS']");
+  sig.signingKey = privateKeyPem;
+  sig.keyInfoProvider = { 
+    getKeyInfo: () => `<X509Data><X509Certificate>${certPem.replace(/-----BEGIN CERTIFICATE-----|-----END CERTIFICATE-----|\s/g, '')}</X509Certificate></X509Data>` 
+  };
+  sig.computeSignature(xml);
+  return sig.getSignedXml();
+}
+
 function getDefaultProviderUrl(provider: string): string {
   switch (provider) {
-    case 'webmania':
-      return 'https://webmaniabr.com/api/2/nfse/emissao';
-    case 'focus_nfe':
-      return 'https://api.focusnfe.com.br/v2/nfse';
-    case 'enotas':
-      return 'https://api.enotas.com.br/v2/empresas/nfse';
-    default:
-      return 'https://webmaniabr.com/api/2/nfse/emissao';
+    case 'webmania': return 'https://webmaniabr.com/api/2/nfse/emissao';
+    case 'focus_nfe': return 'https://api.focusnfe.com.br/v2/nfse';
+    default: return 'https://webmaniabr.com/api/2/nfse/emissao';
   }
 }

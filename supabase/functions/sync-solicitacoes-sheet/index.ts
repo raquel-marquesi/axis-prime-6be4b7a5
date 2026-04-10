@@ -536,23 +536,22 @@ Deno.serve(async (req) => {
 
           const ocorrencia = (sol.titulo || "Solicitação importada").substring(0, 120);
 
-          const { error: dlErr } = await supabase
-            .from("process_deadlines")
-            .upsert({
+          const { data: result, error: rpcError } = await supabase.rpc("core_create_deadline", {
+            payload: {
               process_id: sol.process_id,
               data_prazo: sol.data_limite,
               ocorrencia,
               detalhes: sol.descricao?.substring(0, 500) || null,
               assigned_to: sol.assigned_to || null,
               source: "planilha_cliente",
-              is_completed: false,
-              solicitacao_id: sol.id,
-            }, { onConflict: "process_id,data_prazo,ocorrencia", ignoreDuplicates: true });
+              solicitacao_id: sol.id
+            }
+          });
 
-          if (dlErr) {
-            errors.push(`Deadline: ${dlErr.message} (${sol.titulo?.substring(0, 20)})`);
+          if (rpcError || (result && !result.success)) {
+            errors.push(`Deadline RPC: ${rpcError?.message || result?.error} (${sol.titulo?.substring(0, 20)})`);
           } else {
-            deadlinesCreated++;
+            if (result?.action === "inserted") deadlinesCreated++;
           }
         }
       }

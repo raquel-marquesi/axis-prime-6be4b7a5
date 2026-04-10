@@ -527,56 +527,57 @@ Deno.serve(async (req) => {
                 try {
                   const ocorrencia = aiResult?.extraction?.calculation_type || headers.subject || "Prazo via e-mail";
                   
-                  // Upsert deadline (respects partial unique index on process_id, data_prazo, ocorrencia where is_completed = false)
-                  const { data: deadline, error: deadlineError } = await supabase
-                    .from("process_deadlines")
-                    .insert({
+                  const { data: result, error: rpcError } = await supabase.rpc("core_create_deadline", {
+                    payload: {
                       process_id: processId,
                       data_prazo: dataLimite,
                       ocorrencia: ocorrencia.substring(0, 200),
                       detalhes: `Extraído do e-mail: ${headers.subject || "sem assunto"}\nDe: ${headers.from || "desconhecido"}`,
                       assigned_to: solicitacao.assigned_to || null,
-                    })
-                    .select()
-                    .single();
-                  
-                  if (deadlineError) {
-                    console.error("Error creating deadline:", deadlineError);
-                  } else if (deadline) {
-                    console.log(`Created process_deadline ${deadline.id} for process ${processId} on ${dataLimite}`);
-                    
-                    // Determine user_id for calendar event: assigned_to or fallback to process creator
-                    let eventUserId = solicitacao.assigned_to;
-                    if (!eventUserId) {
-                      const { data: processData } = await supabase
-                        .from("processes")
-                        .select("created_by")
-                        .eq("id", processId)
-                        .single();
-                      eventUserId = processData?.created_by;
+                      source: "email"
                     }
+                  });
+                  
+                  if (rpcError || (result && !result.success)) {
+                    console.error("Error creating deadline:", rpcError || result?.error);
+                  } else if (result && result.id) {
+                    console.log(`Created/Updated process_deadline ${result.id} for process ${processId} on ${dataLimite} (Action: ${result.action})`);
                     
-                    if (eventUserId) {
-                      const deadlineDate = new Date(dataLimite + "T09:00:00");
-                      const endDate = new Date(dataLimite + "T18:00:00");
+                    // Only create event if it was newly inserted
+                    if (result.action === "inserted") {
+                      // Determine user_id for calendar event: assigned_to or fallback to process creator
+                      let eventUserId = solicitacao.assigned_to;
+                      if (!eventUserId) {
+                        const { data: processData } = await supabase
+                          .from("processes")
+                          .select("created_by")
+                          .eq("id", processId)
+                          .single();
+                        eventUserId = processData?.created_by;
+                      }
                       
-                      const { error: calError } = await supabase
-                        .from("calendar_events")
-                        .insert({
-                          user_id: eventUserId,
-                          title: `Prazo: ${ocorrencia.substring(0, 100)}`,
-                          description: `Prazo processual extraído de e-mail.\nAssunto: ${headers.subject || ""}\nDe: ${headers.from || ""}`,
-                          start_at: deadlineDate.toISOString(),
-                          end_at: endDate.toISOString(),
-                          all_day: true,
-                          event_type: "prazo",
-                          process_deadline_id: deadline.id,
-                        });
-                      
-                      if (calError) {
-                        console.error("Error creating calendar event:", calError);
-                      } else {
-                        console.log(`Created calendar_event for deadline ${deadline.id}`);
+                      if (eventUserId) {
+                        const deadlineDate = new Date(dataLimite + "T09:00:00");
+                        const endDate = new Date(dataLimite + "T18:00:00");
+                        
+                        const { error: calError } = await supabase
+                          .from("calendar_events")
+                          .insert({
+                            user_id: eventUserId,
+                            title: `Prazo: ${ocorrencia.substring(0, 100)}`,
+                            description: `Prazo processual extraído de e-mail.\nAssunto: ${headers.subject || ""}\nDe: ${headers.from || ""}`,
+                            start_at: deadlineDate.toISOString(),
+                            end_at: endDate.toISOString(),
+                            all_day: true,
+                            event_type: "prazo",
+                            process_deadline_id: result.id,
+                          });
+                        
+                        if (calError) {
+                          console.error("Error creating calendar event:", calError);
+                        } else {
+                          console.log(`Created calendar_event for deadline ${result.id}`);
+                        }
                       }
                     }
                   }

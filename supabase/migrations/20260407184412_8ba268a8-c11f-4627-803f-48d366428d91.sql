@@ -20,22 +20,26 @@ FROM public.clients;
 
 -- 2. Restrict clients SELECT to finance + admin only
 DROP POLICY IF EXISTS "Leaders finance and admins can view clients" ON clients;
+DROP POLICY IF EXISTS "Finance and admins can view clients" ON clients;
 CREATE POLICY "Finance and admins can view clients"
   ON clients FOR SELECT TO authenticated
   USING (is_financeiro(auth.uid()) OR has_role(auth.uid(), 'admin') OR has_role(auth.uid(), 'gerente'));
 
 -- 3. Restrict billing_contacts to finance + admin only
 DROP POLICY IF EXISTS "Financeiro and leaders can view billing contacts" ON billing_contacts;
+DROP POLICY IF EXISTS "Finance and admins can view billing contacts" ON billing_contacts;
 CREATE POLICY "Finance and admins can view billing contacts"
   ON billing_contacts FOR SELECT TO authenticated
   USING (is_financeiro(auth.uid()) OR has_role(auth.uid(), 'admin') OR has_role(auth.uid(), 'gerente'));
 
 DROP POLICY IF EXISTS "Financeiro and leaders can insert billing contacts" ON billing_contacts;
+DROP POLICY IF EXISTS "Finance and admins can insert billing contacts" ON billing_contacts;
 CREATE POLICY "Finance and admins can insert billing contacts"
   ON billing_contacts FOR INSERT TO authenticated
   WITH CHECK (is_financeiro(auth.uid()) OR has_role(auth.uid(), 'admin'));
 
 DROP POLICY IF EXISTS "Financeiro and leaders can update billing contacts" ON billing_contacts;
+DROP POLICY IF EXISTS "Finance and admins can update billing contacts" ON billing_contacts;
 CREATE POLICY "Finance and admins can update billing contacts"
   ON billing_contacts FOR UPDATE TO authenticated
   USING (is_financeiro(auth.uid()) OR has_role(auth.uid(), 'admin'));

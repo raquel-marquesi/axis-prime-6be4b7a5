@@ -159,6 +159,33 @@ export function useTimesheet(filters?: { startDate?: string; endDate?: string })
       .filter((name): name is string => !!name);
   };
 
+  const approveEntries = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { user } = useAuth();
+      if (!user?.id) throw new Error('Usuário não autenticado');
+      
+      const { data, error } = await supabase
+        .from('timesheet_entries')
+        .update({ 
+          approved_at: new Date().toISOString(),
+          approved_by: user.id
+        })
+        .in('id', ids)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      invalidateEntries();
+      queryClient.invalidateQueries({ queryKey: ['pending-timesheet-entries'] });
+      toast({ title: 'Lançamentos aprovados' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Erro ao aprovar', description: error.message, variant: 'destructive' });
+    },
+  });
+
   return {
     entries,
     isLoading,
@@ -169,5 +196,45 @@ export function useTimesheet(filters?: { startDate?: string; endDate?: string })
     deleteEntry,
     checkDuplicate,
     checkBatchDuplicates,
+    approveEntries,
   };
+}
+
+export function usePendingTimesheet(filters?: { client_id?: string; startDate?: string; endDate?: string }) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['pending-timesheet-entries', filters?.client_id, filters?.startDate, filters?.endDate],
+    queryFn: async () => {
+      let query = supabase.from('timesheet_entries')
+        .select(`
+          *,
+          process:processes!process_id (
+            id, 
+            numero_processo, 
+            numero_pasta, 
+            reclamante_nome, 
+            id_cliente,
+            client:clients!id_cliente (id, nome, razao_social)
+          ),
+          activity_type:activity_types!activity_type_id (id, name, weight),
+          user_profile:profiles!user_id (id, full_name, sigla)
+        `)
+        .is('approved_at', null)
+        .order('data_atividade', { ascending: false });
+
+      if (filters?.client_id) {
+        // Since we filters by process.client_id
+        // We use the alias 'client_id' defined in the join but better to use a filter on the junction
+        query = query.filter('process.id_cliente', 'eq', filters.client_id);
+      }
+      if (filters?.startDate) query = query.gte('data_atividade', filters.startDate);
+      if (filters?.endDate) query = query.lte('data_atividade', filters.endDate);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
 }

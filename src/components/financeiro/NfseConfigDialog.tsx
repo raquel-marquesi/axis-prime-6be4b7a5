@@ -13,8 +13,9 @@ export function NfseConfigDialog({ open, onOpenChange }: NfseConfigDialogProps) 
   const { config, saveConfig } = useNfse();
   const [form, setForm] = useState({
     razao_social: '', cnpj: '', inscricao_municipal: '', codigo_servico: '17.01', aliquota_iss: 5, regime_tributario: 'simples_nacional',
+    codigo_tributacao_municipio: '', natureza_operacao: 1, certificado_a1_base64: '', senha_certificado: '',
     endereco_logradouro: '', endereco_numero: '', endereco_complemento: '', endereco_bairro: '', endereco_cidade: 'São Paulo', endereco_estado: 'SP', endereco_cep: '',
-    email_contato: '', provider: 'webmania', provider_api_url: '',
+    email_contato: '', provider: 'nativo_sp', provider_api_url: '',
   });
 
   useEffect(() => {
@@ -22,9 +23,11 @@ export function NfseConfigDialog({ open, onOpenChange }: NfseConfigDialogProps) 
       setForm({
         razao_social: config.razao_social || '', cnpj: config.cnpj || '', inscricao_municipal: config.inscricao_municipal || '',
         codigo_servico: config.codigo_servico || '17.01', aliquota_iss: config.aliquota_iss || 5, regime_tributario: config.regime_tributario || 'simples_nacional',
+        codigo_tributacao_municipio: config.codigo_tributacao_municipio || '', natureza_operacao: config.natureza_operacao || 1,
+        certificado_a1_base64: config.certificado_a1_base64 || '', senha_certificado: config.senha_certificado || '',
         endereco_logradouro: config.endereco_logradouro || '', endereco_numero: config.endereco_numero || '', endereco_complemento: config.endereco_complemento || '',
         endereco_bairro: config.endereco_bairro || '', endereco_cidade: config.endereco_cidade || 'São Paulo', endereco_estado: config.endereco_estado || 'SP',
-        endereco_cep: config.endereco_cep || '', email_contato: config.email_contato || '', provider: config.provider || 'webmania', provider_api_url: config.provider_api_url || '',
+        endereco_cep: config.endereco_cep || '', email_contato: config.email_contato || '', provider: config.provider || 'nativo_sp', provider_api_url: config.provider_api_url || '',
       });
     }
   }, [config]);
@@ -51,7 +54,9 @@ export function NfseConfigDialog({ open, onOpenChange }: NfseConfigDialogProps) 
           <div className="space-y-4">
             <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Dados Fiscais</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Código do Serviço</Label><Input value={form.codigo_servico} onChange={e => updateField('codigo_servico', e.target.value)} /></div>
+              <div><Label>Código do Serviço (CNAE Principal)</Label><Input value={form.codigo_servico} onChange={e => updateField('codigo_servico', e.target.value)} /></div>
+              <div><Label>Código Tributação Município</Label><Input value={form.codigo_tributacao_municipio} onChange={e => updateField('codigo_tributacao_municipio', e.target.value)} placeholder="Ex: 01015" /></div>
+              <div><Label>Natureza Operação</Label><Input type="number" value={form.natureza_operacao} onChange={e => updateField('natureza_operacao', parseInt(e.target.value, 10))} /></div>
               <div><Label>Alíquota ISS (%)</Label><Input type="number" step="0.01" value={form.aliquota_iss} onChange={e => updateField('aliquota_iss', parseFloat(e.target.value) || 0)} /></div>
               <div className="col-span-2">
                 <Label>Regime Tributário</Label>
@@ -80,16 +85,16 @@ export function NfseConfigDialog({ open, onOpenChange }: NfseConfigDialogProps) 
             </div>
           </div>
           <div className="space-y-4">
-            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Provedor de NFS-e</h3>
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Integração Nativa e Certificado A1</h3>
             <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2"><Label>Certificado Digital (String Base64 do PFX)</Label><Input value={form.certificado_a1_base64} onChange={e => updateField('certificado_a1_base64', e.target.value)} type="password" placeholder="MIIJbQIBAzCC..." /></div>
+              <div className="col-span-2"><Label>Senha do Certificado</Label><Input value={form.senha_certificado} onChange={e => updateField('senha_certificado', e.target.value)} type="password" /></div>
               <div>
                 <Label>Provedor</Label>
                 <Select value={form.provider} onValueChange={v => updateField('provider', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="webmania">Webmania</SelectItem>
-                    <SelectItem value="focus_nfe">Focus NFe</SelectItem>
-                    <SelectItem value="enotas">Enotas</SelectItem>
+                    <SelectItem value="nativo_sp">Prefeitura de SP (Nativo SOAP)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

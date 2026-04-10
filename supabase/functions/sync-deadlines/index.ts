@@ -275,7 +275,8 @@ Deno.serve(async (req) => {
         body.status?.toLowerCase() === "concluído" ||
         !!body.data_realizacao;
 
-      const deadlineData: Record<string, any> = {
+      // Hub DB RPC Call
+      const corePayload = {
         process_id: processId,
         data_prazo: body.data_agenda,
         ocorrencia: body.tipo_agenda,
@@ -284,98 +285,46 @@ Deno.serve(async (req) => {
         realizado_por: quemAgendouId,
         completed_by: quemRealizouId,
         is_completed: isCompleted,
-        completed_at: body.data_realizacao || null,
+        completed_at: body.data_realizacao || (isCompleted ? new Date().toISOString() : null),
         ultimo_andamento: body.ultimo_andamento || null,
         urgente: body.urgente ?? false,
         source: body.id_tarefa ? "planilha_cliente" : (smartAssignFallback ? "auto_coordenador" : "planilha_cliente"),
-        ...(body.id_tarefa ? { id_tarefa_externa: body.id_tarefa } : {}),
+        ...(body.id_tarefa ? { id_tarefa_externa: body.id_tarefa } : {})
       };
 
-      // Dedup 1: by id_tarefa_externa (primary, if provided)
-      let existingDeadline: { id: string } | null = null;
+      const { data: result, error: rpcError } = await supabase.rpc("core_create_deadline", {
+        payload: corePayload
+      });
 
-      if (body.id_tarefa) {
-        const { data } = await supabase
-          .from("process_deadlines")
-          .select("id")
-          .eq("id_tarefa_externa", body.id_tarefa)
-          .limit(1)
-          .single();
-        existingDeadline = data;
+      if (rpcError || (result && !result.success)) {
+        console.error("Error creating deadline:", rpcError || result?.error);
+        return new Response(
+          JSON.stringify({
+            error: "Process saved but failed to create deadline",
+            process_id: processId,
+            details: rpcError?.message || result?.error,
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
-      // Dedup 2: fallback by (process_id, data_prazo, ocorrencia) — any status
-      if (!existingDeadline) {
-        const { data } = await supabase
-          .from("process_deadlines")
-          .select("id")
-          .eq("process_id", processId)
-          .eq("data_prazo", body.data_agenda)
-          .eq("ocorrencia", body.tipo_agenda)
-          .limit(1)
-          .single();
-        existingDeadline = data;
-      }
+      deadlineId = result.id;
+      deadlineCreated = result.action === "inserted";
 
-      if (existingDeadline) {
-        // Update existing deadline with new data
-        const updateFields: Record<string, any> = {};
-        if (responsavelId) updateFields.assigned_to = responsavelId;
-        if (quemAgendouId) updateFields.realizado_por = quemAgendouId;
-        if (quemRealizouId) updateFields.completed_by = quemRealizouId;
-        if (body.descricao) updateFields.detalhes = body.descricao;
-        if (body.ultimo_andamento) updateFields.ultimo_andamento = body.ultimo_andamento;
-        if (body.urgente !== undefined) updateFields.urgente = body.urgente;
-        if (body.id_tarefa) updateFields.id_tarefa_externa = body.id_tarefa;
-        if (isCompleted) {
-          updateFields.is_completed = true;
-          updateFields.completed_at = body.data_realizacao || new Date().toISOString();
-        }
+      // Create calendar event only for NEW non-completed deadlines with assigned user
+      if (deadlineCreated && !isCompleted && responsavelId) {
+        const eventDate = new Date(body.data_agenda + "T09:00:00");
+        const eventEnd = new Date(body.data_agenda + "T09:15:00");
 
-        if (Object.keys(updateFields).length > 0) {
-          await supabase.from("process_deadlines").update(updateFields).eq("id", existingDeadline.id);
-        }
-
-        deadlineId = existingDeadline.id;
-        deadlineCreated = false;
-      } else {
-        // Insert new deadline
-        const { data: newDeadline, error: deadlineError } = await supabase
-          .from("process_deadlines")
-          .insert(deadlineData)
-          .select("id")
-          .single();
-
-        if (deadlineError) {
-          console.error("Error creating deadline:", deadlineError);
-          return new Response(
-            JSON.stringify({
-              error: "Process saved but failed to create deadline",
-              process_id: processId,
-              details: deadlineError.message,
-            }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        deadlineId = newDeadline.id;
-        deadlineCreated = true;
-
-        // Create calendar event only for NEW non-completed deadlines with assigned user
-        if (!isCompleted && responsavelId) {
-          const eventDate = new Date(body.data_agenda + "T09:00:00");
-          const eventEnd = new Date(body.data_agenda + "T09:15:00");
-
-          await supabase.from("calendar_events").insert({
-            user_id: responsavelId,
-            title: `[${body.numero_processo}] - ${body.tipo_agenda}`,
-            description: `Reclamante: ${body.parte_contraria || "N/A"}\n${body.descricao || ""}`,
-            start_at: eventDate.toISOString(),
-            end_at: eventEnd.toISOString(),
-            event_type: "prazo",
-            process_deadline_id: deadlineId,
-          });
-        }
+        await supabase.from("calendar_events").insert({
+          user_id: responsavelId,
+          title: `[${body.numero_processo}] - ${body.tipo_agenda}`,
+          description: `Reclamante: ${body.parte_contraria || "N/A"}\n${body.descricao || ""}`,
+          start_at: eventDate.toISOString(),
+          end_at: eventEnd.toISOString(),
+          event_type: "prazo",
+          process_deadline_id: deadlineId,
+        });
       }
     }
 

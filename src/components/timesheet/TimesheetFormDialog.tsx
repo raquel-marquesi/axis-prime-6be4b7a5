@@ -126,11 +126,38 @@ export function TimesheetFormDialog({ open, onOpenChange, entry }: TimesheetForm
       if (!forceNew && !entry) {
         const duplicateCheck = await checkDuplicate(values.process_id, values.activity_type_id, values.data_atividade);
         if (duplicateCheck.isDuplicate) {
+          // Strict block if description is also the same
+          if (duplicateCheck.existingEntry?.descricao === values.descricao) {
+            toast({ 
+              title: 'Duplicidade Bloqueada', 
+              description: 'Já existe um lançamento identico (mesmo processo, atividade, data e descrição).', 
+              variant: 'destructive' 
+            });
+            return;
+          }
           setDuplicateWarning({ show: true, existingEntry: duplicateCheck.existingEntry });
           return;
         }
       }
-      const formData: TimesheetFormData = { process_id: values.process_id, activity_type_id: values.activity_type_id, data_atividade: values.data_atividade, descricao: values.descricao, deadline_id: values.deadline_id || null };
+
+      // Requirement: Documents for deadlines
+      if (values.deadline_id && !selectedProcess?.drive_folder_id) {
+        toast({ 
+          title: 'Atenção: Documento Obrigatório', 
+          description: 'Para concluir um prazo, o processo deve ter uma pasta vinculada e o documento deve estar anexado.', 
+          variant: 'destructive' 
+        });
+        // We open the folder if it exists but here it doesn't
+        return;
+      }
+
+      const formData: TimesheetFormData = { 
+        process_id: values.process_id, 
+        activity_type_id: values.activity_type_id, 
+        data_atividade: values.data_atividade, 
+        descricao: values.descricao, 
+        deadline_id: values.deadline_id || null 
+      };
       if (entry) { await updateEntry.mutateAsync({ ...formData, id: entry.id }); } else { await createEntry.mutateAsync(formData); }
       if (selectedProcess?.drive_folder_id) { openDriveFolder(selectedProcess.drive_folder_id); }
       handleClose();

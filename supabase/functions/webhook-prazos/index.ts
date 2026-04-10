@@ -116,60 +116,29 @@ Deno.serve(async (req) => {
     }
 
     // Check for existing non-completed deadline (upsert logic)
-    const { data: existing } = await supabase
-      .from("process_deadlines")
-      .select("id")
-      .eq("process_id", body.process_id)
-      .eq("data_prazo", body.data_prazo)
-      .eq("ocorrencia", ocorrencia)
-      .eq("is_completed", false)
-      .limit(1)
-      .single();
-
-    let deadlineId: string;
-    let action: "created" | "updated";
-
-    if (existing) {
-      // Update existing
-      const updateFields: Record<string, unknown> = {};
-      if (detalhes) updateFields.detalhes = detalhes;
-      if (ultimoAndamento) updateFields.ultimo_andamento = ultimoAndamento;
-      if (body.assigned_to !== undefined) updateFields.assigned_to = body.assigned_to || null;
-
-      if (Object.keys(updateFields).length > 0) {
-        await supabase.from("process_deadlines").update(updateFields).eq("id", existing.id);
+    // Usando o Hub Central RPC
+    const { data: result, error: rpcError } = await supabase.rpc("core_create_deadline", {
+      payload: {
+        process_id: body.process_id,
+        data_prazo: body.data_prazo,
+        ocorrencia,
+        detalhes,
+        assigned_to: body.assigned_to || null,
+        ultimo_andamento: ultimoAndamento,
+        source: "planilha_cliente"
       }
+    });
 
-      deadlineId = existing.id;
-      action = "updated";
-    } else {
-      // Insert new
-      const { data: newDeadline, error: insertError } = await supabase
-        .from("process_deadlines")
-        .insert({
-          process_id: body.process_id,
-          data_prazo: body.data_prazo,
-          ocorrencia,
-          detalhes,
-          assigned_to: body.assigned_to || null,
-          ultimo_andamento: ultimoAndamento,
-          is_completed: false,
-          source: "planilha_cliente",
-        })
-        .select("id")
-        .single();
-
-      if (insertError) {
-        console.error("Error inserting deadline:", insertError);
-        return new Response(
-          JSON.stringify({ error: "Failed to create deadline", details: insertError.message }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      deadlineId = newDeadline.id;
-      action = "created";
+    if (rpcError || (result && !result.success)) {
+      console.error("Error using core RPC:", rpcError || result?.error);
+      return new Response(
+        JSON.stringify({ error: "Failed to create deadline via core", details: rpcError?.message || result?.error }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+
+    const deadlineId = result.id;
+    const action = result.action;
 
     console.log(`webhook-prazos: deadline ${action} id=${deadlineId}`);
 

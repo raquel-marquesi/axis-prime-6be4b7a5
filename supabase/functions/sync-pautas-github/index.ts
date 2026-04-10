@@ -606,26 +606,21 @@ Deno.serve(async (req) => {
 
             // ── Create process_deadline ──
             if (processId && parsed.dataLimite) {
-              const { data: existingDl } = await supabase
-                .from("process_deadlines")
-                .select("id")
-                .eq("process_id", processId)
-                .eq("data_prazo", parsed.dataLimite)
-                .eq("is_completed", false)
-                .maybeSingle();
+              const { data: result, error: rpcError } = await supabase.rpc("core_create_deadline", {
+                payload: {
+                  process_id: processId,
+                  data_prazo: parsed.dataLimite,
+                  ocorrencia: parsed.titulo.substring(0, 120),
+                  detalhes: parsed.observacao?.substring(0, 500) || null,
+                  source: "planilha_pautas",
+                  solicitacao_id: solicitacaoId
+                }
+              });
 
-              if (!existingDl) {
-                const { error: dlErr } = await supabase
-                  .from("process_deadlines")
-                  .insert({
-                    process_id: processId,
-                    data_prazo: parsed.dataLimite,
-                    ocorrencia: parsed.titulo.substring(0, 120),
-                    detalhes: parsed.observacao?.substring(0, 500) || null,
-                    source: "planilha_pautas",
-                  });
-                if (!dlErr) totalDeadlines++;
-                else allErrors.push(`[${source.key}] Deadline: ${dlErr.message}`);
+              if (!rpcError && result?.success) {
+                if (result.action === "inserted") totalDeadlines++;
+              } else {
+                allErrors.push(`[${source.key}] Deadline RPC: ${rpcError?.message || result?.error}`);
               }
             }
           }

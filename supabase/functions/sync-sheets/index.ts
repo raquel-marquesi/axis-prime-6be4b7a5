@@ -293,10 +293,8 @@ async function processAtividadesSheet(
   const actualSyncLetter = columnToLetter(actualSyncIdx);
 
   // Pre-load activity types and open deadlines in parallel
-  const [actTypesRes, deadlinesRes] = await Promise.all([
+  const [actTypesRes] = await Promise.all([
     supabase.from("activity_types").select("id, name").eq("is_active", true),
-    supabase.from("process_deadlines").select("id, process_id, data_prazo, ocorrencia")
-      .eq("is_completed", false),
   ]);
 
   const actTypeMap = new Map<string, string>();
@@ -304,14 +302,7 @@ async function processAtividadesSheet(
     actTypeMap.set(at.name.toLowerCase(), at.id);
   }
 
-  // Index open deadlines by process_id for fast lookup
-  const openDeadlinesMap = new Map<string, Array<{ id: string; data_prazo: string; ocorrencia: string }>>();
-  for (const dl of deadlinesRes.data || []) {
-    const list = openDeadlinesMap.get(dl.process_id) || [];
-    list.push({ id: dl.id, data_prazo: dl.data_prazo, ocorrencia: dl.ocorrencia });
-    openDeadlinesMap.set(dl.process_id, list);
-  }
-  console.log(`[ATIVIDADES] Loaded ${actTypeMap.size} activity types, ${deadlinesRes.data?.length || 0} open deadlines`);
+  console.log(`[ATIVIDADES] Loaded ${actTypeMap.size} activity types`);
 
   let processed = 0, failed = 0, deadlinesCompleted = 0;
   const errors: string[] = [];
@@ -383,9 +374,13 @@ async function processAtividadesSheet(
         }
       }
 
+      const processId = processIdRaw;
+      const clientId = processId ? ref.processClientMap.get(numProcesso) : null;
+
       const { data: tsData, error: tsErr } = await supabase.from("timesheet_entries").insert({
         user_id: userId,
         process_id: processId,
+        client_id: clientId,
         activity_type_id: activityTypeId,
         data_atividade: dataAtividade,
         descricao: descricao,
@@ -405,57 +400,22 @@ async function processAtividadesSheet(
         continue;
       }
 
-      // ── Deadline auto-completion ──
+      // ── Deadline auto-completion via DB Hub ──
       if (processId) {
-        const deadlines = openDeadlinesMap.get(processId);
-        if (deadlines && deadlines.length > 0) {
-          const actDate = new Date(dataAtividade + "T00:00:00Z");
-          const sevenDaysBefore = new Date(actDate.getTime() - 7 * 86400000);
-
-          // Filter by compatible date range
-          const candidates = deadlines.filter(dl => {
-            const dlDate = new Date(dl.data_prazo + "T00:00:00Z");
-            return dlDate >= sevenDaysBefore && dlDate <= actDate;
-          });
-
-          if (candidates.length > 0) {
-            // Prioritize exact match on ocorrencia with tipo_atividade or tipo_prazo
-            const matchKey = (tipoPrazo || tipoAtividade || "").toLowerCase();
-            let matched = matchKey
-              ? candidates.find(dl => dl.ocorrencia.toLowerCase().includes(matchKey) || matchKey.includes(dl.ocorrencia.toLowerCase()))
-              : null;
-
-            // Fallback: closest date
-            if (!matched) {
-              matched = candidates.sort((a, b) => {
-                const da = Math.abs(new Date(a.data_prazo + "T00:00:00Z").getTime() - actDate.getTime());
-                const db = Math.abs(new Date(b.data_prazo + "T00:00:00Z").getTime() - actDate.getTime());
-                return da - db;
-              })[0];
-            }
-
-            if (matched) {
-              const { error: dlUpErr } = await supabase.from("process_deadlines").update({
-                is_completed: true,
-                completed_at: dataAtividade,
-                completed_by: userId,
-                timesheet_entry_id: tsData.id,
-              }).eq("id", matched.id);
-
-              if (!dlUpErr) {
-                // Remove from map to avoid double-completion
-                const remaining = deadlines.filter(dl => dl.id !== matched!.id);
-                if (remaining.length > 0) {
-                  openDeadlinesMap.set(processId, remaining);
-                } else {
-                  openDeadlinesMap.delete(processId);
-                }
-                deadlinesCompleted++;
-              } else {
-                console.error(`[ATIVIDADES] L${rowNum}: deadline update error: ${dlUpErr.message}`);
-              }
-            }
+        const { data: compResult, error: compErr } = await supabase.rpc("core_complete_deadline", {
+          payload: {
+            process_id: processId,
+            data_agendamento: dataAtividade,
+            completed_by: userId,
+            completion_activity_type: tipoAtividade || null,
+            timesheet_entry_id: tsData.id
           }
+        });
+        
+        if (!compErr && compResult?.success && compResult.completed_count > 0) {
+          deadlinesCompleted += compResult.completed_count;
+        } else if (compErr || (compResult && !compResult.success)) {
+          console.error(`[ATIVIDADES] L${rowNum}: deadline completion RPC error:`, compErr || compResult?.error);
         }
       }
 
