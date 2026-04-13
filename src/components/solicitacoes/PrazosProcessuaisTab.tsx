@@ -15,6 +15,7 @@ import { useAllProcessDeadlines, type DeadlineStatus, type ProcessDeadlineRow } 
 import { useOverdueTimesheetMap } from '@/hooks/useOverdueTimesheetMap';
 import { type Process } from '@/hooks/useProcesses';
 import { ProcessDetailsDialog } from '@/components/processes/ProcessDetailsDialog';
+import { ProcessFormDialog } from '@/components/processes/ProcessFormDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfiles } from '@/hooks/useProfiles';
 import { supabase } from '@/integrations/supabase/client';
