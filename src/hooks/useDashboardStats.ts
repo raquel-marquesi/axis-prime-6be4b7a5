@@ -39,6 +39,26 @@ export function useDashboardStats() {
   return useQuery({
     queryKey: ['dashboard-stats', userId, isCoordPlus],
     queryFn: async (): Promise<DashboardStats> => {
+      // 0. Get team user IDs for scope alignment
+      let teamUserIds: string[] | null = null;
+      if (isCoordPlus) {
+        const { data: myProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', userId!)
+          .maybeSingle();
+
+        if (myProfile) {
+          const { data: subordinates } = await supabase
+            .from('profiles_safe' as any)
+            .select('user_id')
+            .eq('reports_to', myProfile.id);
+          
+          const subordinateIds = (subordinates as any[])?.map(p => p.user_id) || [];
+          teamUserIds = [...subordinateIds, userId!];
+        }
+      }
+
       // Active clients + by type
       const { count: activeClients } = await supabase
         .from('clients')
@@ -57,23 +77,32 @@ export function useDashboardStats() {
         .eq('is_active', true)
         .eq('tipo', 'juridica');
 
-      // Pending deadlines (next 7 days) — scoped by role
+      // Pending deadlines (Today + Future) — scoped by role/team
       let pendingQuery = supabase
         .from('process_deadlines')
         .select('*', { count: 'exact', head: true })
         .eq('is_completed', false)
-        .gte('data_prazo', todayStr)
-        .lte('data_prazo', in7days);
-      if (!isCoordPlus) pendingQuery = pendingQuery.eq('assigned_to', userId!);
+        .gte('data_prazo', todayStr);
+      
+      if (teamUserIds) {
+        pendingQuery = pendingQuery.in('assigned_to', teamUserIds);
+      } else if (!isCoordPlus) {
+        pendingQuery = pendingQuery.eq('assigned_to', userId!);
+      }
       const { count: pendingDeadlines } = await pendingQuery;
 
-      // Overdue deadlines — scoped by role
+      // Overdue deadlines — scoped by role/team
       let overdueQuery = supabase
         .from('process_deadlines')
         .select('*', { count: 'exact', head: true })
         .eq('is_completed', false)
         .lt('data_prazo', todayStr);
-      if (!isCoordPlus) overdueQuery = overdueQuery.eq('assigned_to', userId!);
+      
+      if (teamUserIds) {
+        overdueQuery = overdueQuery.in('assigned_to', teamUserIds);
+      } else if (!isCoordPlus) {
+        overdueQuery = overdueQuery.eq('assigned_to', userId!);
+      }
       const { count: overdueDeadlines } = await overdueQuery;
 
       // Contracts expiring in 30/60/90 days
@@ -91,38 +120,25 @@ export function useDashboardStats() {
         contractQuery(in90days),
       ]);
 
-      // Deadlines by user + team stats (for coordinators+)
+      // Deadlines by user + team stats
       let deadlinesByUser: DeadlineByUser[] = [];
-      let teamMembers = 0;
-      if (isCoordPlus) {
-        // Get profile id for current user
-        const { data: myProfile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('user_id', userId!)
-          .maybeSingle();
-
-        if (myProfile) {
-          // Count team members
-          const { count: membersCount } = await supabase
-            .from('profiles')
-            .select('*', { count: 'exact', head: true })
-            .eq('reports_to', myProfile.id)
-            .eq('is_active', true);
-          teamMembers = membersCount || 0;
-        }
-
+      let teamMembersCount = 0;
+      
+      if (teamUserIds) {
+        teamMembersCount = teamUserIds.length;
+        
         const { data: rawDeadlines } = await supabase
           .from('process_deadlines')
           .select('assigned_to, data_prazo, is_completed')
-          .eq('is_completed', false);
+          .eq('is_completed', false)
+          .in('assigned_to', teamUserIds);
 
         if (rawDeadlines && rawDeadlines.length > 0) {
-          const userIds = [...new Set(rawDeadlines.map(d => d.assigned_to).filter(Boolean))] as string[];
+          const distinctUserIds = [...new Set(rawDeadlines.map(d => d.assigned_to).filter(Boolean))] as string[];
           const { data: profiles } = await supabase
             .from('profiles')
             .select('user_id, full_name')
-            .in('user_id', userIds);
+            .in('user_id', distinctUserIds);
 
           const nameMap = new Map((profiles || []).map(p => [p.user_id, p.full_name]));
           const grouped = new Map<string, { pending: number; overdue: number }>();
@@ -153,7 +169,7 @@ export function useDashboardStats() {
         contractsExpiring90: c90.count || 0,
         deadlinesByUser,
         clientsByType: { fisica: pfCount || 0, juridica: pjCount || 0 },
-        teamMembers,
+        teamMembers: teamMembersCount,
         teamPendingDeadlines: pendingDeadlines || 0,
         teamOverdueDeadlines: overdueDeadlines || 0,
         teamMonthlyActivities: 0,

@@ -96,7 +96,7 @@ export default function Dashboard() {
                   </div>
                   <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block" />
-                    Próximos 7 dias
+                    Hoje e futuros
                   </p>
 
                 </CardContent>
