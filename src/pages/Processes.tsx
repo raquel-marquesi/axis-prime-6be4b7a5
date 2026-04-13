@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
 
 import { useProcesses, Process } from '@/hooks/useProcesses';
+import { useNavigate } from 'react-router-dom';
 import ProcessesTable from '@/components/processes/ProcessesTable';
-import ProcessFormDialog from '@/components/processes/ProcessFormDialog';
 import ProcessDetailsDialog from '@/components/processes/ProcessDetailsDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,16 +18,15 @@ type FilterArea = 'all' | AreaProcesso;
 
 export default function Processes() {
   const { processes, isLoading } = useProcesses();
+  const navigate = useNavigate();
   const { isAdmin, hasRole } = useAuth();
   const canEditProcesses = isAdmin() || hasRole('socio') || hasRole('coordenador') || hasRole('lider');
 
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [filterArea, setFilterArea] = useState<FilterArea>('all');
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedProcess, setSelectedProcess] = useState<Process | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [editProcess, setEditProcess] = useState<Process | null>(null);
 
   const filteredProcesses = useMemo(() => {
     return processes.filter((process) => {
@@ -48,8 +47,7 @@ export default function Processes() {
   }, [processes, search, filterType, filterArea]);
 
   const handleViewDetails = (process: Process) => { setSelectedProcess(process); setIsDetailsOpen(true); };
-  const handleEdit = (process: Process) => { setEditProcess(process); setIsFormOpen(true); };
-  const handleCloseForm = () => { setIsFormOpen(false); setEditProcess(null); };
+  const handleEdit = (process: Process) => { navigate(`/processos/${process.id}`); };
 
   return (
     <>
@@ -60,7 +58,7 @@ export default function Processes() {
             <p className="text-sm text-muted-foreground">Gerencie processos trabalhistas</p>
           </div>
           {canEditProcesses && (
-            <Button onClick={() => setIsFormOpen(true)}>
+            <Button onClick={() => navigate('/processos/novo')}>
               <Plus className="w-4 h-4 mr-2" />Novo Processo
             </Button>
           )}
@@ -97,7 +95,6 @@ export default function Processes() {
           <ProcessesTable processes={filteredProcesses} onViewDetails={handleViewDetails} onEdit={handleEdit} />
         )}
       </div>
-      <ProcessFormDialog open={isFormOpen} onOpenChange={handleCloseForm} process={editProcess} />
       <ProcessDetailsDialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen} process={selectedProcess} onEdit={handleEdit} />
     </>
   );

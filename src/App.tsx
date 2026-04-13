@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Processes from "./pages/Processes";
+import ProcessFormPage from "./pages/ProcessFormPage";
 
 import UserManagement from "./pages/UserManagement";
 import Solicitacoes from "./pages/Solicitacoes";
@@ -54,6 +55,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Processes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/processos/:id"
+              element={
+                <ProtectedRoute>
+                  <ProcessFormPage />
                 </ProtectedRoute>
               }
             />
