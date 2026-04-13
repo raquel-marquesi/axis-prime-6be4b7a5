@@ -23,6 +23,7 @@ interface AuthContextType {
   can: (module: PermissionModule, action: PermissionAction) => boolean;
   canAny: (module: PermissionModule, actions: PermissionAction[]) => boolean;
   getScope: (module: PermissionModule, action: PermissionAction) => PermissionScope | null;
+  signInWithGoogle: () => Promise<{ error: Error | null }>;
   permissionsLoading: boolean;
   // Simulation
   simulatedRole: string | null;
@@ -142,6 +143,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+      },
+    });
+    return { error };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
@@ -170,7 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         user, session, profile, roles: effectiveRoles, loading,
-        signIn, signUp, signOut,
+        signIn, signUp, signOut, signInWithGoogle,
         hasRole, hasAnyRole, isAdminOrManager, isLeaderOrAbove, isCoordinatorOrAbove, isFinanceiro, isAdmin,
         can, canAny, getScope, permissionsLoading,
         simulatedRole, isSimulating, realRoles, startSimulation, stopSimulation,
