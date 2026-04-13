@@ -119,15 +119,16 @@ export function useTesourariaReport(startDate: string, endDate: string) {
   return useQuery({
     queryKey: ['finance-tesouraria-report', startDate, endDate],
     queryFn: async () => {
-      const { data: bankAccounts, error: e1 } = await supabase.from('bank_accounts_config').select('*').eq('is_active', true);
-      if (e1) throw e1;
-      const { data: entries, error: e2 } = await supabase.from('treasury_entries').select('*').gte('data_movimentacao', startDate).lte('data_movimentacao', endDate);
-      if (e2) throw e2;
-      const accounts = (bankAccounts || []).map(ba => { const acEntries = (entries || []).filter(e => e.bank_account_id === ba.id); const entradas = acEntries.filter(e => e.tipo === 'entrada').reduce((s, e) => s + Number(e.valor), 0); const saidas = acEntries.filter(e => e.tipo === 'saida' || e.tipo === 'transferencia').reduce((s, e) => s + Number(e.valor), 0); return { ...ba, entradas, saidas, saldo: entradas - saidas }; });
-      const monthly: Record<string, { entradas: number; saidas: number }> = {};
-      for (const e of (entries || [])) { const month = e.data_movimentacao.substring(0, 7); if (!monthly[month]) monthly[month] = { entradas: 0, saidas: 0 }; if (e.tipo === 'entrada') monthly[month].entradas += Number(e.valor); else monthly[month].saidas += Number(e.valor); }
-      const monthlyData = Object.entries(monthly).sort(([a], [b]) => a.localeCompare(b)).map(([month, v]) => ({ month, ...v }));
-      return { accounts, monthlyData };
+      const { data, error } = await supabase.rpc('get_treasury_summary', {
+        p_start_date: startDate,
+        p_end_date: endDate
+      });
+      if (error) throw error;
+      const payload = data as any;
+      return {
+        accounts: payload?.accounts || [],
+        monthlyData: payload?.monthlyData || []
+      };
     },
   });
 }

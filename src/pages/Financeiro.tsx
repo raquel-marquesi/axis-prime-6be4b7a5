@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Plus, FileText, Layers } from "lucide-react";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Visão Geral
 import FinanceSummary from "@/components/financeiro/FinanceSummary";
@@ -81,16 +82,16 @@ const Financeiro = () => {
 
         {/* Visão Geral */}
         <TabsContent value="visao-geral" className="space-y-6">
-          <FinanceSummary />
-          <AnaliseFinanceiraTab />
+          <ErrorBoundary><FinanceSummary /></ErrorBoundary>
+          <ErrorBoundary><AnaliseFinanceiraTab /></ErrorBoundary>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <RecebiveisWidget />
-            <ProjecaoReceitaWidget />
+            <ErrorBoundary><RecebiveisWidget /></ErrorBoundary>
+            <ErrorBoundary><ProjecaoReceitaWidget /></ErrorBoundary>
           </div>
-          <FinanceCharts />
+          <ErrorBoundary><FinanceCharts /></ErrorBoundary>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <RentabilidadeChart />
-            <PremiacaoVsFaturamentoChart />
+            <ErrorBoundary><RentabilidadeChart /></ErrorBoundary>
+            <ErrorBoundary><PremiacaoVsFaturamentoChart /></ErrorBoundary>
           </div>
         </TabsContent>
 
@@ -164,14 +165,14 @@ const Financeiro = () => {
               <TabsTrigger value="fat-cliente">Fat. por Cliente</TabsTrigger>
               <TabsTrigger value="fat-profissional">Fat. por Profissional</TabsTrigger>
             </TabsList>
-            <TabsContent value="dre"><DREReport /></TabsContent>
-            <TabsContent value="fluxo-caixa"><FluxoCaixaReport /></TabsContent>
-            <TabsContent value="contas-pagar"><ContasPagarReport /></TabsContent>
-            <TabsContent value="contas-receber"><ContasReceberReport /></TabsContent>
-            <TabsContent value="centro-custos"><CentroCustosReport /></TabsContent>
-            <TabsContent value="tesouraria"><TesourariaReport /></TabsContent>
-            <TabsContent value="fat-cliente"><FaturamentoClienteReport /></TabsContent>
-            <TabsContent value="fat-profissional"><FaturamentoProfissionalReport /></TabsContent>
+            <TabsContent value="dre"><ErrorBoundary fallbackMessage="Falha no DRE"><DREReport /></ErrorBoundary></TabsContent>
+            <TabsContent value="fluxo-caixa"><ErrorBoundary fallbackMessage="Falha no Fluxo de Caixa"><FluxoCaixaReport /></ErrorBoundary></TabsContent>
+            <TabsContent value="contas-pagar"><ErrorBoundary fallbackMessage="Falha: Contas a Pagar"><ContasPagarReport /></ErrorBoundary></TabsContent>
+            <TabsContent value="contas-receber"><ErrorBoundary fallbackMessage="Falha: Contas a Receber"><ContasReceberReport /></ErrorBoundary></TabsContent>
+            <TabsContent value="centro-custos"><ErrorBoundary fallbackMessage="Falha: Centro de Custos"><CentroCustosReport /></ErrorBoundary></TabsContent>
+            <TabsContent value="tesouraria"><ErrorBoundary fallbackMessage="Falha na Tesouraria"><TesourariaReport /></ErrorBoundary></TabsContent>
+            <TabsContent value="fat-cliente"><ErrorBoundary fallbackMessage="Falha no Faturamento"><FaturamentoClienteReport /></ErrorBoundary></TabsContent>
+            <TabsContent value="fat-profissional"><ErrorBoundary fallbackMessage="Falha no Relatório"><FaturamentoProfissionalReport /></ErrorBoundary></TabsContent>
           </Tabs>
         </TabsContent>
 
