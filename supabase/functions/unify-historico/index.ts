@@ -354,3 +354,10 @@ async function importHistorico(db: any, batchSize: number, startOffset: number) 
 
   return jsonResponse({ status: "ok", phase: "import", next_offset: hasMore ? offset : null, stats: { total: stats.total, inserted: stats.inserted, skipped_no_user: stats.skipped_no_user, skipped_no_date: stats.skipped_no_date, duplicates: stats.duplicates, errors: stats.errors, unmatched_users: [...stats.unmatched_users].slice(0, 30), unmatched_activities: [...stats.unmatched_activities].slice(0, 30) } });
 }
+
+function jsonResponse(data: any, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
