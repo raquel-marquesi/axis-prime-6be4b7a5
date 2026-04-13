@@ -98,3 +98,6 @@ verify_jwt = false
 
 [functions.unify-historico]
 verify_jwt = false
+
+[functions.verify-delayed-sheets]
+verify_jwt = false
