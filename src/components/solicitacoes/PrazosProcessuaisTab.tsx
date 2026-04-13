@@ -42,6 +42,7 @@ export function PrazosProcessuaisTab() {
   const [teamFilter, setTeamFilter] = useState<string>('all');
   const [selectedProcess, setSelectedProcess] = useState<Process | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editProcess, setEditProcess] = useState<Process | null>(null);
   const [hideWithActivity, setHideWithActivity] = useState(true);
   const [aiChatOpen, setAiChatOpen] = useState(false);
 
