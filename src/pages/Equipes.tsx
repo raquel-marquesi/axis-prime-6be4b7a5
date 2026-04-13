@@ -60,9 +60,13 @@ const Equipes = () => {
   // Leaders: profiles that have at least one subordinate (reports_to) OR at least one team_client
   const leaderIds = useMemo(() => {
     const ids = new Set<string>();
-    profiles.forEach((p) => { if (p.reports_to) ids.add(p.reports_to); });
-    teamClients.forEach((tc) => ids.add(tc.team_lead_id));
-    return Array.from(ids);
+    profiles.forEach((p) => { 
+      if (p.reports_to) ids.add(p.reports_to); 
+    });
+    teamClients.forEach((tc) => {
+      if (tc.team_lead_id) ids.add(tc.team_lead_id);
+    });
+    return Array.from(ids).filter(id => !!id);
   }, [profiles, teamClients]);
 
   // Members grouped by leader (reports_to)
@@ -89,7 +93,13 @@ const Equipes = () => {
     return map;
   }, [teamClients]);
 
-  const getLeaderName = (id: string) => profileById.get(id)?.full_name || "Desconhecido";
+  const getLeaderName = (id: string) => {
+    const p = profileById.get(id);
+    if (p) return p.full_name;
+    // Fallback: search in teamClients if data was provided there as leader_name
+    const tcItem = teamClients.find(tc => tc.team_lead_id === id);
+    return tcItem?.leader_name || "Líder não identificado";
+  };
 
   const getClientName = (clientId: string) => {
     const c = clients?.find((cl: any) => cl.id === clientId);
