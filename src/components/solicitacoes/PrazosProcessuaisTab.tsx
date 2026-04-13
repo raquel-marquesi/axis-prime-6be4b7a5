@@ -174,7 +174,8 @@ export function PrazosProcessuaisTab() {
         <CollapsibleContent><Card className="mb-4"><AIAgentChat module="prazos" className="h-[400px]" /></Card></CollapsibleContent>
       </Collapsible>
 
-      <ProcessDetailsDialog open={dialogOpen} onOpenChange={setDialogOpen} process={selectedProcess} onEdit={() => {}} defaultTab="deadlines" />
+      <ProcessDetailsDialog open={dialogOpen} onOpenChange={setDialogOpen} process={selectedProcess} onEdit={() => { setDialogOpen(false); setEditProcess(selectedProcess); }} defaultTab="deadlines" />
+      <ProcessFormDialog open={!!editProcess} onOpenChange={(open) => { if (!open) setEditProcess(null); }} process={editProcess} />
     </>
   );
 }
