@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { startOfMonth, endOfMonth } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,11 +16,17 @@ const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', curren
 
 export function ContasReceberReport() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
 
   const { data: invoices = [], isLoading } = useQuery({
-    queryKey: ['contas-receber-report'],
+    queryKey: ['contas-receber-report', startDate, endDate],
     queryFn: async () => {
-      const { data, error } = await supabase.from('invoices').select('*, billing_contact:billing_contacts!billing_contact_id(razao_social)').order('data_vencimento', { ascending: true });
+      const { data, error } = await supabase.from('invoices')
+        .select('*, billing_contact:billing_contacts!billing_contact_id(razao_social)')
+        .gte('data_vencimento', startDate)
+        .lte('data_vencimento', endDate)
+        .order('data_vencimento', { ascending: true });
       if (error) throw error;
       return data;
     },
@@ -33,7 +41,10 @@ export function ContasReceberReport() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Contas a Receber</CardTitle>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center flex-wrap">
+          <Input type="date" className="w-36" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          <span className="text-muted-foreground">-</span>
+          <Input type="date" className="w-36" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
             <SelectContent>

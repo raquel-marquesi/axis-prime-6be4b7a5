@@ -70,23 +70,16 @@ export function useFluxoCaixaReport(startDate: string, endDate: string, branchId
   return useQuery({
     queryKey: ['finance-fluxo-caixa', startDate, endDate, branchIds],
     queryFn: async () => {
-      let expQ = supabase.from('expenses').select('valor, data_pagamento, data_vencimento, status, branch_id').eq('status', 'paga');
-      if (branchIds && branchIds.length > 0) expQ = expQ.in('branch_id', branchIds);
-      const { data: expenses, error: e1 } = await expQ;
-      if (e1) throw e1;
-      let invQ = supabase.from('invoices').select('valor, data_vencimento, status, branch_id').eq('status', 'paga');
-      if (branchIds && branchIds.length > 0) invQ = invQ.in('branch_id', branchIds);
-      const { data: invoices, error: e2 } = await invQ;
-      if (e2) throw e2;
-      const months: Record<string, { recebimentos: number; pagamentos: number }> = {};
-      let current = startOfMonth(parseISO(startDate)); const end = endOfMonth(parseISO(endDate));
-      while (current <= end) { months[format(current, 'yyyy-MM')] = { recebimentos: 0, pagamentos: 0 }; current = addMonths(current, 1); }
-      for (const exp of (expenses || [])) { const dt = exp.data_pagamento || exp.data_vencimento; if (!dt) continue; const month = dt.substring(0, 7); if (months[month] !== undefined) months[month].pagamentos += exp.valor || 0; }
-      for (const inv of (invoices || [])) { const dt = inv.data_vencimento; if (!dt) continue; const month = dt.substring(0, 7); if (months[month] !== undefined) months[month].recebimentos += inv.valor || 0; }
-      let saldoAcumulado = 0;
-      const data = Object.entries(months).sort(([a], [b]) => a.localeCompare(b)).map(([month, v]) => { saldoAcumulado += v.recebimentos - v.pagamentos; return { month, ...v, saldo: saldoAcumulado }; });
-      const totais = { recebimentos: data.reduce((s, d) => s + d.recebimentos, 0), pagamentos: data.reduce((s, d) => s + d.pagamentos, 0), saldo: saldoAcumulado };
-      return { data, totais };
+      const { data: raw, error } = await supabase.rpc('get_cashflow_summary', {
+        p_start_date: startDate,
+        p_end_date: endDate,
+        p_branch_ids: branchIds?.length ? branchIds : null
+      });
+
+      if (error) throw error;
+      
+      const payload = raw as any;
+      return { data: payload.data || [], totais: payload.totais || { recebimentos: 0, pagamentos: 0, saldo: 0 } };
     },
   });
 }
