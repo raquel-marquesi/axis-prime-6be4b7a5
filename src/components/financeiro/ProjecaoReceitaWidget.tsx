@@ -24,124 +24,17 @@ export function ProjecaoReceitaWidget() {
   const { data, isLoading } = useQuery({
     queryKey: ['projecao-receita'],
     queryFn: async () => {
-      // 1. Get open deadlines with process info
-      const { data: deadlines, error: dErr } = await supabase
-        .from('process_deadlines')
-        .select('id, process_id')
-        .eq('is_completed', false);
-      if (dErr) throw dErr;
-
-      if (!deadlines?.length) return { projections: [] as ClientProjection[], totalGeneral: 0, totalContrato: 0, totalEstimado: 0, totalPrazos: 0 };
-
-      // 2. Get unique process IDs and fetch processes with client ref
-      const processIds = [...new Set(deadlines.map(d => d.process_id))];
+      const { data, error } = await supabase.rpc('get_revenue_projection');
       
-      const allProcesses: { id: string; id_cliente: string }[] = [];
-      for (let i = 0; i < processIds.length; i += 500) {
-        const batch = processIds.slice(i, i + 500);
-        const { data: processes, error: pErr } = await supabase
-          .from('processes')
-          .select('id, id_cliente')
-          .in('id', batch);
-        if (pErr) throw pErr;
-        if (processes) allProcesses.push(...processes);
-      }
-
-      // 3. Get clients for names
-      const clientIds = [...new Set(allProcesses.map(p => p.id_cliente).filter(Boolean))];
-      const allClients: { id: string; nome: string | null; razao_social: string | null }[] = [];
-      for (let i = 0; i < clientIds.length; i += 500) {
-        const batch = clientIds.slice(i, i + 500);
-        const { data: clients, error: cErr } = await supabase
-          .from('clients')
-          .select('id, nome, razao_social')
-          .in('id', batch);
-        if (cErr) throw cErr;
-        if (clients) allClients.push(...clients);
-      }
-      const clientMap = new Map(allClients.map(c => [c.id, c.razao_social || c.nome || 'Sem Nome']));
-
-      // 4. Get contract pricing
-      const { data: pricing, error: prErr } = await supabase
-        .from('contract_pricing')
-        .select('client_id, cliente_nome, valor')
-        .eq('is_active', true);
-      if (prErr) throw prErr;
-
-      const pricingByClientId = new Map<string, number[]>();
-      const pricingByName = new Map<string, number[]>();
-      for (const p of pricing || []) {
-        if (p.valor && p.valor > 0) {
-          if (p.client_id) {
-            const arr = pricingByClientId.get(p.client_id) || [];
-            arr.push(p.valor);
-            pricingByClientId.set(p.client_id, arr);
-          }
-          const nameKey = p.cliente_nome.toUpperCase().trim();
-          const arr2 = pricingByName.get(nameKey) || [];
-          arr2.push(p.valor);
-          pricingByName.set(nameKey, arr2);
-        }
-      }
-
-      // 5. Map deadlines to clients
-      const processMap = new Map(allProcesses.map(p => [p.id, p]));
-      const clientDeadlines = new Map<string, { name: string; clientId: string | null; count: number }>();
-
-      for (const d of deadlines) {
-        const proc = processMap.get(d.process_id);
-        const clientId = proc?.id_cliente || null;
-        const clientName = clientId ? (clientMap.get(clientId) || 'Sem Nome') : 'Sem Cliente';
-        const clientKey = clientName.toUpperCase().trim();
-        const existing = clientDeadlines.get(clientKey) || { name: clientName, clientId, count: 0 };
-        existing.count++;
-        clientDeadlines.set(clientKey, existing);
-      }
-
-      // 5. Build projections
-      const projections: ClientProjection[] = [];
-      let totalContrato = 0;
-      let totalEstimado = 0;
-
-      for (const [, client] of clientDeadlines) {
-        let avgPrice = FALLBACK_PRICE;
-        let source: 'contrato' | 'estimado' = 'estimado';
-
-        // Try by client_id first, then by name
-        if (client.clientId && pricingByClientId.has(client.clientId)) {
-          const vals = pricingByClientId.get(client.clientId)!;
-          avgPrice = vals.reduce((a, b) => a + b, 0) / vals.length;
-          source = 'contrato';
-        } else {
-          const nameKey = client.name.toUpperCase().trim();
-          if (pricingByName.has(nameKey)) {
-            const vals = pricingByName.get(nameKey)!;
-            avgPrice = vals.reduce((a, b) => a + b, 0) / vals.length;
-            source = 'contrato';
-          }
-        }
-
-        const projectedRevenue = client.count * avgPrice;
-        if (source === 'contrato') totalContrato += projectedRevenue;
-        else totalEstimado += projectedRevenue;
-
-        projections.push({
-          clientName: client.name,
-          deadlineCount: client.count,
-          avgPrice,
-          projectedRevenue,
-          source,
-        });
-      }
-
-      projections.sort((a, b) => b.projectedRevenue - a.projectedRevenue);
-
-      return {
-        projections,
-        totalGeneral: totalContrato + totalEstimado,
-        totalContrato,
-        totalEstimado,
-        totalPrazos: deadlines.length,
+      if (error) throw error;
+      
+      // A RPC `get_revenue_projection` retorna um JSON com exatamente as props necessárias
+      return data as {
+        projections: ClientProjection[];
+        totalGeneral: number;
+        totalContrato: number;
+        totalEstimado: number;
+        totalPrazos: number;
       };
     },
   });

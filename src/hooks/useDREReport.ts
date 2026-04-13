@@ -7,16 +7,27 @@ export function useDREReport(startDate: string, endDate: string) {
   return useQuery({
     queryKey: ['dre_report', startDate, endDate],
     queryFn: async () => {
-      const { data: invoices } = await supabase.from('invoices').select('valor, status').gte('data_emissao', startDate).lte('data_emissao', endDate);
-      const { data: expenses } = await supabase.from('expenses').select('valor, status, categoria').gte('data_vencimento', startDate).lte('data_vencimento', endDate);
+      const { data, error } = await supabase.rpc('get_financial_dre_summary', {
+        p_start_date: startDate,
+        p_end_date: endDate
+      });
 
-      const receitaBruta = (invoices || []).reduce((sum, i) => sum + Number(i.valor || 0), 0);
-      const receitaRealizada = (invoices || []).filter(i => i.status === 'paga').reduce((sum, i) => sum + Number(i.valor || 0), 0);
-      const allExpenses = expenses || [];
-      const despesasPagas = allExpenses.filter(e => e.status === 'paga');
-      const despesasTotal = despesasPagas.reduce((sum, e) => sum + Number(e.valor || 0), 0);
-      const despesasAdmin = despesasPagas.filter(e => ['administrativa', 'aluguel', 'utilidades'].includes(e.categoria)).reduce((sum, e) => sum + Number(e.valor || 0), 0);
-      const despesasPessoal = despesasPagas.filter(e => ['pessoal', 'salarios', 'beneficios'].includes(e.categoria)).reduce((sum, e) => sum + Number(e.valor || 0), 0);
+      if (error) throw error;
+      
+      const dre = data as {
+        receitaBruta: number;
+        receitaRealizada: number;
+        despesasTotal: number;
+        despesasAdmin: number;
+        despesasPessoal: number;
+      };
+
+      const receitaBruta = Number(dre.receitaBruta);
+      const receitaRealizada = Number(dre.receitaRealizada);
+      const despesasTotal = Number(dre.despesasTotal);
+      const despesasAdmin = Number(dre.despesasAdmin);
+      const despesasPessoal = Number(dre.despesasPessoal);
+      
       const despesasOperacionais = despesasTotal - despesasAdmin - despesasPessoal;
       const deducoes = receitaRealizada * 0.1133;
       const receitaLiquida = receitaRealizada - deducoes;
