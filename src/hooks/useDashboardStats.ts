@@ -26,7 +26,7 @@ export interface DashboardStats {
 }
 
 export function useDashboardStats() {
-  const { session, isCoordinatorOrAbove } = useAuth();
+  const { session, roles, isCoordinatorOrAbove } = useAuth();
   const userId = session?.user?.id;
   const isCoordPlus = isCoordinatorOrAbove();
   const today = new Date();
