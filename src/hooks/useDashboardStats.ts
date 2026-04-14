@@ -41,7 +41,12 @@ export function useDashboardStats() {
     queryFn: async (): Promise<DashboardStats> => {
       // 0. Get team user IDs for scope alignment
       let teamUserIds: string[] | null = null;
-      if (isCoordPlus) {
+      let bypassFilters = false;
+
+      // Admins and partners see everything, they bypass team filters entirely
+      if (roles.includes('admin') || roles.includes('socio') || roles.includes('gerente')) {
+        bypassFilters = true;
+      } else if (isCoordPlus) {
         const { data: myProfile } = await supabase
           .from('profiles')
           .select('id')
@@ -54,7 +59,7 @@ export function useDashboardStats() {
             .select('user_id')
             .eq('reports_to', myProfile.id);
           
-          const subordinateIds = (subordinates as any[])?.map(p => p.user_id) || [];
+          const subordinateIds = (subordinates as any[])?.map((p: any) => p.user_id) || [];
           teamUserIds = [...subordinateIds, userId!];
         }
       }
@@ -84,10 +89,12 @@ export function useDashboardStats() {
         .eq('is_completed', false)
         .gte('data_prazo', todayStr);
       
-      if (teamUserIds) {
-        pendingQuery = pendingQuery.in('assigned_to', teamUserIds);
-      } else if (!isCoordPlus) {
-        pendingQuery = pendingQuery.eq('assigned_to', userId!);
+      if (!bypassFilters) {
+        if (teamUserIds) {
+          pendingQuery = pendingQuery.in('assigned_to', teamUserIds);
+        } else {
+          pendingQuery = pendingQuery.eq('assigned_to', userId!);
+        }
       }
       const { count: pendingDeadlines } = await pendingQuery;
 
@@ -98,10 +105,12 @@ export function useDashboardStats() {
         .eq('is_completed', false)
         .lt('data_prazo', todayStr);
       
-      if (teamUserIds) {
-        overdueQuery = overdueQuery.in('assigned_to', teamUserIds);
-      } else if (!isCoordPlus) {
-        overdueQuery = overdueQuery.eq('assigned_to', userId!);
+      if (!bypassFilters) {
+        if (teamUserIds) {
+          overdueQuery = overdueQuery.in('assigned_to', teamUserIds);
+        } else {
+          overdueQuery = overdueQuery.eq('assigned_to', userId!);
+        }
       }
       const { count: overdueDeadlines } = await overdueQuery;
 
@@ -124,7 +133,39 @@ export function useDashboardStats() {
       let deadlinesByUser: DeadlineByUser[] = [];
       let teamMembersCount = 0;
       
-      if (teamUserIds) {
+      if (bypassFilters) {
+        // Admin sees all deadlines assigned to anyone
+        const { data: rawDeadlines } = await supabase
+          .from('process_deadlines')
+          .select('assigned_to, data_prazo, is_completed')
+          .eq('is_completed', false);
+
+        if (rawDeadlines && rawDeadlines.length > 0) {
+          const distinctUserIds = [...new Set(rawDeadlines.map((d: any) => d.assigned_to).filter(Boolean))] as string[];
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('user_id, full_name')
+            .in('user_id', distinctUserIds);
+
+          const nameMap = new Map((profiles || []).map((p: any) => [p.user_id, p.full_name]));
+          teamMembersCount = distinctUserIds.length;
+          const grouped = new Map<string, { pending: number; overdue: number }>();
+          for (const d of rawDeadlines) {
+            if (!d.assigned_to) continue;
+            if (!grouped.has(d.assigned_to)) grouped.set(d.assigned_to, { pending: 0, overdue: 0 });
+            const entry = grouped.get(d.assigned_to)!;
+            if (d.data_prazo < todayStr) entry.overdue++;
+            else entry.pending++;
+          }
+
+          deadlinesByUser = Array.from(grouped.entries())
+            .map(([uid, counts]) => ({
+              user_name: nameMap.get(uid) || 'Desconhecido',
+              ...counts,
+            }))
+            .sort((a, b) => b.overdue - a.overdue || b.pending - a.pending);
+        }
+      } else if (teamUserIds) {
         teamMembersCount = teamUserIds.length;
         
         const { data: rawDeadlines } = await supabase
