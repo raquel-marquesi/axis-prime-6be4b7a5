@@ -14,10 +14,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="bg-yellow-100 p-2 text-xs border-b border-yellow-200">
-          Debug: UserID: {user?.id} | Roles: {roles?.join(', ')}
-        </div>
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
         <RoleSimulationBanner />
         <main className="flex-1 overflow-y-auto p-6 lg:p-8">
           {children}
