@@ -12,31 +12,25 @@ export function useProdutividadeReport(filters: ProdutividadeFilters) {
   return useQuery({
     queryKey: ['report-produtividade', format(month, 'yyyy-MM'), areaFilter, collaboratorId, clientId, coordinatorId],
     queryFn: async () => {
-      const start = format(startOfMonth(month), 'yyyy-MM-dd');
-      const end = format(endOfMonth(month), 'yyyy-MM-dd');
-      let profilesQuery = supabase.from('profiles_safe' as any).select('user_id, full_name, area, reports_to, id').eq('is_active', true);
-      if (areaFilter) profilesQuery = profilesQuery.eq('area', areaFilter as any);
-      const { data: profiles } = await profilesQuery as { data: any[] | null };
-      if (!profiles?.length) return { rows: [], history: [] };
-      let filteredProfiles = profiles;
-      if (!isAdminOrManager() && isCoordinatorOrAbove() && user) { const myProfile = profiles.find(p => p.user_id === user.id); if (myProfile) filteredProfiles = profiles.filter(p => p.reports_to === myProfile.id || p.user_id === user.id); }
-      else if (!isAdminOrManager() && !isCoordinatorOrAbove() && user) filteredProfiles = profiles.filter(p => p.user_id === user.id);
-      if (coordinatorId) { const coordProfile = profiles.find(p => p.user_id === coordinatorId); if (coordProfile) filteredProfiles = filteredProfiles.filter(p => p.reports_to === coordProfile.id || p.user_id === coordinatorId); }
-      if (collaboratorId) filteredProfiles = filteredProfiles.filter(p => p.user_id === collaboratorId);
-      if (!filteredProfiles.length) return { rows: [], history: [] };
-      const userIds = filteredProfiles.map(p => p.user_id);
-      let entriesQuery = supabase.from('timesheet_entries').select('user_id, quantidade, activity_type_id, process_id').gte('data_atividade', start).lte('data_atividade', end).in('user_id', userIds);
-      const { data: entries } = await entriesQuery;
-      let filteredEntries = entries ?? [];
-      if (clientId && filteredEntries.length > 0) { const processIds = [...new Set(filteredEntries.map(e => e.process_id).filter(Boolean))]; if (processIds.length > 0) { const { data: processes } = await supabase.from('processes').select('id').eq('id_cliente', clientId).in('id', processIds); const validProcessIds = new Set(processes?.map(p => p.id) ?? []); filteredEntries = filteredEntries.filter(e => e.process_id && validProcessIds.has(e.process_id)); } else filteredEntries = []; }
-      const { data: actTypes } = await supabase.from('activity_types').select('id, weight, area');
-      const { data: goals } = await supabase.from('area_goals').select('area, monthly_goal, extra_value_per_calculation');
-      const weightMap = new Map(actTypes?.map(a => [a.id, { weight: Number(a.weight), area: a.area as string }]) ?? []);
-      const goalMap = new Map(goals?.map(g => [g.area as string, { goal: g.monthly_goal, extra: Number(g.extra_value_per_calculation ?? 0) }]) ?? []);
-      const rows: ProdutividadeRow[] = filteredProfiles.map(p => { const userEntries = filteredEntries.filter(e => e.user_id === p.user_id); const totalWeighted = userEntries.reduce((sum, e) => { const w = weightMap.get(e.activity_type_id ?? ''); return sum + (e.quantidade * (w?.weight ?? 0)); }, 0); const areaGoal = goalMap.get(p.area ?? '') ?? { goal: 0, extra: 0 }; const pct = areaGoal.goal > 0 ? (totalWeighted / areaGoal.goal) * 100 : 0; const excess = Math.max(totalWeighted - areaGoal.goal, 0); return { user_id: p.user_id, full_name: p.full_name, area: p.area, total_weighted: totalWeighted, monthly_goal: areaGoal.goal, percentage: pct, bonus_projected: excess * areaGoal.extra }; }).sort((a, b) => b.percentage - a.percentage);
-      const history: { month: string; avg: number }[] = [];
-      for (let i = 5; i >= 0; i--) { const m = subMonths(month, i); const mStart = format(startOfMonth(m), 'yyyy-MM-dd'); const mEnd = format(endOfMonth(m), 'yyyy-MM-dd'); const { data: mEntries } = await supabase.from('timesheet_entries').select('user_id, quantidade, activity_type_id').gte('data_atividade', mStart).lte('data_atividade', mEnd).in('user_id', userIds); let totalPct = 0; let count = 0; filteredProfiles.forEach(p => { const ue = mEntries?.filter(e => e.user_id === p.user_id) ?? []; const tw = ue.reduce((s, e) => s + e.quantidade * (weightMap.get(e.activity_type_id ?? '')?.weight ?? 0), 0); const g = goalMap.get((p.area as string) ?? '')?.goal ?? 0; if (g > 0) { totalPct += (tw / g) * 100; count++; } }); history.push({ month: format(m, 'MMM/yy'), avg: count > 0 ? totalPct / count : 0 }); }
-      return { rows, history };
+      const { data, error } = await supabase.rpc('get_produtividade_report', {
+        p_month: format(month, 'yyyy-MM-dd'),
+        p_area: areaFilter || null,
+        p_collaborator_id: collaboratorId || null,
+        p_client_id: clientId || null,
+        p_coordinator_id: coordinatorId || null,
+        p_user_id: user?.id || null
+      });
+
+      if (error) {
+        console.error('Error fetching produtividade data from RPC:', error);
+        throw error;
+      }
+
+      const payload = data as any;
+      return {
+        rows: payload.rows || [],
+        history: payload.history || []
+      };
     },
   });
 }

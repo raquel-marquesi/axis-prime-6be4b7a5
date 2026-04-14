@@ -36,21 +36,34 @@ export interface ProcessFormData {
   reclamadas?: string[];
 }
 
-export function useProcesses() {
+export function useProcesses(options?: { page?: number; pageSize?: number }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: processes = [], isLoading, error } = useQuery({
-    queryKey: ['processes'],
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['processes', options?.page, options?.pageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('processes')
-        .select(`*, client:clients!id_cliente (id, nome, razao_social, tipo)`)
+        .select(`*, client:clients!id_cliente (id, nome, razao_social, tipo)`, { count: 'exact' })
         .order('numero_pasta', { ascending: false });
+
+      if (options?.page !== undefined && options?.pageSize !== undefined) {
+        const from = options.page * options.pageSize;
+        const to = from + options.pageSize - 1;
+        query = query.range(from, to);
+      } else {
+        query = query.limit(2000);
+      }
+
+      const { data, error, count } = await query;
       if (error) throw error;
-      return data as Process[];
+      return { processes: data as Process[], count: count || 0 };
     },
   });
+
+  const processes = data?.processes || [];
+  const totalCount = data?.count || 0;
 
   const createProcess = useMutation({
     mutationFn: async (formData: ProcessFormData) => {
@@ -93,5 +106,5 @@ export function useProcesses() {
     onError: (error: Error) => { toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' }); },
   });
 
-  return { processes, isLoading, error, createProcess, createProcessesBatch, updateProcess, deleteProcess };
+  return { processes, totalCount, isLoading, error, createProcess, createProcessesBatch, updateProcess, deleteProcess };
 }
