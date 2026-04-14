@@ -68,10 +68,8 @@ export default function Auth() {
     if (error) {
       toast({
         variant: 'destructive',
-        title: 'Erro ao entrar',
-        description: error.message === 'Invalid login credentials' 
-          ? 'E-mail ou senha incorretos' 
-          : error.message,
+        title: 'Erro de Autenticação',
+        description: error.message,
       });
     } else {
       toast({
@@ -110,8 +108,8 @@ export default function Auth() {
       if (error) {
         toast({
           variant: 'destructive',
-          title: 'Configuração Necessária',
-          description: 'O login via Google ainda não foi configurado no Dashboard do Supabase. Use e-mail/senha por enquanto.',
+          title: 'Erro no Google Login',
+          description: `Falha técnica: ${error.message}`,
         });
         setIsLoading(false);
       }
@@ -119,7 +117,7 @@ export default function Auth() {
       toast({
         variant: 'destructive',
         title: 'Erro ao conectar',
-        description: 'Não foi possível iniciar a autenticação social.',
+        description: `Falha catastrófica: ${err?.message || 'Desconhecida'}`,
       });
       setIsLoading(false);
     }
