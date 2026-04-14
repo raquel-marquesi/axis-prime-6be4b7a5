@@ -3342,9 +3342,25 @@ export type Database = {
           ultimo_andamento: string
         }[]
       }
+      get_cashflow_summary: {
+        Args: {
+          p_branch_ids?: string[]
+          p_end_date: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
       get_coordinator_for_client: {
         Args: { p_client_id: string }
         Returns: string
+      }
+      get_cost_center_summary: {
+        Args: { p_branch_id?: string; p_end_date: string; p_start_date: string }
+        Returns: Json
+      }
+      get_financial_dre_summary: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: Json
       }
       get_goal_progress_data: {
         Args: {
@@ -3414,6 +3430,11 @@ export type Database = {
         }[]
       }
       get_profile_id_for_user: { Args: { _user_id: string }; Returns: string }
+      get_revenue_projection: { Args: never; Returns: Json }
+      get_treasury_summary: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: Json
+      }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_admin_or_manager: { Args: { _user_id: string }; Returns: boolean }
       is_coordinator_or_above: { Args: { _user_id: string }; Returns: boolean }
