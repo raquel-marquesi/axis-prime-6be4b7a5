@@ -83,9 +83,10 @@ export function useDashboardStats() {
         .eq('tipo', 'juridica');
 
       // Pending deadlines (Today + Future) — scoped by role/team
+      // Uses !inner join with processes to exclude orphaned deadlines (matches RPC behavior)
       let pendingQuery = supabase
         .from('process_deadlines')
-        .select('*', { count: 'exact', head: true })
+        .select('*, processes!inner(id)', { count: 'exact', head: true })
         .eq('is_completed', false)
         .gte('data_prazo', todayStr);
       
@@ -101,7 +102,7 @@ export function useDashboardStats() {
       // Overdue deadlines — scoped by role/team
       let overdueQuery = supabase
         .from('process_deadlines')
-        .select('*', { count: 'exact', head: true })
+        .select('*, processes!inner(id)', { count: 'exact', head: true })
         .eq('is_completed', false)
         .lt('data_prazo', todayStr);
       
@@ -137,7 +138,7 @@ export function useDashboardStats() {
         // Admin sees all deadlines assigned to anyone
         const { data: rawDeadlines } = await supabase
           .from('process_deadlines')
-          .select('assigned_to, data_prazo, is_completed')
+          .select('assigned_to, data_prazo, is_completed, processes!inner(id)')
           .eq('is_completed', false);
 
         if (rawDeadlines && rawDeadlines.length > 0) {
@@ -170,7 +171,7 @@ export function useDashboardStats() {
         
         const { data: rawDeadlines } = await supabase
           .from('process_deadlines')
-          .select('assigned_to, data_prazo, is_completed')
+          .select('assigned_to, data_prazo, is_completed, processes!inner(id)')
           .eq('is_completed', false)
           .in('assigned_to', teamUserIds);
 
