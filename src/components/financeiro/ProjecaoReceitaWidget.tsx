@@ -29,7 +29,7 @@ export function ProjecaoReceitaWidget() {
       if (error) throw error;
       
       // A RPC `get_revenue_projection` retorna um JSON com exatamente as props necessárias
-      return data as {
+      return data as unknown as {
         projections: ClientProjection[];
         totalGeneral: number;
         totalContrato: number;
