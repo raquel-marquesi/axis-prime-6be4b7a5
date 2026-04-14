@@ -15,7 +15,7 @@ import { useAllProcessDeadlines, type DeadlineStatus, type ProcessDeadlineRow } 
 import { useOverdueTimesheetMap } from '@/hooks/useOverdueTimesheetMap';
 import { type Process } from '@/hooks/useProcesses';
 import { ProcessDetailsDialog } from '@/components/processes/ProcessDetailsDialog';
-import { ProcessFormDialog } from '@/components/processes/ProcessFormDialog';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfiles } from '@/hooks/useProfiles';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,6 +32,7 @@ const STATUS_CONFIG: Record<DeadlineStatus, { label: string; variant: 'destructi
 
 export function PrazosProcessuaisTab() {
   const { isCoordinatorOrAbove, isAdminOrManager, isFinanceiro } = useAuth();
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<DeadlineStatus | 'all'>('all');
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
   const [cardFilter, setCardFilter] = useState<DeadlineStatus | null>(null);
@@ -42,7 +43,6 @@ export function PrazosProcessuaisTab() {
   const [teamFilter, setTeamFilter] = useState<string>('all');
   const [selectedProcess, setSelectedProcess] = useState<Process | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editProcess, setEditProcess] = useState<Process | null>(null);
   const [hideWithActivity, setHideWithActivity] = useState(true);
   const [aiChatOpen, setAiChatOpen] = useState(false);
 
@@ -175,8 +175,7 @@ export function PrazosProcessuaisTab() {
         <CollapsibleContent><Card className="mb-4"><AIAgentChat module="prazos" className="h-[400px]" /></Card></CollapsibleContent>
       </Collapsible>
 
-      <ProcessDetailsDialog open={dialogOpen} onOpenChange={setDialogOpen} process={selectedProcess} onEdit={() => { setDialogOpen(false); setEditProcess(selectedProcess); }} defaultTab="deadlines" />
-      <ProcessFormDialog open={!!editProcess} onOpenChange={(open) => { if (!open) setEditProcess(null); }} process={editProcess} />
+      <ProcessDetailsDialog open={dialogOpen} onOpenChange={setDialogOpen} process={selectedProcess} onEdit={() => { if (selectedProcess) navigate(`/processos/${selectedProcess.id}`); setDialogOpen(false); }} defaultTab="deadlines" />
     </>
   );
 }
