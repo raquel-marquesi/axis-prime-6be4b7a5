@@ -15,12 +15,14 @@ interface UsePermissionsResult {
   getScope: (module: PermissionModule, action: PermissionAction) => PermissionScope | null;
   permissions: PermissionEntry[];
   isLoading: boolean;
+  permissionsLoaded: boolean;
   refetch: () => void;
 }
 
 export function usePermissions(userId: string | undefined, roles: AppRole[]): UsePermissionsResult {
   const [permissions, setPermissions] = useState<PermissionEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
 
   const fetchPermissions = useCallback(async () => {
     if (!userId) { setPermissions([]); setIsLoading(false); return; }
@@ -63,6 +65,7 @@ export function usePermissions(userId: string | undefined, roles: AppRole[]): Us
       console.error('Error fetching permissions:', error);
     } finally {
       setIsLoading(false);
+      setPermissionsLoaded(true);
     }
   }, [userId, roles.join(',')]);
 
@@ -81,5 +84,5 @@ export function usePermissions(userId: string | undefined, roles: AppRole[]): Us
     return entry?.scope ?? null;
   }, [permMap]);
 
-  return { can, canAny, getScope, permissions, isLoading, refetch: fetchPermissions };
+  return { can, canAny, getScope, permissions, isLoading, permissionsLoaded, refetch: fetchPermissions };
 }

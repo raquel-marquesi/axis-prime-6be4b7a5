@@ -25,6 +25,7 @@ interface AuthContextType {
   getScope: (module: PermissionModule, action: PermissionAction) => PermissionScope | null;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   permissionsLoading: boolean;
+  permissionsLoaded: boolean;
   // Simulation
   simulatedRole: string | null;
   isSimulating: boolean;
@@ -46,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isSimulating = simulatedRole !== null;
   const effectiveRoles = isSimulating ? [simulatedRole] : realRoles;
 
-  const { can, canAny, getScope, isLoading: permissionsLoading } = usePermissions(user?.id, effectiveRoles);
+  const { can, canAny, getScope, isLoading: permissionsLoading, permissionsLoaded } = usePermissions(user?.id, effectiveRoles);
 
   const fetchUserData = async (userId: string) => {
     try {
@@ -188,7 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user, session, profile, roles: effectiveRoles, loading,
         signIn, signUp, signOut, signInWithGoogle,
         hasRole, hasAnyRole, isAdminOrManager, isLeaderOrAbove, isCoordinatorOrAbove, isFinanceiro, isAdmin,
-        can, canAny, getScope, permissionsLoading,
+        can, canAny, getScope, permissionsLoading, permissionsLoaded,
         simulatedRole, isSimulating, realRoles, startSimulation, stopSimulation,
       }}
     >
