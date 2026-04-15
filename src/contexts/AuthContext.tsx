@@ -198,10 +198,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+const defaultAuthContext: AuthContextType = {
+  user: null, session: null, profile: null, roles: [], loading: true,
+  signIn: async () => ({ error: new Error('AuthProvider not mounted') }),
+  signUp: async () => ({ error: new Error('AuthProvider not mounted') }),
+  signOut: async () => {},
+  signInWithGoogle: async () => ({ error: new Error('AuthProvider not mounted') }),
+  hasRole: () => false, hasAnyRole: () => false,
+  isAdminOrManager: () => false, isLeaderOrAbove: () => false,
+  isCoordinatorOrAbove: () => false, isFinanceiro: () => false, isAdmin: () => false,
+  can: () => false, canAny: () => false, getScope: () => null,
+  permissionsLoading: true, permissionsLoaded: false,
+  simulatedRole: null, isSimulating: false, realRoles: [],
+  startSimulation: () => {}, stopSimulation: () => {},
+};
+
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    console.warn('useAuth called outside AuthProvider – returning safe defaults (HMR?)');
+    return defaultAuthContext;
   }
   return context;
 }
