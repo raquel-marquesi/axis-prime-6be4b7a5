@@ -28,7 +28,7 @@ import { getAvailableWidgets, getDefaultWidgetIds } from "@/lib/dashboardWidgets
 import type { CalendarEvent } from "@/types/calendar";
 
 export default function Dashboard() {
-  const { profile, session, roles, landing } = useAuth();
+  const { profile, session, roles, loading } = useAuth();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState("overview");
