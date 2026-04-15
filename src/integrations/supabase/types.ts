@@ -3358,6 +3358,7 @@ export type Database = {
         Args: { p_branch_id?: string; p_end_date: string; p_start_date: string }
         Returns: Json
       }
+      get_dashboard_stats: { Args: { p_user_id: string }; Returns: Json }
       get_financial_dre_summary: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: Json
@@ -3428,6 +3429,17 @@ export type Database = {
           lancamentos: number
           pontos: number
         }[]
+      }
+      get_produtividade_report: {
+        Args: {
+          p_area?: string
+          p_client_id?: string
+          p_collaborator_id?: string
+          p_coordinator_id?: string
+          p_month: string
+          p_user_id?: string
+        }
+        Returns: Json
       }
       get_profile_id_for_user: { Args: { _user_id: string }; Returns: string }
       get_revenue_projection: { Args: never; Returns: Json }
