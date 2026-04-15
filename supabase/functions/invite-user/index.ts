@@ -38,15 +38,17 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Get the current user
-    const { data: { user: currentUser }, error: userError } = await userClient.auth.getUser();
-    if (userError || !currentUser) {
-      console.error('Error getting user:', userError);
+    // Get the current user via getClaims (supports ES256 signing-keys)
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      console.error('Error getting claims:', claimsError);
       return new Response(
         JSON.stringify({ error: 'Usuário não autenticado' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    const currentUser = { id: claimsData.claims.sub };
 
     // Check if user is admin using the has_role function
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
