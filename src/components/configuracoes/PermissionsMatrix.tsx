@@ -1,12 +1,15 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Shield } from 'lucide-react';
 import { MODULE_LABELS, ACTION_LABELS } from '@/types/auth';
+import { toast } from 'sonner';
 
 interface Permission {
   id: string;
@@ -22,7 +25,16 @@ interface RolePermission {
   scope: string;
 }
 
+const SCOPES = [
+  { value: 'own', label: 'Próprio' },
+  { value: 'team', label: 'Equipe' },
+  { value: 'all', label: 'Todos' },
+];
+
 export const PermissionsMatrix = () => {
+  const queryClient = useQueryClient();
+  const [mutating, setMutating] = useState<Set<string>>(new Set());
+
   const { data: permissions = [], isLoading: loadingP } = useQuery({
     queryKey: ['permissions-list'],
     queryFn: async () => {
@@ -52,28 +64,74 @@ export const PermissionsMatrix = () => {
 
   const isLoading = loadingP || loadingRP;
 
-  // Build lookup: `${role}:${permission_id}` → scope
-  const rpMap = new Map<string, string>();
-  rolePerms.forEach(rp => rpMap.set(`${rp.role}:${rp.permission_id}`, rp.scope));
+  // Build lookups
+  const rpMap = new Map<string, RolePermission>();
+  rolePerms.forEach(rp => rpMap.set(`${rp.role}:${rp.permission_id}`, rp));
 
-  // Group permissions by module
   const modules = [...new Set(permissions.map(p => p.module))];
+
+  const setMutatingKey = (key: string, active: boolean) => {
+    setMutating(prev => {
+      const next = new Set(prev);
+      active ? next.add(key) : next.delete(key);
+      return next;
+    });
+  };
+
+  const handleToggle = useCallback(async (roleName: string, permId: string, existing: RolePermission | undefined) => {
+    const key = `${roleName}:${permId}`;
+    setMutatingKey(key, true);
+    try {
+      if (existing) {
+        const { error } = await supabase.from('role_permissions' as any).delete().eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('role_permissions' as any).insert({
+          role: roleName,
+          permission_id: permId,
+          scope: 'all',
+        });
+        if (error) throw error;
+      }
+      await queryClient.invalidateQueries({ queryKey: ['role-permissions-list'] });
+    } catch (err: any) {
+      toast.error(`Erro ao alterar permissão: ${err.message}`);
+    } finally {
+      setMutatingKey(key, false);
+    }
+  }, [queryClient]);
+
+  const handleScopeChange = useCallback(async (rpId: string, newScope: string, key: string) => {
+    setMutatingKey(key, true);
+    try {
+      const { error } = await supabase.from('role_permissions' as any).update({ scope: newScope }).eq('id', rpId);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ['role-permissions-list'] });
+    } catch (err: any) {
+      toast.error(`Erro ao alterar escopo: ${err.message}`);
+    } finally {
+      setMutatingKey(key, false);
+    }
+  }, [queryClient]);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" />Matriz de Permissões</CardTitle>
-        <CardDescription>Visualização das permissões atribuídas a cada papel ({permissions.length} permissões × {roles.length} papéis = {rolePerms.length} vínculos).</CardDescription>
+        <CardDescription>
+          Gerencie as permissões de cada papel. Clique para ativar/desativar e selecione o escopo.
+          ({permissions.length} permissões × {roles.length} papéis = {rolePerms.length} vínculos)
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? <Skeleton className="h-64 w-full" /> : (
-          <div className="overflow-auto max-h-[500px]">
+          <div className="overflow-auto max-h-[600px]">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="sticky left-0 bg-background z-10 min-w-[200px]">Módulo / Ação</TableHead>
                   {roles.map((r: any) => (
-                    <TableHead key={r.id} className="text-center min-w-[100px]">
+                    <TableHead key={r.id} className="text-center min-w-[120px]">
                       <span className="text-xs">{r.label}</span>
                     </TableHead>
                   ))}
@@ -93,16 +151,36 @@ export const PermissionsMatrix = () => {
                       </TableCell>
                       {roles.map((r: any) => {
                         const key = `${r.name}:${perm.id}`;
-                        const scope = rpMap.get(key);
+                        const existing = rpMap.get(key);
+                        const isMutating = mutating.has(key);
                         return (
                           <TableCell key={r.id} className="text-center">
-                            {scope ? (
-                              <Badge variant="default" className="text-[10px] px-1.5">
-                                {scope === 'all' ? '✓' : scope}
-                              </Badge>
-                            ) : (
-                              <span className="text-muted-foreground/30">—</span>
-                            )}
+                            <div className="flex flex-col items-center gap-1">
+                              <Checkbox
+                                checked={!!existing}
+                                disabled={isMutating}
+                                onCheckedChange={() => handleToggle(r.name, perm.id, existing)}
+                                className="data-[state=checked]:bg-primary"
+                              />
+                              {existing && (
+                                <Select
+                                  value={existing.scope}
+                                  onValueChange={(v) => handleScopeChange(existing.id, v, key)}
+                                  disabled={isMutating}
+                                >
+                                  <SelectTrigger className="h-5 w-[70px] text-[10px] px-1 py-0">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {SCOPES.map(s => (
+                                      <SelectItem key={s.value} value={s.value} className="text-xs">
+                                        {s.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </div>
                           </TableCell>
                         );
                       })}
