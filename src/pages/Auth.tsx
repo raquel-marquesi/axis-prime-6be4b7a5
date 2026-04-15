@@ -36,7 +36,7 @@ export default function Auth() {
   const [activeTab, setActiveTab] = useState('login');
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, signIn, signInWithGoogle } = useAuth();
+  const { user, signIn, signUp, signInWithGoogle } = useAuth();
 
   useEffect(() => {
     if (user) {
