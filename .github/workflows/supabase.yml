@@ -52,7 +52,7 @@ jobs:
             20260413192500 20260413192900 20260413194800 20260413200000 \
             20260414120000 20260414140559 20260414140601 \
             20260414190000 20260414193000 20260414200000; do
-            supabase migration repair --status applied $version || true
+           supabase migration repair --status reverted 20260402155704 20260415115251 20260415120819 20260415194102 20260416130544|| true
           done
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
