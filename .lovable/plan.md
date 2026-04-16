@@ -1,49 +1,48 @@
 
+O erro do build está no workflow `.github/workflows/supabase.yml`. Olhando o diff que vazou:
 
-# Diagnóstico: Usuários com IDs desalinhados entre `auth.users` e `profiles`
+```yaml
+20260414190000 20260414193000 20260414200000; do
+   supabase migration repair --status reverted 20260402155704 20260415115251 20260415120819 20260415194102 20260416130544|| true
+done
+```
 
-## Problema encontrado
+O loop `for version in ...; do` perdeu a linha `supabase migration repair --status applied $version`. Foi substituída por um comando fixo que marca **5 migrations como reverted** (incluindo a `20260416130544` — que é justamente a migration de realinhamento de UUIDs criada no último deploy).
 
-Cinco usuários possuem um `profiles.user_id` que **não corresponde** ao `auth.users.id` real. Quando fazem login, o sistema busca o perfil pelo ID do auth — e não encontra nada. Resultado: nome "Usuário", sidebar vazia, zero widgets.
+Resultado: a cada push, o GitHub Actions tenta reverter a migration de fix dos UUIDs. Isso explica por que o usuário pediu "reverter o último deploy" — o workflow já está fazendo isso automaticamente e quebrando o build.
 
-| Usuário | profiles.user_id (antigo) | auth.users.id (correto) |
-|---|---|---|
-| CAROLINA CASELLI ANTUNES | `6d3a874a...` | `ed356bd4...` |
-| ADMINISTRADOR LM (ti@) | `8deec831...` | *(a verificar)* |
-| VICTOR HUGO | `9bdf4197...` | *(a verificar)* |
-| FABRICIO FERREIRA | `2056c272...` | *(a verificar)* |
-| RAQUEL CASELLI | `35a01de6...` | *(a verificar)* |
+## Diagnóstico
 
-**Causa provável**: perfis foram criados via batch-import com UUIDs gerados, depois os usuários foram convidados via `invite-user` Edge Function, que cria um **novo** `auth.users.id`. Os perfis nunca foram atualizados.
+Dois problemas distintos no workflow:
+
+1. **Loop quebrado**: o comando dentro do `for` não usa mais `$version`, então itera 60 vezes executando sempre o mesmo comando fixo (inofensivo mas inútil — só roda 60x a mesma coisa).
+2. **Migration de fix marcada como reverted**: `20260416130544` aparece na lista de reverts. Isso faz o Supabase tentar des-aplicar a migration que corrigiu os IDs da Carolina e dos demais usuários.
+
+Além disso, há um bug pré-existente no número: a migration real é `20260416130546` (criada no deploy), mas o workflow lista `20260416130544` (dois dígitos a menos). Mesmo assim, o intent está errado.
 
 ## Plano de correção
 
-### 1. Migration SQL para realinhar os IDs
+Restaurar o workflow para:
 
-Criar uma migration que, para cada e-mail com mismatch:
-- Atualize `profiles.user_id` para o `auth.users.id` correto
-- Atualize `user_roles.user_id` para o novo ID
-- Atualize quaisquer outras tabelas com FK para o user_id antigo (`timesheet_entries.user_id`, `process_deadlines` campos de responsável, `team_clients`, etc.)
-- Delete o registro antigo de `profiles` se houver duplicata
+1. Loop original: `supabase migration repair --status applied $version || true` dentro do `for`.
+2. Linha de reverts (antes do loop) mantém só as migrations órfãs originais: `20260402155704 20260415115251 20260415120819` — **sem** incluir a migration de UUID fix.
+3. Remover a `20260416130546` de qualquer lista de reverts (ela deve ser aplicada normalmente, não revertida).
 
-### 2. Prevenir reincidência no `invite-user` Edge Function
+## Seção técnica
 
-Verificar a Edge Function `invite-user` para garantir que, ao criar um auth user, ela atualize o `profiles.user_id` existente em vez de deixar o ID antigo.
+**Arquivo a editar**: `.github/workflows/supabase.yml`, linhas ~30-56.
 
-### 3. Verificação pós-fix
+**Estado correto desejado**:
+```yaml
+- name: Sincronizar histórico de migrations com o banco remoto
+  run: |
+    supabase migration repair --status reverted 20260402155704 20260415115251 20260415120819 || true
+    for version in \
+      20260327195312 ... 20260414200000; do
+      supabase migration repair --status applied $version || true
+    done
+```
 
-Query de validação confirmando que todos os `profiles.user_id` existem em `auth.users`.
+A migration `20260416130546` (fix de UUIDs) **não** entra em nenhuma das duas listas — ela é nova, o `db push --include-all` vai aplicá-la normalmente.
 
----
-
-**Seção técnica — tabelas afetadas pela mudança de user_id:**
-- `profiles` (user_id PK/FK)
-- `user_roles` (user_id FK)
-- `user_permission_overrides` (user_id FK)
-- `timesheet_entries` (user_id)
-- `calendar_events` (user_id)
-- `bonus_entries` (user_id)
-- Qualquer outra tabela com coluna `user_id` referenciando profiles
-
-A migration usará transação para garantir atomicidade.
-
+**Nada precisa ser revertido no banco**: a migration de fix dos UUIDs já foi aplicada com sucesso e o Dashboard da Carolina está funcionando. O problema é só o workflow tentando desfazer isso a cada push.
