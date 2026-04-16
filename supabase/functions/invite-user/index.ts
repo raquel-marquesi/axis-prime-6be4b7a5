@@ -137,22 +137,75 @@ Deno.serve(async (req) => {
     const newUserId = inviteData.user.id;
     console.log(`User created with ID: ${newUserId}`);
 
-    // Create profile
-    const { error: profileError } = await adminClient.from('profiles').insert({
-      user_id: newUserId,
-      full_name: fullName,
-      email: email,
-      area: area || null,
-      reports_to: coordinatorId || null,
-      is_active: true,
-    });
+    // Check if a profile already exists for this email (e.g. from batch import)
+    // If so, update its user_id to match the new auth user instead of creating a duplicate
+    const { data: existingProfile } = await adminClient
+      .from('profiles')
+      .select('user_id')
+      .eq('email', email)
+      .neq('user_id', newUserId)
+      .maybeSingle();
 
-    if (profileError) {
-      console.error('Error creating profile:', profileError);
-      // Don't fail the request, the user was created
+    if (existingProfile) {
+      const oldUserId = existingProfile.user_id;
+      console.log(`Found existing profile with old user_id ${oldUserId}, relinking to ${newUserId}`);
+
+      // Relink all FK references from old user_id to new auth user_id
+      await adminClient.from('timesheet_entries').update({ user_id: newUserId }).eq('user_id', oldUserId);
+      await adminClient.from('calendar_events').update({ user_id: newUserId }).eq('user_id', oldUserId);
+      await adminClient.from('bonus_calculations').update({ user_id: newUserId }).eq('user_id', oldUserId);
+      await adminClient.rpc('execute_sql', { sql: '' }).catch(() => {}); // no-op, just in case
+
+      // Update process_deadlines assigned_to and completed_by
+      await adminClient.from('process_deadlines').update({ assigned_to: newUserId }).eq('assigned_to', oldUserId);
+      await adminClient.from('process_deadlines').update({ completed_by: newUserId }).eq('completed_by', oldUserId);
+
+      // Delete old user_roles, then update or create
+      await adminClient.from('user_roles').delete().eq('user_id', oldUserId);
+
+      // Update the old profile to point to new auth user
+      const { error: relinkError } = await adminClient
+        .from('profiles')
+        .update({
+          user_id: newUserId,
+          full_name: fullName,
+          area: area || null,
+          reports_to: coordinatorId || null,
+          is_active: true,
+        })
+        .eq('user_id', oldUserId);
+
+      if (relinkError) {
+        console.error('Error relinking profile:', relinkError);
+        // Fallback: delete old and create new
+        await adminClient.from('profiles').delete().eq('user_id', oldUserId);
+        await adminClient.from('profiles').upsert({
+          user_id: newUserId,
+          full_name: fullName,
+          email: email,
+          area: area || null,
+          reports_to: coordinatorId || null,
+          is_active: true,
+        });
+      }
+    } else {
+      // No pre-existing profile, create or upsert (handle_new_user trigger may have created one)
+      const { error: profileError } = await adminClient.from('profiles').upsert({
+        user_id: newUserId,
+        full_name: fullName,
+        email: email,
+        area: area || null,
+        reports_to: coordinatorId || null,
+        is_active: true,
+      });
+
+      if (profileError) {
+        console.error('Error creating profile:', profileError);
+      }
     }
 
-    // Assign role
+    // Assign role (upsert to avoid conflicts with handle_new_user trigger)
+    await adminClient.from('user_roles').delete().eq('user_id', newUserId);
     const { error: roleInsertError } = await adminClient.from('user_roles').insert({
       user_id: newUserId,
       role: role,
@@ -160,7 +213,6 @@ Deno.serve(async (req) => {
 
     if (roleInsertError) {
       console.error('Error assigning role:', roleInsertError);
-      // Don't fail the request, the user was created
     }
 
     console.log(`User ${email} invited successfully`);
