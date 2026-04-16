@@ -27,8 +27,8 @@ jobs:
 
       - name: Sincronizar histórico de migrations com o banco remoto
         run: |
-          # Marcar como reverted as migrations órfãs que existem apenas no remoto
-          supabase migration repair --status reverted 20260402155704 20260415115251 20260415120819 20260415194102 20260416130544 || true
+          # Marcar como reverted a migration órfã que existia apenas no remoto
+          supabase migration repair --status reverted 20260402155704 20260415115251 20260415120819 || true
           # Marcar como applied TODAS as migrations (60 versões)
           for version in \
             20260327195312 20260327195459 20260330120000 \
@@ -51,9 +51,7 @@ jobs:
             20260413140000 20260413150000 20260413160000 20260413170000 \
             20260413192500 20260413192900 20260413194800 20260413200000 \
             20260414120000 20260414140559 20260414140601 \
-            20260414190000 20260414193000 20260414200000 \
-            20260415115253 20260415120822 20260415194104 \
-            20260416130546 20260416180000; do
+            20260414190000 20260414193000 20260414200000; do
             supabase migration repair --status applied $version || true
           done
         env:

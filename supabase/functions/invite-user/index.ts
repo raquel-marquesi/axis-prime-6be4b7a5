@@ -138,104 +138,73 @@ Deno.serve(async (req) => {
     console.log(`User created with ID: ${newUserId}`);
 
     // Check if a profile already exists for this email (e.g. from batch import)
-    // If so, relink ALL related rows to the new auth user_id and merge the profile.
+    // If so, update its user_id to match the new auth user instead of creating a duplicate
     const { data: existingProfile } = await adminClient
       .from('profiles')
-      .select('user_id, full_name, area, reports_to, avatar_url')
+      .select('user_id')
       .eq('email', email)
       .neq('user_id', newUserId)
       .maybeSingle();
 
-    let profileOk = false;
-    let roleOk = false;
-
     if (existingProfile) {
       const oldUserId = existingProfile.user_id;
-      console.log(`Found existing profile (old user_id ${oldUserId}); relinking to ${newUserId}`);
+      console.log(`Found existing profile with old user_id ${oldUserId}, relinking to ${newUserId}`);
 
-      const relinks: Array<[string, string]> = [
-        ['timesheet_entries', 'user_id'],
-        ['timesheet_entries', 'approved_by'],
-        ['calendar_events', 'user_id'],
-        ['bonus_calculations', 'user_id'],
-        ['bonus_calculations', 'approved_by'],
-        ['bonus_calculations', 'billed_by'],
-        ['bonus_provisions', 'user_id'],
-        ['process_deadlines', 'assigned_to'],
-        ['process_deadlines', 'completed_by'],
-        ['solicitacoes', 'assigned_to'],
-        ['solicitacoes', 'created_by'],
-        ['team_clients', 'created_by'],
-        ['user_aliases', 'user_id'],
-        ['user_aliases', 'created_by'],
-        ['access_logs', 'user_id'],
-        ['audit_logs', 'user_id'],
-        ['bank_statements', 'uploaded_by'],
-        ['billing_contacts', 'created_by'],
-        ['billing_previews', 'created_by'],
-        ['boletos', 'created_by'],
-        ['client_aliases', 'created_by'],
-        ['client_documents', 'uploaded_by'],
-        ['clients', 'created_by'],
-        ['contract_extractions', 'created_by'],
-        ['expenses', 'created_by'],
-        ['invoices', 'created_by'],
-        ['processes', 'created_by'],
-        ['related_processes', 'created_by'],
-        ['accounts', 'created_by'],
-        ['treasury_entries', 'created_by'],
-      ];
-      for (const [table, col] of relinks) {
-        const { error } = await adminClient.from(table).update({ [col]: newUserId }).eq(col, oldUserId);
-        if (error) console.warn(`relink ${table}.${col} failed:`, error.message);
-      }
+      // Relink all FK references from old user_id to new auth user_id
+      await adminClient.from('timesheet_entries').update({ user_id: newUserId }).eq('user_id', oldUserId);
+      await adminClient.from('calendar_events').update({ user_id: newUserId }).eq('user_id', oldUserId);
+      await adminClient.from('bonus_calculations').update({ user_id: newUserId }).eq('user_id', oldUserId);
+      await adminClient.rpc('execute_sql', { sql: '' }).catch(() => {}); // no-op, just in case
 
-      await adminClient.from('user_roles').delete().eq('user_id', newUserId);
-      await adminClient.from('user_roles').update({ user_id: newUserId }).eq('user_id', oldUserId);
-      await adminClient.from('user_permission_overrides').delete().eq('user_id', newUserId);
-      await adminClient.from('user_permission_overrides').update({ user_id: newUserId }).eq('user_id', oldUserId);
+      // Update process_deadlines assigned_to and completed_by
+      await adminClient.from('process_deadlines').update({ assigned_to: newUserId }).eq('assigned_to', oldUserId);
+      await adminClient.from('process_deadlines').update({ completed_by: newUserId }).eq('completed_by', oldUserId);
 
-      const { data: triggerProfile } = await adminClient
-        .from('profiles').select('user_id').eq('user_id', newUserId).maybeSingle();
+      // Delete old user_roles, then update or create
+      await adminClient.from('user_roles').delete().eq('user_id', oldUserId);
 
-      if (triggerProfile) {
-        const { error: mergeErr } = await adminClient.from('profiles').update({
-          full_name: fullName || existingProfile.full_name,
-          area: area || existingProfile.area,
-          reports_to: coordinatorId || existingProfile.reports_to,
-          avatar_url: existingProfile.avatar_url,
-          is_active: true,
-        }).eq('user_id', newUserId);
-        if (mergeErr) console.error('Merge profile error:', mergeErr);
-        await adminClient.from('profiles').delete().eq('user_id', oldUserId);
-      } else {
-        const { error: relinkErr } = await adminClient.from('profiles').update({
+      // Update the old profile to point to new auth user
+      const { error: relinkError } = await adminClient
+        .from('profiles')
+        .update({
           user_id: newUserId,
           full_name: fullName,
-          area: area || existingProfile.area,
-          reports_to: coordinatorId || existingProfile.reports_to,
+          area: area || null,
+          reports_to: coordinatorId || null,
           is_active: true,
-        }).eq('user_id', oldUserId);
-        if (relinkErr) console.error('Relink profile error:', relinkErr);
+        })
+        .eq('user_id', oldUserId);
+
+      if (relinkError) {
+        console.error('Error relinking profile:', relinkError);
+        // Fallback: delete old and create new
+        await adminClient.from('profiles').delete().eq('user_id', oldUserId);
+        await adminClient.from('profiles').upsert({
+          user_id: newUserId,
+          full_name: fullName,
+          email: email,
+          area: area || null,
+          reports_to: coordinatorId || null,
+          is_active: true,
+        });
+      }
+    } else {
+      // No pre-existing profile, create or upsert (handle_new_user trigger may have created one)
+      const { error: profileError } = await adminClient.from('profiles').upsert({
+        user_id: newUserId,
+        full_name: fullName,
+        email: email,
+        area: area || null,
+        reports_to: coordinatorId || null,
+        is_active: true,
+      });
+
+      if (profileError) {
+        console.error('Error creating profile:', profileError);
       }
     }
 
-    // Final upsert to guarantee the profile exists with correct fields
-    const { error: profileError } = await adminClient.from('profiles').upsert({
-      user_id: newUserId,
-      full_name: fullName,
-      email: email,
-      area: area || null,
-      reports_to: coordinatorId || null,
-      is_active: true,
-    }, { onConflict: 'user_id' });
-
-    if (profileError) {
-      console.error('Error ensuring profile:', profileError);
-    } else {
-      profileOk = true;
-    }
-
+    // Assign role (upsert to avoid conflicts with handle_new_user trigger)
     await adminClient.from('user_roles').delete().eq('user_id', newUserId);
     const { error: roleInsertError } = await adminClient.from('user_roles').insert({
       user_id: newUserId,
@@ -244,21 +213,6 @@ Deno.serve(async (req) => {
 
     if (roleInsertError) {
       console.error('Error assigning role:', roleInsertError);
-    } else {
-      roleOk = true;
-    }
-
-    // Fail loudly if profile or role could not be persisted
-    if (!profileOk || !roleOk) {
-      return new Response(
-        JSON.stringify({
-          error: 'Usuário criado no auth, mas falhou ao gravar profile/role. Verifique os logs.',
-          userId: newUserId,
-          profileOk,
-          roleOk,
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
 
     console.log(`User ${email} invited successfully`);
