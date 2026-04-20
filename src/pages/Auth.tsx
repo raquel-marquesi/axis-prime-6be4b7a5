@@ -36,7 +36,7 @@ export default function Auth() {
   const [activeTab, setActiveTab] = useState('login');
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, signIn, signUp, signInWithGoogle } = useAuth();
+  const { user, profile, signIn, signUp, signInWithGoogle } = useAuth();
 
   useEffect(() => {
     if (user) {
@@ -54,10 +54,15 @@ export default function Auth() {
           });
           return;
         }
+        // Check if user is approved
+        if (profile && !profile.approved) {
+          navigate('/aguardando-aprovacao');
+          return;
+        }
         navigate('/');
       })();
     }
-  }, [user, navigate, toast]);
+  }, [user, profile, navigate, toast]);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),

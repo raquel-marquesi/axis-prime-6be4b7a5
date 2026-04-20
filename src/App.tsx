@@ -20,6 +20,7 @@ import Equipes from "./pages/Equipes";
 import ImportarPautas from "./pages/ImportarPautas";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
+import AguardandoAprovacao from "./pages/AguardandoAprovacao";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/aguardando-aprovacao" element={<AguardandoAprovacao />} />
             <Route
               path="/"
               element={
@@ -69,7 +71,7 @@ const App = () => (
             <Route
               path="/usuarios"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRoles={['admin']}>
                   <UserManagement />
                 </ProtectedRoute>
               }
@@ -94,7 +96,7 @@ const App = () => (
             <Route
               path="/financeiro"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRoles={['financeiro', 'assistente_financeiro', 'gerente', 'admin', 'socio']}>
                   <Financeiro />
                 </ProtectedRoute>
               }
@@ -110,7 +112,7 @@ const App = () => (
             <Route
               path="/configuracoes"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRoles={['admin', 'gerente', 'socio']}>
                   <Configuracoes />
                 </ProtectedRoute>
               }
@@ -118,7 +120,7 @@ const App = () => (
             <Route
               path="/equipes"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRoles={['admin', 'gerente', 'socio', 'coordenador']}>
                   <Equipes />
                 </ProtectedRoute>
               }

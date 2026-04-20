@@ -133,18 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     });
 
-    if (!error && data.user) {
-      await supabase.from('profiles').insert({
-        user_id: data.user.id,
-        full_name: fullName,
-        email: email,
-      });
-
-      await supabase.from('user_roles').insert({
-        user_id: data.user.id,
-        role: 'usuario',
-      });
-    }
+    // Profile and role are handled by the handle_new_user trigger
 
     return { error };
   };
