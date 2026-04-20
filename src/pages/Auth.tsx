@@ -40,9 +40,24 @@ export default function Auth() {
 
   useEffect(() => {
     if (user) {
-      navigate('/');
+      (async () => {
+        const { data: authorized } = await supabase.rpc('is_email_domain_authorized', {
+          p_email: user.email ?? '',
+        });
+        if (!authorized) {
+          const domain = user.email?.split('@')[1] || '';
+          await supabase.auth.signOut();
+          toast({
+            variant: 'destructive',
+            title: 'Acesso não autorizado',
+            description: `O domínio "${domain}" não tem permissão para acessar este sistema.`,
+          });
+          return;
+        }
+        navigate('/');
+      })();
     }
-  }, [user, navigate]);
+  }, [user, navigate, toast]);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
