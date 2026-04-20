@@ -40,9 +40,24 @@ export default function Auth() {
 
   useEffect(() => {
     if (user) {
-      navigate('/');
+      (async () => {
+        const { data: authorized } = await supabase.rpc('is_email_domain_authorized', {
+          p_email: user.email ?? '',
+        });
+        if (!authorized) {
+          const domain = user.email?.split('@')[1] || '';
+          await supabase.auth.signOut();
+          toast({
+            variant: 'destructive',
+            title: 'Acesso não autorizado',
+            description: `O domínio "${domain}" não tem permissão para acessar este sistema.`,
+          });
+          return;
+        }
+        navigate('/');
+      })();
     }
-  }, [user, navigate]);
+  }, [user, navigate, toast]);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -60,6 +75,15 @@ export default function Auth() {
       password: '',
     },
   });
+
+  const checkDomainAuthorized = async (email: string): Promise<boolean> => {
+    const { data, error } = await supabase.rpc('is_email_domain_authorized', { p_email: email });
+    if (error) {
+      console.error('Erro ao validar domínio:', error);
+      return false;
+    }
+    return data === true;
+  };
 
   const handleLogin = async (data: LoginFormData) => {
     setIsLoading(true);
@@ -83,13 +107,29 @@ export default function Auth() {
 
   const handleSignup = async (data: SignupFormData) => {
     setIsLoading(true);
-    const { error } = await signUp(data.email, data.password, data.fullName);
-    
-    if (error) {
+
+    const isAuthorized = await checkDomainAuthorized(data.email);
+    if (!isAuthorized) {
+      const domain = data.email.split('@')[1] || '';
       toast({
         variant: 'destructive',
-        title: 'Erro ao criar conta',
-        description: error.message,
+        title: 'Domínio não autorizado',
+        description: `O domínio "${domain}" não tem permissão para criar contas neste sistema.`,
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    const { error } = await signUp(data.email, data.password, data.fullName);
+
+    if (error) {
+      const isDomainError = error.message?.includes('DOMAIN_NOT_AUTHORIZED');
+      toast({
+        variant: 'destructive',
+        title: isDomainError ? 'Domínio não autorizado' : 'Erro ao criar conta',
+        description: isDomainError
+          ? 'Este e-mail não pertence a um domínio autorizado.'
+          : error.message,
       });
     } else {
       toast({
