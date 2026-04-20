@@ -61,6 +61,15 @@ export default function Auth() {
     },
   });
 
+  const checkDomainAuthorized = async (email: string): Promise<boolean> => {
+    const { data, error } = await supabase.rpc('is_email_domain_authorized', { p_email: email });
+    if (error) {
+      console.error('Erro ao validar domínio:', error);
+      return false;
+    }
+    return data === true;
+  };
+
   const handleLogin = async (data: LoginFormData) => {
     setIsLoading(true);
     const { error } = await signIn(data.email, data.password);

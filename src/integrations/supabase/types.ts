@@ -261,6 +261,27 @@ export type Database = {
         }
         Relationships: []
       }
+      authorized_email_domains: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          domain: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          domain: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          domain?: string
+          id?: string
+        }
+        Relationships: []
+      }
       bank_accounts_config: {
         Row: {
           agencia: string
@@ -3450,6 +3471,10 @@ export type Database = {
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_admin_or_manager: { Args: { _user_id: string }; Returns: boolean }
       is_coordinator_or_above: { Args: { _user_id: string }; Returns: boolean }
+      is_email_domain_authorized: {
+        Args: { p_email: string }
+        Returns: boolean
+      }
       is_financeiro: { Args: { _user_id: string }; Returns: boolean }
       is_leader_or_above: { Args: { _user_id: string }; Returns: boolean }
       reconcile_open_deadlines:
