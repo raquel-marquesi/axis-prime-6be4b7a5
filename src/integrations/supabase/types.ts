@@ -263,18 +263,21 @@ export type Database = {
       }
       authorized_email_domains: {
         Row: {
+          active: boolean
           created_at: string
           created_by: string | null
           domain: string
           id: string
         }
         Insert: {
+          active?: boolean
           created_at?: string
           created_by?: string | null
           domain: string
           id?: string
         }
         Update: {
+          active?: boolean
           created_at?: string
           created_by?: string | null
           domain?: string
@@ -2518,6 +2521,9 @@ export type Database = {
       profiles: {
         Row: {
           agencia: string | null
+          approved: boolean
+          approved_at: string | null
+          approved_by: string | null
           area: Database["public"]["Enums"]["area_setor"] | null
           avatar_url: string | null
           banco: string | null
@@ -2539,6 +2545,9 @@ export type Database = {
         }
         Insert: {
           agencia?: string | null
+          approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
           area?: Database["public"]["Enums"]["area_setor"] | null
           avatar_url?: string | null
           banco?: string | null
@@ -2560,6 +2569,9 @@ export type Database = {
         }
         Update: {
           agencia?: string | null
+          approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
           area?: Database["public"]["Enums"]["area_setor"] | null
           avatar_url?: string | null
           banco?: string | null
