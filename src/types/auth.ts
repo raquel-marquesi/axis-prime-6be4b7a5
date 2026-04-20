@@ -13,6 +13,9 @@ export interface UserProfile {
   avatar_url: string | null;
   area: AreaSetor | null;
   is_active: boolean;
+  approved: boolean;
+  approved_at: string | null;
+  approved_by: string | null;
   created_at: string;
   updated_at: string;
   reports_to: string | null;
