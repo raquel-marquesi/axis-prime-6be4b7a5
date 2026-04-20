@@ -92,13 +92,29 @@ export default function Auth() {
 
   const handleSignup = async (data: SignupFormData) => {
     setIsLoading(true);
-    const { error } = await signUp(data.email, data.password, data.fullName);
-    
-    if (error) {
+
+    const isAuthorized = await checkDomainAuthorized(data.email);
+    if (!isAuthorized) {
+      const domain = data.email.split('@')[1] || '';
       toast({
         variant: 'destructive',
-        title: 'Erro ao criar conta',
-        description: error.message,
+        title: 'Domínio não autorizado',
+        description: `O domínio "${domain}" não tem permissão para criar contas neste sistema.`,
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    const { error } = await signUp(data.email, data.password, data.fullName);
+
+    if (error) {
+      const isDomainError = error.message?.includes('DOMAIN_NOT_AUTHORIZED');
+      toast({
+        variant: 'destructive',
+        title: isDomainError ? 'Domínio não autorizado' : 'Erro ao criar conta',
+        description: isDomainError
+          ? 'Este e-mail não pertence a um domínio autorizado.'
+          : error.message,
       });
     } else {
       toast({
