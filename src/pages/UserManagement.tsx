@@ -47,8 +47,8 @@ export default function UserManagement() {
   const profileNameMap = new Map<string, string>();
   users.forEach((u: any) => profileNameMap.set(u.id, u.full_name));
 
-  const approvedUsers = users.filter((u: any) => u.approved === true);
-  const pendingUsers = users.filter((u: any) => u.approved !== true);
+  const approvedUsers = users.filter((u: any) => u.approved === true && u.is_active !== false);
+  const pendingUsers = users.filter((u: any) => u.approved !== true && u.is_active !== false);
 
   const handleDelete = async (user: any) => {
     if (!confirm(`Tem certeza que deseja excluir o usuário ${user.full_name}?`)) return;
