@@ -212,7 +212,7 @@ export default function UserManagement() {
                             <Button
                               size="sm"
                               variant="default"
-                              onClick={() => handleApprove(user)}
+                              onClick={() => { setApprovingUser(user); setApproveDialogOpen(true); }}
                             >
                               <Check className="h-4 w-4 mr-1" />
                               Aprovar
