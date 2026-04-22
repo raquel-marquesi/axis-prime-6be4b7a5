@@ -25,24 +25,23 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
-      # ⚠️ Sincronização automática de migrations DESATIVADA temporariamente.
-      # Motivo: alinhamento manual do histórico de migrations via `supabase db pull` local.
-      # NÃO reativar `supabase migration repair` automático nem `supabase db push`
-      # antes de garantir que o diretório local reflete o estado remoto.
-      #
-      # Para reativar após o alinhamento, restaure o passo:
-      #   - name: Aplicar migrations
-      #     run: supabase db push --include-all
-      #     env:
-      #       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      #       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-
-      - name: Deploy Edge Functions
-        run: |
-          if [ -d "supabase/functions" ] && [ "$(ls -A supabase/functions 2>/dev/null)" ]; then
-            supabase functions deploy
-          else
-            echo "Nenhuma Edge Function encontrada, pulando deploy."
-          fi
+      - name: Aplicar migrations
+        run: supabase db push --include-all
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      # ⚠️ Deploy de Edge Functions DESATIVADO temporariamente.
+      # Motivo: erros recorrentes no deploy. Será corrigido separadamente.
+      # NÃO reativar antes de validar as functions individualmente.
+      #
+      # Para reativar, restaure o passo:
+      #   - name: Deploy Edge Functions
+      #     run: |
+      #       if [ -d "supabase/functions" ] && [ "$(ls -A supabase/functions 2>/dev/null)" ]; then
+      #         supabase functions deploy
+      #       else
+      #         echo "Nenhuma Edge Function encontrada, pulando deploy."
+      #       fi
+      #     env:
+      #       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
