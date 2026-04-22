@@ -34,7 +34,7 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.delete-user]
-verify_jwt = true
+verify_jwt = false
 
 [functions.emit-nfe]
 verify_jwt = false
