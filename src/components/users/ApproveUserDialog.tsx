@@ -41,7 +41,7 @@ export const ApproveUserDialog = ({ open, onOpenChange, user, onSuccess }: Appro
           approved: true,
           approved_at: new Date().toISOString(),
           approved_by: currentUser?.id ?? null,
-          area: area || null,
+          area: (area || null) as any,
         })
         .eq("id", user.id);
       if (profileError) throw profileError;
