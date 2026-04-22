@@ -16,6 +16,8 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function UserManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [approvingUser, setApprovingUser] = useState<any>(null);
   const { user: currentUser } = useAuth();
 
   const { data: users = [], refetch } = useQuery({
