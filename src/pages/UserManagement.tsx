@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserPlus, Trash2, Edit2, Check, X, Clock, Users } from "lucide-react";
 import { toast } from "sonner";
 import { UserDialog } from "@/components/users/UserDialog";
+import { ApproveUserDialog } from "@/components/users/ApproveUserDialog";
 import { ROLE_LABELS, AREA_LABELS, type AreaSetor } from "@/types/auth";
 import { useAuth } from "@/contexts/AuthContext";
 
