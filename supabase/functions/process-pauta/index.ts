@@ -1,5 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "npm:@supabase/supabase-js@2"
+import { createClient } from "npm:@supabase/supabase-js@2.49.1";
 import { parse } from "https://esm.sh/papaparse@5.4.1"
 
 const corsHeaders = {
@@ -44,7 +43,7 @@ function mapRowToRecord(row: Record<string, any>, cliente: string) {
   };
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {

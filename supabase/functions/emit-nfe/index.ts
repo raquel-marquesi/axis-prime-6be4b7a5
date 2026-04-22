@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from "npm:@supabase/supabase-js@2.49.1";
 import * as forge from 'https://esm.sh/node-forge@1.3.1';
 import { SignedXml } from 'https://esm.sh/xml-crypto@3.0.1';
 
