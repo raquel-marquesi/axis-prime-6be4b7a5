@@ -162,7 +162,7 @@ export default function UserManagement() {
                             <Button variant="ghost" size="icon" onClick={() => { setEditingUser(user); setIsDialogOpen(true); }}>
                               <Edit2 className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(user.id)}>
+                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(user)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TableCell>
