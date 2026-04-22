@@ -27,35 +27,36 @@ jobs:
 
       - name: Sincronizar histórico de migrations com o banco remoto
         run: |
-          # Marcar como reverted a migration órfã que existia apenas no remoto
-          supabase migration repair --status reverted 20260402155704 20260415115251 20260415120819 20260416182505 20260416185412 20260416192204 20260420180514 20260420183658 || true
-          # Marcar como applied TODAS as migrations (60 versões)
-          for version in \
-            20260327195312 20260327195459 20260330120000 \
-            20260331125257 20260331130442 20260331161221 \
-            20260331190054 20260331190657 20260331190724 \
-            20260331192454 20260331200046 \
-            20260401144004 20260401144648 20260401153145 \
-            20260401154123 20260401154651 20260401155144 \
-            20260401203954 20260401204626 20260401204653 \
-            20260401204715 20260401220559 \
-            20260402120000 20260402155706 \
-            20260406144514 20260406181542 20260406191152 20260406222213 \
-            20260407120801 20260407122759 20260407165309 20260407173111 \
-            20260407173622 20260407180954 20260407181633 20260407184412 \
-            20260407185014 20260407191003 20260407201147 \
-            20260408122126 20260408132527 20260409114106 \
-            20260408163000 20260408170500 20260408190000 \
-            20260410100000 20260410110000 20260410120000 \
-            20260410130000 20260410140000 \
-            20260413140000 20260413150000 20260413160000 20260413170000 \
-            20260413192500 20260413192900 20260413194800 20260413200000 \
-            20260414120000 20260414140559 20260414140601 \
-            20260414190000 20260414193000 20260414200000 \
-            20260416130546 20260416185414 20260416192206 \
-            20260420180517 20260420183701; do
-            supabase migration repair --status applied $version || true
-          done
+          set -e
+          # 1. Listar migrations locais (ordenadas)
+          ls supabase/migrations/*.sql 2>/dev/null \
+            | xargs -n1 basename \
+            | grep -oE '^[0-9]+' \
+            | sort -u > /tmp/local_migrations.txt || touch /tmp/local_migrations.txt
+
+          # 2. Listar status remoto e extrair as versões aplicadas no remoto
+          supabase migration list --linked 2>/dev/null \
+            | awk 'NR>2 { if ($3 != "" && $3 ~ /^[0-9]+$/) print $3; else if ($1 ~ /^[0-9]+$/) print $1 }' \
+            | sort -u > /tmp/remote_migrations.txt || touch /tmp/remote_migrations.txt
+
+          echo "=== Local migrations ==="
+          cat /tmp/local_migrations.txt
+          echo "=== Remote migrations ==="
+          cat /tmp/remote_migrations.txt
+
+          # 3. Migrations que existem APENAS no remoto -> marcar como reverted
+          comm -13 /tmp/local_migrations.txt /tmp/remote_migrations.txt > /tmp/orphan_remote.txt || true
+          if [ -s /tmp/orphan_remote.txt ]; then
+            echo "=== Marcando como reverted (existem só no remoto) ==="
+            cat /tmp/orphan_remote.txt
+            while read version; do
+              [ -n "$version" ] && supabase migration repair --status reverted "$version" || true
+            done < /tmp/orphan_remote.txt
+          fi
+
+          # 4. Migrations que existem APENAS no local -> marcar como applied (se já foram aplicadas no DB)
+          # Não fazemos applied automaticamente — deixa o `db push` aplicar normalmente.
+          echo "Sincronização concluída."
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
