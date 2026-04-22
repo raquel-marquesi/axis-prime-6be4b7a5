@@ -18,7 +18,7 @@
  *   SHEET_D  1Nd4P4...    aba Pautas  (ID Externo + Tipo de cálculo direto)
  */
 
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.49.1";
 
 // ─── Source definitions ──────────────────────────────────────────────
 
