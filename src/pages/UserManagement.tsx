@@ -9,12 +9,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserPlus, Trash2, Edit2, Check, X, Clock, Users } from "lucide-react";
 import { toast } from "sonner";
 import { UserDialog } from "@/components/users/UserDialog";
+import { ApproveUserDialog } from "@/components/users/ApproveUserDialog";
 import { ROLE_LABELS, AREA_LABELS, type AreaSetor } from "@/types/auth";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function UserManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [approvingUser, setApprovingUser] = useState<any>(null);
   const { user: currentUser } = useAuth();
 
   const { data: users = [], refetch } = useQuery({
@@ -209,7 +212,7 @@ export default function UserManagement() {
                             <Button
                               size="sm"
                               variant="default"
-                              onClick={() => handleApprove(user)}
+                              onClick={() => { setApprovingUser(user); setApproveDialogOpen(true); }}
                             >
                               <Check className="h-4 w-4 mr-1" />
                               Aprovar
@@ -236,6 +239,12 @@ export default function UserManagement() {
       </Tabs>
 
       <UserDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} user={editingUser} onSuccess={() => { setIsDialogOpen(false); refetch(); }} />
+      <ApproveUserDialog
+        open={approveDialogOpen}
+        onOpenChange={setApproveDialogOpen}
+        user={approvingUser}
+        onSuccess={() => { refetch(); }}
+      />
     </div>
   );
 }
