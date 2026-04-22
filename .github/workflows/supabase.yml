@@ -25,47 +25,17 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
-      - name: Sincronizar histórico de migrations com o banco remoto
-        run: |
-          set -e
-          # 1. Listar migrations locais (ordenadas)
-          ls supabase/migrations/*.sql 2>/dev/null \
-            | xargs -n1 basename \
-            | grep -oE '^[0-9]+' \
-            | sort -u > /tmp/local_migrations.txt || touch /tmp/local_migrations.txt
-
-          # 2. Listar status remoto e extrair as versões aplicadas no remoto
-          supabase migration list --linked 2>/dev/null \
-            | awk 'NR>2 { if ($3 != "" && $3 ~ /^[0-9]+$/) print $3; else if ($1 ~ /^[0-9]+$/) print $1 }' \
-            | sort -u > /tmp/remote_migrations.txt || touch /tmp/remote_migrations.txt
-
-          echo "=== Local migrations ==="
-          cat /tmp/local_migrations.txt
-          echo "=== Remote migrations ==="
-          cat /tmp/remote_migrations.txt
-
-          # 3. Migrations que existem APENAS no remoto -> marcar como reverted
-          comm -13 /tmp/local_migrations.txt /tmp/remote_migrations.txt > /tmp/orphan_remote.txt || true
-          if [ -s /tmp/orphan_remote.txt ]; then
-            echo "=== Marcando como reverted (existem só no remoto) ==="
-            cat /tmp/orphan_remote.txt
-            while read version; do
-              [ -n "$version" ] && supabase migration repair --status reverted "$version" || true
-            done < /tmp/orphan_remote.txt
-          fi
-
-          # 4. Migrations que existem APENAS no local -> marcar como applied (se já foram aplicadas no DB)
-          # Não fazemos applied automaticamente — deixa o `db push` aplicar normalmente.
-          echo "Sincronização concluída."
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-
-      - name: Aplicar migrations
-        run: supabase db push --include-all
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      # ⚠️ Sincronização automática de migrations DESATIVADA temporariamente.
+      # Motivo: alinhamento manual do histórico de migrations via `supabase db pull` local.
+      # NÃO reativar `supabase migration repair` automático nem `supabase db push`
+      # antes de garantir que o diretório local reflete o estado remoto.
+      #
+      # Para reativar após o alinhamento, restaure o passo:
+      #   - name: Aplicar migrations
+      #     run: supabase db push --include-all
+      #     env:
+      #       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      #       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
 
       - name: Deploy Edge Functions
         run: |
