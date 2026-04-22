@@ -14,7 +14,8 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
   const { user, profile, roles, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) {
+  // Wait for both auth and profile to finish loading to avoid race conditions
+  if (loading || (user && !profile)) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -28,7 +29,7 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
   }
 
   // Authenticated but not approved
-  if (profile && !profile.approved) {
+  if (!profile?.approved) {
     return <Navigate to="/aguardando-aprovacao" replace />;
   }
 
