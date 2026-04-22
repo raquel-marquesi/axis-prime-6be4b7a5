@@ -3523,7 +3523,6 @@ export type Database = {
         | "assistente"
         | "consultor"
         | "assistente_financeiro"
-        | "convidado"
       area_processo: "trabalhista" | "civel"
       area_setor:
         | "execucao"
@@ -3704,7 +3703,6 @@ export const Constants = {
         "assistente",
         "consultor",
         "assistente_financeiro",
-        "convidado",
       ],
       area_processo: ["trabalhista", "civel"],
       area_setor: [

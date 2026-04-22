@@ -59,7 +59,6 @@ export const ROLE_LABELS: Record<string, string> = {
   advogado: 'Advogado',
   assistente: 'Assistente',
   consultor: 'Consultor',
-  convidado: 'Convidado (aguardando aprovação)',
 };
 
 // Kept for backward compat but prefer dynamic from custom_roles table
