@@ -14,8 +14,9 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
   const { user, profile, roles, loading } = useAuth();
   const location = useLocation();
 
-  // Wait for both auth and profile to finish loading to avoid race conditions
-  if (loading || (user && !profile)) {
+  // Wait only for the auth bootstrap. Don't block on profile fetch — if it's
+  // missing we treat the user as pending approval below.
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -28,8 +29,10 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // Authenticated but not approved
-  if (!profile?.approved) {
+  // Authenticated but profile not loaded yet OR not approved → pending screen.
+  // The /aguardando-aprovacao route is public, so users without an approved
+  // profile (or even without a profile row yet) can always reach it.
+  if (!profile || profile.approved !== true) {
     return <Navigate to="/aguardando-aprovacao" replace />;
   }
 
