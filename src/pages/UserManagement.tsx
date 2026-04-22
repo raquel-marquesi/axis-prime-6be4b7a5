@@ -50,16 +50,19 @@ export default function UserManagement() {
   const approvedUsers = users.filter((u: any) => u.approved === true);
   const pendingUsers = users.filter((u: any) => u.approved !== true);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este usuário?")) return;
-    const { error } = await supabase.from("profiles").delete().eq("id", id);
+  const handleDelete = async (user: any) => {
+    if (!confirm(`Tem certeza que deseja excluir o usuário ${user.full_name}?`)) return;
+    const { error } = await supabase.functions.invoke("delete-user", {
+      body: { userId: user.user_id },
+    });
     if (error) {
-      toast.error("Erro ao excluir usuário");
+      toast.error("Erro ao excluir usuário: " + error.message);
     } else {
       toast.success("Usuário excluído com sucesso");
       refetch();
     }
   };
+
 
   const handleApprove = async (user: any) => {
     const { error } = await supabase
@@ -159,7 +162,7 @@ export default function UserManagement() {
                             <Button variant="ghost" size="icon" onClick={() => { setEditingUser(user); setIsDialogOpen(true); }}>
                               <Edit2 className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(user.id)}>
+                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(user)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TableCell>
