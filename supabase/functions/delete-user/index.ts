@@ -71,8 +71,8 @@ Deno.serve(async (req) => {
     // 1. Remove roles
     await adminClient.from("user_roles").delete().eq("user_id", userId);
 
-    // 2. Deactivate profile
-    await adminClient.from("profiles").update({ is_active: false }).eq("user_id", userId);
+    // 2. Delete profile
+    await adminClient.from("profiles").delete().eq("user_id", userId);
 
     // 3. Delete from auth
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId);
