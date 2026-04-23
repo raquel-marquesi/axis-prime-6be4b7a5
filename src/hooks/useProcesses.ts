@@ -78,13 +78,83 @@ export function useProcesses(options?: { page?: number; pageSize?: number }) {
 
   const createProcessesBatch = useMutation({
     mutationFn: async (processesList: ProcessFormData[]) => {
+      // 1. Normalizar entrada (trim + remover vazios)
+      const normalized = processesList
+        .map(p => ({ ...p, numero_processo: p.numero_processo?.trim() ?? '' }))
+        .filter(p => p.numero_processo.length > 0);
+
+      if (normalized.length === 0) {
+        return { inserted: 0, skipped: 0, errors: 0, insertedRows: [] as any[] };
+      }
+
+      // 2. Pre-check em batch: quais já existem no banco?
+      const uniqueNumeros = Array.from(new Set(normalized.map(p => p.numero_processo)));
+      const { data: existing, error: checkError } = await supabase
+        .from('processes')
+        .select('numero_processo')
+        .in('numero_processo', uniqueNumeros);
+      if (checkError) throw checkError;
+
+      const existingSet = new Set((existing ?? []).map(r => r.numero_processo));
+
+      // 3. Particionar + dedupe interno (linhas duplicadas no mesmo arquivo)
+      const seen = new Set<string>();
+      const toInsert = normalized.filter(p => {
+        if (existingSet.has(p.numero_processo)) return false;
+        if (seen.has(p.numero_processo)) return false;
+        seen.add(p.numero_processo);
+        return true;
+      });
+      const skipped = normalized.length - toInsert.length;
+
+      if (toInsert.length === 0) {
+        return { inserted: 0, skipped, errors: 0, insertedRows: [] as any[] };
+      }
+
+      // 4. Inserir somente os novos
       const { data: user } = await supabase.auth.getUser();
-      const { data, error } = await supabase.from('processes').insert(processesList.map(p => ({ ...p, created_by: user.user?.id }))).select();
-      if (error) throw error;
-      return data;
+      const { data, error } = await supabase
+        .from('processes')
+        .insert(toInsert.map(p => ({ ...p, created_by: user.user?.id })))
+        .select();
+
+      if (error) {
+        return {
+          inserted: 0,
+          skipped,
+          errors: toInsert.length,
+          insertedRows: [] as any[],
+          errorMessage: error.message,
+        };
+      }
+
+      return { inserted: data.length, skipped, errors: 0, insertedRows: data };
     },
-    onSuccess: (data) => { queryClient.invalidateQueries({ queryKey: ['processes'] }); toast({ title: `${data.length} processo(s) importados` }); },
-    onError: (error: Error) => { toast({ title: 'Erro ao importar', description: error.message, variant: 'destructive' }); },
+    onSuccess: ({ inserted, skipped, errors, errorMessage }) => {
+      queryClient.invalidateQueries({ queryKey: ['processes'] });
+      if (errors > 0) {
+        toast({
+          title: 'Importação com erros',
+          description: `${inserted} inseridos · ${skipped} já existiam · ${errors} erros${errorMessage ? ` (${errorMessage})` : ''}`,
+          variant: 'destructive',
+        });
+      } else if (inserted === 0 && skipped > 0) {
+        toast({
+          title: 'Nenhum processo novo',
+          description: `${skipped} já existiam no sistema`,
+        });
+      } else if (inserted === 0 && skipped === 0) {
+        toast({ title: 'Nenhum processo válido para importar' });
+      } else {
+        toast({
+          title: 'Importação concluída',
+          description: `${inserted} inseridos · ${skipped} já existiam`,
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Erro ao importar', description: error.message, variant: 'destructive' });
+    },
   });
 
   const updateProcess = useMutation({
