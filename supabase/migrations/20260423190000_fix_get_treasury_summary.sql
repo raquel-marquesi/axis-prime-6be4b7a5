@@ -1,17 +1,26 @@
--- ============================================================
--- SQL RPC: Treasury Aggregation (Bypass PostgREST 1000 limit)
--- ============================================================
-
-CREATE OR REPLACE FUNCTION get_treasury_summary(p_start_date date, p_end_date date)
-RETURNS json
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
+-- Corrige aggregate aninhado em get_treasury_summary.
+-- A versão anterior usava json_agg(json_build_object(...SUM()...) ORDER BY ...)
+-- com GROUP BY, criando nested aggregates inválidos. Separado em subquery.
+CREATE OR REPLACE FUNCTION public.get_treasury_summary(p_start_date date, p_end_date date)
+ RETURNS json
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
 DECLARE
   v_accounts json;
   v_monthly json;
 BEGIN
-  -- Aggregate totals per Bank Account directly from the Database
+  IF NOT (
+    public.has_role(auth.uid(), 'admin')
+    OR public.has_role(auth.uid(), 'socio')
+    OR public.has_role(auth.uid(), 'gerente')
+    OR public.has_role(auth.uid(), 'financeiro')
+    OR public.has_role(auth.uid(), 'assistente_financeiro')
+  ) THEN
+    RAISE EXCEPTION 'Acesso negado: requer role financeiro';
+  END IF;
+
   SELECT json_agg(
     json_build_object(
       'id', ba.id,
@@ -34,7 +43,6 @@ BEGIN
   ) te ON te.bank_account_id = ba.id
   WHERE ba.is_active = true;
 
-  -- Aggregate totals per Month to populate Dashboard Charts
   SELECT json_agg(
     json_build_object(
       'month', month,
@@ -57,4 +65,4 @@ BEGIN
     'monthlyData', COALESCE(v_monthly, '[]'::json)
   );
 END;
-$$;
+$function$;
