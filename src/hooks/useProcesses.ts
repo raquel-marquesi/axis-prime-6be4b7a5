@@ -189,3 +189,39 @@ export function useProcesses(options?: { page?: number; pageSize?: number }) {
     isImporting: createProcessesBatch.isPending,
   };
 }
+
+// Busca pontual de um processo por ID — para forms/widgets que precisam de um único registro.
+export function useProcessById(id?: string | null) {
+  return useQuery({
+    queryKey: ['process', id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('processes')
+        .select(`*, client:clients!id_cliente (id, nome, razao_social, tipo)`)
+        .eq('id', id!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as Process | null;
+    },
+  });
+}
+
+// Busca server-side por número/reclamante para combobox (limit 20).
+export function useProcessSearch(term: string) {
+  return useQuery({
+    queryKey: ['processes-search', term],
+    enabled: term.trim().length >= 2,
+    queryFn: async () => {
+      const t = term.trim().replace(/,/g, ' ');
+      const { data, error } = await supabase
+        .from('processes')
+        .select(`id, numero_processo, numero_pasta, reclamante_nome, area, tipo_acao, id_cliente, drive_folder_id`)
+        .or(`numero_processo.ilike.%${t}%,reclamante_nome.ilike.%${t}%`)
+        .order('numero_pasta', { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return (data ?? []) as Process[];
+    },
+  });
+}
