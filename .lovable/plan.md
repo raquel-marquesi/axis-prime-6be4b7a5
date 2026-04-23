@@ -1,117 +1,85 @@
 
 
-## Adicionar deduplicação ao `createProcessesBatch` em `useProcesses.ts`
+## Configurar QueryClient e expor `isPending` das mutations
 
 ### Objetivo
 
-Evitar erros de violação de constraint UNIQUE (`numero_processo`) durante importação em lote, fazendo um pre-check no banco e pulando processos já existentes. Retornar um resumo `{ inserted, skipped, errors }` e refletir isso no toast.
+1. Reduzir refetches desnecessários configurando defaults sãos no `QueryClient`.
+2. Expor `isPending` de cada mutation `create`/`update`/`delete` em `useClients`, `useProcesses` e `useSolicitacoes`, para que os componentes possam desabilitar botões durante a operação.
 
-### Mudanças em `src/hooks/useProcesses.ts`
+### Mudanças
 
-**1. Reescrever `createProcessesBatch.mutationFn`**:
+**1. `src/App.tsx`**
 
-- Normalizar a lista de `numero_processo` da entrada (trim + filtro de vazios).
-- **Pre-check em batch** (1 query, evita N+1):
-  ```ts
-  const { data: existing } = await supabase
-    .from('processes')
-    .select('numero_processo')
-    .in('numero_processo', uniqueNumeros);
-  ```
-- Construir `Set<string>` com os números existentes.
-- Particionar a lista de entrada:
-  - `toInsert` → não estão no Set.
-  - `skipped` → estão no Set (contador apenas, não vão pro insert).
-- Buscar `user_id` uma vez via `supabase.auth.getUser()`.
-- Inserir apenas `toInsert` com `.insert(...).select()`.
-  - Se a lista vazia: pular o insert e retornar imediatamente.
-- Capturar o `error` do insert sem `throw` para poder contar erros vs. inseridos:
-  - Se `error` → contar TODA a `toInsert.length` como `errors` (insert é atômico) e propagar a mensagem para o toast de erro.
-  - Se sucesso → `inserted = data.length`.
-- **Retornar** `{ inserted, skipped, errors, insertedRows }`.
-
-**2. Atualizar `onSuccess`**:
-
-- Invalidar `['processes']` (mantém).
-- Toast com resumo:
-  - Título: `'Importação concluída'`
-  - Description: `` `${inserted} inseridos · ${skipped} já existiam · ${errors} erros` ``
-  - Se `errors > 0`, usar `variant: 'destructive'`; se `inserted === 0 && skipped > 0`, manter padrão e ajustar título para `'Nenhum processo novo'`.
-
-**3. Manter `onError`** para falhas que escapem do `mutationFn` (ex.: erro na query de pre-check ou no `auth.getUser`).
-
-### Snippet de referência
-
+Substituir:
 ```ts
-const createProcessesBatch = useMutation({
-  mutationFn: async (processesList: ProcessFormData[]) => {
-    const normalized = processesList
-      .map(p => ({ ...p, numero_processo: p.numero_processo?.trim() }))
-      .filter(p => p.numero_processo);
-
-    const uniqueNumeros = Array.from(new Set(normalized.map(p => p.numero_processo)));
-
-    const { data: existing, error: checkError } = await supabase
-      .from('processes')
-      .select('numero_processo')
-      .in('numero_processo', uniqueNumeros);
-    if (checkError) throw checkError;
-
-    const existingSet = new Set((existing ?? []).map(r => r.numero_processo));
-    const toInsert = normalized.filter(p => !existingSet.has(p.numero_processo));
-    const skipped = normalized.length - toInsert.length;
-
-    if (toInsert.length === 0) {
-      return { inserted: 0, skipped, errors: 0, insertedRows: [] };
-    }
-
-    const { data: user } = await supabase.auth.getUser();
-    const { data, error } = await supabase
-      .from('processes')
-      .insert(toInsert.map(p => ({ ...p, created_by: user.user?.id })))
-      .select();
-
-    if (error) {
-      return { inserted: 0, skipped, errors: toInsert.length, insertedRows: [], errorMessage: error.message };
-    }
-    return { inserted: data.length, skipped, errors: 0, insertedRows: data };
-  },
-  onSuccess: ({ inserted, skipped, errors, errorMessage }) => {
-    queryClient.invalidateQueries({ queryKey: ['processes'] });
-    if (errors > 0) {
-      toast({
-        title: 'Importação com erros',
-        description: `${inserted} inseridos · ${skipped} já existiam · ${errors} erros${errorMessage ? ` (${errorMessage})` : ''}`,
-        variant: 'destructive',
-      });
-    } else if (inserted === 0 && skipped > 0) {
-      toast({ title: 'Nenhum processo novo', description: `${skipped} já existiam no sistema` });
-    } else {
-      toast({ title: 'Importação concluída', description: `${inserted} inseridos · ${skipped} já existiam` });
-    }
-  },
-  onError: (error: Error) => {
-    toast({ title: 'Erro ao importar', description: error.message, variant: 'destructive' });
+const queryClient = new QueryClient();
+```
+por:
+```ts
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5,      // 5 min
+      gcTime: 1000 * 60 * 10,        // 10 min
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
   },
 });
 ```
 
+Sem outras alterações no arquivo.
+
+**2. `src/hooks/useClients.ts`**
+
+No objeto de retorno do hook, adicionar flags `isPending` para cada mutation existente. Padrão:
+```ts
+return {
+  // ...campos atuais (clients, isLoading, etc.)
+  createClient,
+  updateClient,
+  deleteClient,
+  isCreating: createClient.isPending,
+  isUpdating: updateClient.isPending,
+  isDeleting: deleteClient.isPending,
+};
+```
+Os nomes exatos serão alinhados às mutations realmente existentes no arquivo (verificadas durante a edição). Se houver mutations adicionais (ex.: `createBillingContact`, `linkClient`), também receberão flag `isPending` correspondente.
+
+**3. `src/hooks/useProcesses.ts`**
+
+Mesmo padrão. Mutations a expor:
+- `createProcess` → `isCreating`
+- `updateProcess` → `isUpdating`
+- `deleteProcess` → `isDeleting`
+- `createProcessesBatch` → `isImporting`
+
+**4. `src/hooks/useSolicitacoes.ts`**
+
+- `createSolicitacao` → `isCreating`
+- `updateSolicitacao` → `isUpdating`
+- `deleteSolicitacao` → `isDeleting`
+- `updateStatus` → `isUpdatingStatus`
+
 ### Detalhes técnicos
 
-- **Deduplicação interna**: `Set` no `uniqueNumeros` previne que linhas duplicadas dentro do mesmo arquivo gerem queries inflamadas. Linhas duplicadas dentro do batch são tratadas implicitamente — a primeira ocorrência entra em `toInsert`, as demais ficam fora porque o `numero_processo` aparece no `existingSet` após o primeiro insert (não é o caso aqui pois o pre-check é único). Para garantir que duplicatas internas também sejam puladas, adiciona-se um `seen = new Set()` no filter de `toInsert`. **Decisão**: incluir esse filtro extra para robustez.
-- **Atomicidade do insert**: o Supabase faz `.insert([...])` em uma única transação; se uma linha violar constraint, todas falham. Por isso, em caso de erro, todas as `toInsert.length` linhas são contadas como `errors` (não dá para parcializar sem fazer N inserts individuais — fora do escopo).
-- **Upsert opcional**: o pedido menciona "ou opcionalmente atualizados via upsert". **Decisão**: NÃO usar upsert — a semântica padrão é "ignorar duplicados", consistente com o comportamento dos syncs (`mem://logic/auto-process-creation`). Se o usuário quiser update, é uma feature separada (ex.: flag `mode: 'skip' | 'update'`).
-- **Tipo de retorno**: muda de `data` (array) para `{ inserted, skipped, errors, insertedRows }`. Único consumidor atual é `BatchImportClientsDialog.tsx`? Verificar — se algum chamador usa o array bruto, precisa adaptar para `.insertedRows`.
+- `isPending` é a propriedade nativa do TanStack Query v5 para `useMutation`. Já está disponível em cada objeto de mutation — apenas re-exportamos como flag de conveniência. Assim, consumidores podem fazer `<Button disabled={isCreating}>` sem precisar acessar `createClient.isPending` (que também continua acessível, retrocompatível).
+- Como o objeto da mutation continua sendo retornado, **nenhum consumidor existente quebra** — isto é uma adição não-destrutiva.
+- `staleTime: 5min` significa que dados não serão refetchados automaticamente nesse intervalo; mutations existentes já chamam `queryClient.invalidateQueries(...)` em `onSuccess`, então atualizações continuam imediatas após uma escrita.
+- `gcTime: 10min` (substitui `cacheTime` em v5) mantém dados não-utilizados em cache por 10 min antes de descartar.
+- `retry: 1` reduz spam de retries em erros transitórios; suficiente para a maioria dos casos sem mascarar bugs.
 
 ### Arquivos afetados
 
-- `src/hooks/useProcesses.ts` — única edição.
-- Possível ajuste em consumidores que dependem do retorno antigo de `createProcessesBatch.mutateAsync` (a verificar antes de aplicar).
+- `src/App.tsx`
+- `src/hooks/useClients.ts`
+- `src/hooks/useProcesses.ts`
+- `src/hooks/useSolicitacoes.ts`
 
 ### Fora do escopo
 
-- Modo "upsert" (atualizar processos existentes em vez de pular).
-- Insert linha-a-linha para isolar erros individuais.
-- UI de preview antes de importar.
-- Aplicar a mesma lógica em outros hooks (`useClients`, etc.).
+- Aplicar o mesmo padrão `isPending` aos demais hooks (`useExpenses`, `useInvoices`, `useTimesheet`, etc.) — pode ser feito em iteração separada, sob demanda.
+- Refatorar componentes consumidores (`ClientFormDialog`, `ProcessFormDialog`, `SolicitacaoFormDialog`) para usar as novas flags. As flags ficam disponíveis; adoção é incremental.
+- Configurar `mutations` defaults no `QueryClient` (ex.: `retry` para mutations) — mantemos apenas os defaults de `queries` conforme pedido.
 
