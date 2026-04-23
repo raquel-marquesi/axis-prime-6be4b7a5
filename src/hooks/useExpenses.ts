@@ -33,5 +33,34 @@ export function useExpenses() {
     onError: (error: Error) => { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); },
   });
 
-  return { expenses: expensesQuery.data || [], isLoading: expensesQuery.isLoading, createExpense };
+  const updateExpense = useMutation({
+    mutationFn: async ({ id, ...formData }: Partial<Expense> & { id: string }) => {
+      const { data, error } = await supabase.from('expenses').update(formData as any).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['expenses'] }); toast({ title: 'Despesa atualizada' }); },
+    onError: (error: Error) => { toast({ title: 'Erro ao atualizar', description: error.message, variant: 'destructive' }); },
+  });
+
+  const deleteExpense = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('expenses').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['expenses'] }); toast({ title: 'Despesa excluída' }); },
+    onError: (error: Error) => { toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' }); },
+  });
+
+  const markAsPaid = useMutation({
+    mutationFn: async ({ id, data_pagamento }: { id: string; data_pagamento: string }) => {
+      const { data, error } = await supabase.from('expenses').update({ status: 'paga', data_pagamento }).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['expenses'] }); toast({ title: 'Despesa marcada como paga' }); },
+    onError: (error: Error) => { toast({ title: 'Erro ao baixar despesa', description: error.message, variant: 'destructive' }); },
+  });
+
+  return { expenses: expensesQuery.data || [], isLoading: expensesQuery.isLoading, createExpense, updateExpense, deleteExpense, markAsPaid };
 }
