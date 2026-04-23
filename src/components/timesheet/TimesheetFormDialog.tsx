@@ -72,8 +72,15 @@ export function TimesheetFormDialog({ open, onOpenChange, entry }: TimesheetForm
     },
   });
 
+  const watchedProcessId = form.watch('process_id');
   const watchedActivityTypeId = form.watch('activity_type_id');
   const selectedActivityType = activityTypes.find(t => t.id === watchedActivityTypeId);
+
+  // Hydrate selectedProcess on edit (when entry.process_id is preset and user hasn't picked yet).
+  const { data: hydratedProcess } = useProcessById(!selectedProcess && watchedProcessId ? watchedProcessId : null);
+  useEffect(() => {
+    if (!selectedProcess && hydratedProcess) setSelectedProcess(hydratedProcess);
+  }, [hydratedProcess, selectedProcess]);
 
   useEffect(() => {
     const checkDuplicatesForParticipants = async () => {
