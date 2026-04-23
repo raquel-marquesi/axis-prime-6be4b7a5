@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 import { useProcesses, Process } from '@/hooks/useProcesses';
 import { useNavigate } from 'react-router-dom';
@@ -9,15 +9,18 @@ import { Input } from '@/components/ui/input';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AreaProcesso } from '@/hooks/useProcesses';
 
 type FilterType = 'all' | 'individual' | 'coletiva';
 type FilterArea = 'all' | AreaProcesso;
 
+const PAGE_SIZE = 50;
+
 export default function Processes() {
-  const { processes, isLoading } = useProcesses();
+  const [page, setPage] = useState(0);
+  const { processes, totalCount, isLoading } = useProcesses({ page, pageSize: PAGE_SIZE });
   const navigate = useNavigate();
   const { isAdmin, hasRole } = useAuth();
   const canEditProcesses = isAdmin() || hasRole('socio') || hasRole('coordenador') || hasRole('lider');
@@ -27,6 +30,11 @@ export default function Processes() {
   const [filterArea, setFilterArea] = useState<FilterArea>('all');
   const [selectedProcess, setSelectedProcess] = useState<Process | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+  // Reset to first page when filters change to avoid confusing partial results.
+  useEffect(() => {
+    setPage(0);
+  }, [search, filterType, filterArea]);
 
   const filteredProcesses = useMemo(() => {
     return processes.filter((process) => {
@@ -48,6 +56,10 @@ export default function Processes() {
 
   const handleViewDetails = (process: Process) => { setSelectedProcess(process); setIsDetailsOpen(true); };
   const handleEdit = (process: Process) => { navigate(`/processos/${process.id}`); };
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const canPrev = page > 0;
+  const canNext = page < totalPages - 1;
 
   return (
     <>
@@ -92,7 +104,22 @@ export default function Processes() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
           </div>
         ) : (
-          <ProcessesTable processes={filteredProcesses} onViewDetails={handleViewDetails} onEdit={handleEdit} />
+          <>
+            <ProcessesTable processes={filteredProcesses} onViewDetails={handleViewDetails} onEdit={handleEdit} />
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-xs text-muted-foreground">
+                Página {page + 1} de {totalPages} · {totalCount} processo{totalCount === 1 ? '' : 's'}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={!canPrev}>
+                  <ChevronLeft className="w-4 h-4 mr-1" />Anterior
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} disabled={!canNext}>
+                  Próxima<ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          </>
         )}
       </div>
       <ProcessDetailsDialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen} process={selectedProcess} onEdit={handleEdit} />
