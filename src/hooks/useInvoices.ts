@@ -36,5 +36,24 @@ export function useInvoices() {
     onError: (error: Error) => { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); },
   });
 
-  return { invoices: invoicesQuery.data || [], isLoading: invoicesQuery.isLoading, createInvoice };
+  const updateInvoice = useMutation({
+    mutationFn: async ({ id, ...formData }: any & { id: string }) => {
+      const { data, error } = await supabase.from('invoices').update(formData).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['invoices'] }); toast({ title: 'Faturamento atualizado' }); },
+    onError: (error: Error) => { toast({ title: 'Erro ao atualizar', description: error.message, variant: 'destructive' }); },
+  });
+
+  const deleteInvoice = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('invoices').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['invoices'] }); toast({ title: 'Faturamento excluído' }); },
+    onError: (error: Error) => { toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' }); },
+  });
+
+  return { invoices: invoicesQuery.data || [], isLoading: invoicesQuery.isLoading, createInvoice, updateInvoice, deleteInvoice };
 }
