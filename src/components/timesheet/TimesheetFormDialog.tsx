@@ -15,7 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useProcesses, Process } from '@/hooks/useProcesses';
+import { useProcessById, Process } from '@/hooks/useProcesses';
+import { ProcessCombobox } from '@/components/processes/ProcessCombobox';
 import { useActivityTypes } from '@/hooks/useActivityTypes';
 import { useTimesheet, TimesheetFormData, TimesheetEntry } from '@/hooks/useTimesheet';
 import { useCollectiveProcessParticipants } from '@/hooks/useCollectiveProcessParticipants';
@@ -42,7 +43,6 @@ interface TimesheetFormDialogProps {
 
 export function TimesheetFormDialog({ open, onOpenChange, entry }: TimesheetFormDialogProps) {
   const { toast } = useToast();
-  const { processes } = useProcesses();
   const { activityTypes } = useActivityTypes();
   const { checkDuplicate, checkBatchDuplicates, createEntry, createBatchEntries, updateEntry } = useTimesheet();
   
