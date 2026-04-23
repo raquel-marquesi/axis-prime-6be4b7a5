@@ -15,7 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useProcesses, Process } from '@/hooks/useProcesses';
+import { useProcessById, Process } from '@/hooks/useProcesses';
+import { ProcessCombobox } from '@/components/processes/ProcessCombobox';
 import { useActivityTypes } from '@/hooks/useActivityTypes';
 import { useTimesheet, TimesheetFormData, TimesheetEntry } from '@/hooks/useTimesheet';
 import { useCollectiveProcessParticipants } from '@/hooks/useCollectiveProcessParticipants';
@@ -42,7 +43,6 @@ interface TimesheetFormDialogProps {
 
 export function TimesheetFormDialog({ open, onOpenChange, entry }: TimesheetFormDialogProps) {
   const { toast } = useToast();
-  const { processes } = useProcesses();
   const { activityTypes } = useActivityTypes();
   const { checkDuplicate, checkBatchDuplicates, createEntry, createBatchEntries, updateEntry } = useTimesheet();
   
@@ -72,8 +72,15 @@ export function TimesheetFormDialog({ open, onOpenChange, entry }: TimesheetForm
     },
   });
 
+  const watchedProcessId = form.watch('process_id');
   const watchedActivityTypeId = form.watch('activity_type_id');
   const selectedActivityType = activityTypes.find(t => t.id === watchedActivityTypeId);
+
+  // Hydrate selectedProcess on edit (when entry.process_id is preset and user hasn't picked yet).
+  const { data: hydratedProcess } = useProcessById(!selectedProcess && watchedProcessId ? watchedProcessId : null);
+  useEffect(() => {
+    if (!selectedProcess && hydratedProcess) setSelectedProcess(hydratedProcess);
+  }, [hydratedProcess, selectedProcess]);
 
   useEffect(() => {
     const checkDuplicatesForParticipants = async () => {
@@ -91,9 +98,8 @@ export function TimesheetFormDialog({ open, onOpenChange, entry }: TimesheetForm
     checkDuplicatesForParticipants();
   }, [showCollectiveDialog, pendingFormData, participants, checkBatchDuplicates]);
 
-  const handleProcessChange = (processId: string) => {
-    const process = processes.find(p => p.id === processId);
-    setSelectedProcess(process || null);
+  const handleProcessChange = (processId: string, process: Process | null) => {
+    setSelectedProcess(process);
     setSelectedParticipants([]);
     setCollectiveChoice('single');
     setDuplicateReclamantes([]);
@@ -234,16 +240,13 @@ export function TimesheetFormDialog({ open, onOpenChange, entry }: TimesheetForm
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
               <FormField control={form.control} name="process_id" render={({ field }) => (
                 <FormItem><FormLabel>Processo *</FormLabel>
-                  <Select value={field.value} onValueChange={(value) => { field.onChange(value); handleProcessChange(value); }}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Selecione o processo" /></SelectTrigger></FormControl>
-                    <SelectContent>{processes.map((process) => (
-                      <SelectItem key={process.id} value={process.id}>
-                        <span className="tabular-nums tracking-wide text-xs mr-2">{process.numero_pasta}</span>
-                        {process.numero_processo} - {process.reclamante_nome}
-                        {process.tipo_acao === 'coletiva' && <span className="ml-2 text-xs text-primary">(Coletiva)</span>}
-                      </SelectItem>
-                    ))}</SelectContent>
-                  </Select><FormMessage />
+                  <FormControl>
+                    <ProcessCombobox
+                      value={field.value}
+                      onChange={(id, process) => { field.onChange(id); handleProcessChange(id, process); }}
+                      placeholder="Selecione o processo"
+                    />
+                  </FormControl><FormMessage />
                 </FormItem>
               )} />
 

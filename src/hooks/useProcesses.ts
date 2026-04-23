@@ -40,23 +40,21 @@ export function useProcesses(options?: { page?: number; pageSize?: number }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const page = options?.page ?? 0;
+  const pageSize = options?.pageSize ?? 50;
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['processes', options?.page, options?.pageSize],
+    queryKey: ['processes', page, pageSize],
     queryFn: async () => {
-      let query = supabase
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await supabase
         .from('processes')
         .select(`*, client:clients!id_cliente (id, nome, razao_social, tipo)`, { count: 'exact' })
-        .order('numero_pasta', { ascending: false });
+        .order('numero_pasta', { ascending: false })
+        .range(from, to);
 
-      if (options?.page !== undefined && options?.pageSize !== undefined) {
-        const from = options.page * options.pageSize;
-        const to = from + options.pageSize - 1;
-        query = query.range(from, to);
-      } else {
-        query = query.limit(2000);
-      }
-
-      const { data, error, count } = await query;
       if (error) throw error;
       return { processes: data as Process[], count: count || 0 };
     },
@@ -163,7 +161,7 @@ export function useProcesses(options?: { page?: number; pageSize?: number }) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['processes'] }); toast({ title: 'Processo atualizado' }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['processes'] }); queryClient.invalidateQueries({ queryKey: ['process'] }); toast({ title: 'Processo atualizado' }); },
     onError: (error: Error) => { toast({ title: 'Erro ao atualizar', description: error.message, variant: 'destructive' }); },
   });
 
@@ -172,7 +170,7 @@ export function useProcesses(options?: { page?: number; pageSize?: number }) {
       const { error } = await supabase.from('processes').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['processes'] }); toast({ title: 'Processo excluído' }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['processes'] }); queryClient.invalidateQueries({ queryKey: ['process'] }); toast({ title: 'Processo excluído' }); },
     onError: (error: Error) => { toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' }); },
   });
 
@@ -190,4 +188,40 @@ export function useProcesses(options?: { page?: number; pageSize?: number }) {
     isDeleting: deleteProcess.isPending,
     isImporting: createProcessesBatch.isPending,
   };
+}
+
+// Busca pontual de um processo por ID — para forms/widgets que precisam de um único registro.
+export function useProcessById(id?: string | null) {
+  return useQuery({
+    queryKey: ['process', id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('processes')
+        .select(`*, client:clients!id_cliente (id, nome, razao_social, tipo)`)
+        .eq('id', id!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as Process | null;
+    },
+  });
+}
+
+// Busca server-side por número/reclamante para combobox (limit 20).
+export function useProcessSearch(term: string) {
+  return useQuery({
+    queryKey: ['processes-search', term],
+    enabled: term.trim().length >= 2,
+    queryFn: async () => {
+      const t = term.trim().replace(/,/g, ' ');
+      const { data, error } = await supabase
+        .from('processes')
+        .select(`id, numero_processo, numero_pasta, reclamante_nome, area, tipo_acao, id_cliente, drive_folder_id`)
+        .or(`numero_processo.ilike.%${t}%,reclamante_nome.ilike.%${t}%`)
+        .order('numero_pasta', { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return (data ?? []) as Process[];
+    },
+  });
 }

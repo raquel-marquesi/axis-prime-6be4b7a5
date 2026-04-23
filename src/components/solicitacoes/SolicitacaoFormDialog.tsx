@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useClients } from '@/hooks/useClients';
-import { useProcesses } from '@/hooks/useProcesses';
+import { ProcessCombobox } from '@/components/processes/ProcessCombobox';
 import { useProfiles } from '@/hooks/useProfiles';
 import { Solicitacao, PRIORIDADE_LABELS, STATUS_LABELS } from '@/hooks/useSolicitacoes';
 
@@ -36,7 +36,6 @@ interface SolicitacaoFormDialogProps {
 
 export function SolicitacaoFormDialog({ open, onOpenChange, solicitacao, onSubmit, isLoading }: SolicitacaoFormDialogProps) {
   const { clients } = useClients();
-  const { processes } = useProcesses();
   const { profiles } = useProfiles();
 
   const form = useForm<FormData>({
@@ -71,7 +70,7 @@ export function SolicitacaoFormDialog({ open, onOpenChange, solicitacao, onSubmi
             </div>
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="client_id" render={({ field }) => (<FormItem><FormLabel>Cliente</FormLabel><Select onValueChange={(v) => field.onChange(v === 'none' ? null : v)} value={field.value || 'none'}><FormControl><SelectTrigger><SelectValue placeholder="Selecione um cliente" /></SelectTrigger></FormControl><SelectContent><SelectItem value="none">Nenhum</SelectItem>{clients.map((c) => (<SelectItem key={c.id} value={c.id}>{c.razao_social || c.nome}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name="process_id" render={({ field }) => (<FormItem><FormLabel>Processo</FormLabel><Select onValueChange={(v) => field.onChange(v === 'none' ? null : v)} value={field.value || 'none'}><FormControl><SelectTrigger><SelectValue placeholder="Selecione um processo" /></SelectTrigger></FormControl><SelectContent><SelectItem value="none">Nenhum</SelectItem>{processes.map((p) => (<SelectItem key={p.id} value={p.id}>{p.numero_pasta} - {p.reclamante_nome}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="process_id" render={({ field }) => (<FormItem><FormLabel>Processo</FormLabel><FormControl><ProcessCombobox value={field.value} onChange={(id) => field.onChange(id || null)} placeholder="Selecione um processo" emptyLabel="Nenhum" allowClear /></FormControl><FormMessage /></FormItem>)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="assigned_to" render={({ field }) => (<FormItem><FormLabel>Responsável</FormLabel><Select onValueChange={(v) => field.onChange(v === 'none' ? null : v)} value={field.value || 'none'}><FormControl><SelectTrigger><SelectValue placeholder="Selecione um responsável" /></SelectTrigger></FormControl><SelectContent><SelectItem value="none">Não atribuído</SelectItem>{profiles.map((p) => (<SelectItem key={p.user_id} value={p.user_id}>{p.full_name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />

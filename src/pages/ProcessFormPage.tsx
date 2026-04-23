@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { X, Plus, User, Users, Scale, Briefcase, Link2, History, FileText, ArrowLeft } from 'lucide-react';
-import { Process, ProcessFormData, useProcesses } from '@/hooks/useProcesses';
+import { ProcessFormData, useProcesses, useProcessById } from '@/hooks/useProcesses';
 import { useProcessWithFolder } from '@/hooks/useProcessWithFolder';
 import { RelatedProcessesTab } from '@/components/processes/RelatedProcessesTab';
 import { DeadlinesTab } from '@/components/processes/DeadlinesTab';
@@ -27,11 +27,11 @@ export default function ProcessFormPage() {
   const navigate = useNavigate();
   const isEditing = id && id !== 'novo';
   
-  const { processes, createProcess, createProcessesBatch, updateProcess } = useProcesses();
+  const { createProcess, createProcessesBatch, updateProcess } = useProcesses();
   const { createProcessWithFolder } = useProcessWithFolder();
   const { clients } = useClients();
-  
-  const process = useMemo(() => processes.find(p => p.id === id) || null, [processes, id]);
+
+  const { data: process } = useProcessById(isEditing ? id : null);
   
   const [reclamadas, setReclamadas] = useState<string[]>(['']);
   const [novaReclamada, setNovaReclamada] = useState('');
