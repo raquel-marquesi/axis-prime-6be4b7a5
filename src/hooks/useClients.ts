@@ -75,28 +75,21 @@ export function useClients() {
   const { data: clients = [], isLoading, error } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
-      const { data: clientsData, error: clientsError } = await supabase
+      const { data: clientsData, error } = await supabase
         .from('clients')
-        .select('*, economic_groups(nome), contract_keys(nome)')
+        .select(`
+          *,
+          economic_groups(nome),
+          contract_keys(nome),
+          client_branches(branch_id, branches(nome))
+        `)
         .order('created_at', { ascending: false });
-      if (clientsError) throw clientsError;
-
-      const { data: branchesData } = await supabase
-        .from('client_branches')
-        .select('client_id, branch_id, branches(nome)');
-
-      const branchesByClient: Record<string, { ids: string[]; nomes: string[] }> = {};
-      for (const cb of branchesData || []) {
-        if (!branchesByClient[cb.client_id]) branchesByClient[cb.client_id] = { ids: [], nomes: [] };
-        branchesByClient[cb.client_id].ids.push(cb.branch_id);
-        branchesByClient[cb.client_id].nomes.push((cb as any).branches?.nome || '');
-      }
-
+      if (error) throw error;
       return (clientsData || []).map((c: any) => ({
         ...c,
         tipo_cadastro: c.tipo_cadastro || 'cliente',
-        branch_ids: branchesByClient[c.id]?.ids || [],
-        branch_nomes: branchesByClient[c.id]?.nomes || [],
+        branch_ids: (c.client_branches || []).map((cb: any) => cb.branch_id),
+        branch_nomes: (c.client_branches || []).map((cb: any) => cb.branches?.nome || ''),
         economic_group_nome: c.economic_groups?.nome || null,
         contract_key_nome: c.contract_keys?.nome || null,
       })) as Client[];
