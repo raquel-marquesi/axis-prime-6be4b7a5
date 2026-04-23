@@ -91,9 +91,8 @@ export function TimesheetFormDialog({ open, onOpenChange, entry }: TimesheetForm
     checkDuplicatesForParticipants();
   }, [showCollectiveDialog, pendingFormData, participants, checkBatchDuplicates]);
 
-  const handleProcessChange = (processId: string) => {
-    const process = processes.find(p => p.id === processId);
-    setSelectedProcess(process || null);
+  const handleProcessChange = (processId: string, process: Process | null) => {
+    setSelectedProcess(process);
     setSelectedParticipants([]);
     setCollectiveChoice('single');
     setDuplicateReclamantes([]);
@@ -234,16 +233,13 @@ export function TimesheetFormDialog({ open, onOpenChange, entry }: TimesheetForm
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
               <FormField control={form.control} name="process_id" render={({ field }) => (
                 <FormItem><FormLabel>Processo *</FormLabel>
-                  <Select value={field.value} onValueChange={(value) => { field.onChange(value); handleProcessChange(value); }}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Selecione o processo" /></SelectTrigger></FormControl>
-                    <SelectContent>{processes.map((process) => (
-                      <SelectItem key={process.id} value={process.id}>
-                        <span className="tabular-nums tracking-wide text-xs mr-2">{process.numero_pasta}</span>
-                        {process.numero_processo} - {process.reclamante_nome}
-                        {process.tipo_acao === 'coletiva' && <span className="ml-2 text-xs text-primary">(Coletiva)</span>}
-                      </SelectItem>
-                    ))}</SelectContent>
-                  </Select><FormMessage />
+                  <FormControl>
+                    <ProcessCombobox
+                      value={field.value}
+                      onChange={(id, process) => { field.onChange(id); handleProcessChange(id, process); }}
+                      placeholder="Selecione o processo"
+                    />
+                  </FormControl><FormMessage />
                 </FormItem>
               )} />
 
