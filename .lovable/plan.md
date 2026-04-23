@@ -1,72 +1,102 @@
 
 
-## Adicionar mutations `updateInvoice` e `deleteInvoice` em `useInvoices.ts`
+## Restringir RLS de `invoices` e `expenses` por role
 
 ### Objetivo
-Estender o hook `useInvoices` com as operações de atualização e exclusão de faturas, seguindo exatamente o padrão já consolidado em `useClients.ts`.
+Substituir as políticas abertas (`USING (true)`) atualmente aplicadas em `public.invoices` e `public.expenses` por políticas restritivas que só permitem acesso (leitura e escrita) a usuários com um dos roles: `admin`, `socio`, `gerente`, `financeiro`, `assistente_financeiro`. Qualquer outro role autenticado perde leitura e escrita nessas tabelas.
 
-### Mudanças em `src/hooks/useInvoices.ts`
+### Nova migration
 
-**1. Adicionar `updateInvoice`** (logo após `createInvoice`):
-- Assinatura: `({ id, ...formData }: any & { id: string })`
-- Operação: `supabase.from('invoices').update(formData).eq('id', id).select().single()`
-- `onSuccess`: invalida `['invoices']` + toast `'Faturamento atualizado'`
-- `onError`: toast `'Erro ao atualizar'` com `variant: 'destructive'`
+**Arquivo**: `supabase/migrations/<timestamp>_restrict_invoices_expenses_rls.sql`
 
-**2. Adicionar `deleteInvoice`** (logo após `updateInvoice`):
-- Assinatura: `(id: string)`
-- Operação: `supabase.from('invoices').delete().eq('id', id)`
-- `onSuccess`: invalida `['invoices']` + toast `'Faturamento excluído'`
-- `onError`: toast `'Erro ao excluir'` com `variant: 'destructive'`
+Conteúdo:
 
-**3. Atualizar o `return`** do hook para expor ambas:
-```ts
-return { invoices, isLoading, createInvoice, updateInvoice, deleteInvoice };
-```
+```sql
+-- Garante RLS habilitado
+ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 
-### Snippet (referência)
+-- ===== INVOICES =====
+-- Remove TODAS as políticas pré-existentes (abertas e legadas)
+DROP POLICY IF EXISTS "Allow authenticated users full access to invoices" ON public.invoices;
+DROP POLICY IF EXISTS "Authenticated finance leaders coordinators can view invoices" ON public.invoices;
+DROP POLICY IF EXISTS "Finance and leaders can insert invoices" ON public.invoices;
+DROP POLICY IF EXISTS "Finance and leaders can update invoices" ON public.invoices;
+DROP POLICY IF EXISTS "Only admins can delete invoices" ON public.invoices;
+DROP POLICY IF EXISTS "Finance roles full access invoices" ON public.invoices;
 
-```ts
-const updateInvoice = useMutation({
-  mutationFn: async ({ id, ...formData }: any & { id: string }) => {
-    const { data, error } = await supabase
-      .from('invoices').update(formData).eq('id', id).select().single();
-    if (error) throw error;
-    return data;
-  },
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['invoices'] });
-    toast({ title: 'Faturamento atualizado' });
-  },
-  onError: (error: Error) => {
-    toast({ title: 'Erro ao atualizar', description: error.message, variant: 'destructive' });
-  },
-});
+CREATE POLICY "Finance roles full access invoices"
+  ON public.invoices
+  FOR ALL
+  TO authenticated
+  USING (
+    public.has_role(auth.uid(), 'admin')
+    OR public.has_role(auth.uid(), 'socio')
+    OR public.has_role(auth.uid(), 'gerente')
+    OR public.has_role(auth.uid(), 'financeiro')
+    OR public.has_role(auth.uid(), 'assistente_financeiro')
+  )
+  WITH CHECK (
+    public.has_role(auth.uid(), 'admin')
+    OR public.has_role(auth.uid(), 'socio')
+    OR public.has_role(auth.uid(), 'gerente')
+    OR public.has_role(auth.uid(), 'financeiro')
+    OR public.has_role(auth.uid(), 'assistente_financeiro')
+  );
 
-const deleteInvoice = useMutation({
-  mutationFn: async (id: string) => {
-    const { error } = await supabase.from('invoices').delete().eq('id', id);
-    if (error) throw error;
-  },
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['invoices'] });
-    toast({ title: 'Faturamento excluído' });
-  },
-  onError: (error: Error) => {
-    toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' });
-  },
-});
+-- ===== EXPENSES =====
+DROP POLICY IF EXISTS "Allow authenticated users full access to expenses" ON public.expenses;
+DROP POLICY IF EXISTS "Finance roles full access expenses" ON public.expenses;
+
+CREATE POLICY "Finance roles full access expenses"
+  ON public.expenses
+  FOR ALL
+  TO authenticated
+  USING (
+    public.has_role(auth.uid(), 'admin')
+    OR public.has_role(auth.uid(), 'socio')
+    OR public.has_role(auth.uid(), 'gerente')
+    OR public.has_role(auth.uid(), 'financeiro')
+    OR public.has_role(auth.uid(), 'assistente_financeiro')
+  )
+  WITH CHECK (
+    public.has_role(auth.uid(), 'admin')
+    OR public.has_role(auth.uid(), 'socio')
+    OR public.has_role(auth.uid(), 'gerente')
+    OR public.has_role(auth.uid(), 'financeiro')
+    OR public.has_role(auth.uid(), 'assistente_financeiro')
+  );
 ```
 
 ### Detalhes técnicos
-- `useToast` e `useQueryClient` já estão importados — sem novos imports.
-- RLS de `invoices` já permite update/delete para usuários autorizados; nenhuma migration necessária.
-- Nenhum componente consumidor é alterado neste passo — as mutations ficam disponíveis para uso futuro (ex.: `InvoiceFormDialog` em modo edição, botão de excluir em `InvoicesTable`).
+
+- **Função `public.has_role(uuid, app_role)`**: já existe no projeto, é `STABLE SECURITY DEFINER`, evita recursão de RLS (padrão consolidado em `mem://security/rls-recursion-prevention`).
+- **Idempotência**: cada `CREATE POLICY` é precedido por `DROP POLICY IF EXISTS` com o mesmo nome, além dos drops das políticas legadas conhecidas (mapeadas em migrations anteriores: `20260407185014_*.sql`, `20260413194800_rls_hardening.sql`, `20260414120000_ensure_all_rls_policies.sql`).
+- **Política única `FOR ALL`**: cobre `SELECT`, `INSERT`, `UPDATE`, `DELETE` em uma só declaração — atende ao pedido de uma policy `SELECT/ALL` por tabela. `USING` controla leitura/update/delete; `WITH CHECK` controla insert/update.
+- **Edge functions**: continuam funcionando porque usam `SUPABASE_SERVICE_ROLE_KEY`, que bypass de RLS.
+- **Regra de memória**: `mem://ops/edge-functions-and-migrations` exige migration versionada para qualquer mudança de policy — atendido.
+
+### Impacto no frontend
+
+Hooks afetados (`useInvoices`, `useExpenses`, `useFinanceReports`, `useTreasury`, `useDREReport`, `useBoletos`, etc.) executam queries via SDK com a sessão do usuário. Usuários **sem** um dos roles autorizados:
+
+- Não verão registros em `invoices` / `expenses` (queries retornam `[]` em vez de erro).
+- Mutations (`createInvoice`, `updateInvoice`, `deleteInvoice`, equivalentes em expenses) retornarão erro de RLS.
+
+Isso é o comportamento desejado — a página `/financeiro` já é navegável apenas por roles financeiros pelo menu lateral, então o impacto prático é limitado a esconder dados sensíveis caso um usuário comum acesse a rota diretamente.
+
+### Verificação pós-migration
+
+Após aplicar, rodar `supabase--linter` para confirmar ausência de warnings de RLS. As RPCs financeiras (`get_financial_dre_summary`, `get_cashflow_summary`, `get_cost_center_summary`, `get_treasury_summary`) são `SECURITY DEFINER` e continuarão acessíveis a qualquer usuário autenticado — se quiser também restringir essas RPCs por role, é uma mudança separada (fora do escopo deste pedido).
 
 ### Arquivos afetados
-- `src/hooks/useInvoices.ts` (única edição)
+
+- **Novo**: `supabase/migrations/<timestamp>_restrict_invoices_expenses_rls.sql`
+- Nenhum arquivo de frontend é alterado.
 
 ### Fora do escopo
-- Wireframe de UI de edição/exclusão em `InvoicesTable` ou `InvoiceFormDialog`.
-- Confirmação modal antes de deletar (pode ser adicionado depois no componente que consumir `deleteInvoice`).
+
+- Restringir as RPCs `SECURITY DEFINER` de finanças por role.
+- Esconder a entrada do menu `/financeiro` para roles não-financeiros (já tratado em `usePermissions`).
+- Mensagens de UI específicas para "acesso negado" nas tabelas financeiras.
 
