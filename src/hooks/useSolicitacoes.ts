@@ -230,5 +230,18 @@ export function useSolicitacoes(filters?: SolicitacoesFilters) {
     },
   });
 
-  return { solicitacoes, pendingCount, isLoading, error, createSolicitacao, updateSolicitacao, deleteSolicitacao, updateStatus };
+  return {
+    solicitacoes,
+    pendingCount,
+    isLoading,
+    error,
+    createSolicitacao,
+    updateSolicitacao,
+    deleteSolicitacao,
+    updateStatus,
+    isCreating: createSolicitacao.isPending,
+    isUpdating: updateSolicitacao.isPending,
+    isDeleting: deleteSolicitacao.isPending,
+    isUpdatingStatus: updateStatus.isPending,
+  };
 }

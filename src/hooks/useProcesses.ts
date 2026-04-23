@@ -176,5 +176,18 @@ export function useProcesses(options?: { page?: number; pageSize?: number }) {
     onError: (error: Error) => { toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' }); },
   });
 
-  return { processes, totalCount, isLoading, error, createProcess, createProcessesBatch, updateProcess, deleteProcess };
+  return {
+    processes,
+    totalCount,
+    isLoading,
+    error,
+    createProcess,
+    createProcessesBatch,
+    updateProcess,
+    deleteProcess,
+    isCreating: createProcess.isPending,
+    isUpdating: updateProcess.isPending,
+    isDeleting: deleteProcess.isPending,
+    isImporting: createProcessesBatch.isPending,
+  };
 }
