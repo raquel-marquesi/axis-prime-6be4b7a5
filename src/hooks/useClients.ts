@@ -140,7 +140,18 @@ export function useClients() {
     return !!data;
   };
 
-  return { clients, isLoading, error, createClient, updateClient, deleteClient, checkDuplicate };
+  return {
+    clients,
+    isLoading,
+    error,
+    createClient,
+    updateClient,
+    deleteClient,
+    checkDuplicate,
+    isCreating: createClient.isPending,
+    isUpdating: updateClient.isPending,
+    isDeleting: deleteClient.isPending,
+  };
 }
 
 export interface ClientContact {
@@ -212,5 +223,13 @@ export function useClientContacts(clientId?: string | null) {
     onError: (error: Error) => { toast({ title: 'Erro ao excluir contato', description: error.message, variant: 'destructive' }); },
   });
 
-  return { contacts, createContact, updateContact, deleteContact };
+  return {
+    contacts,
+    createContact,
+    updateContact,
+    deleteContact,
+    isCreating: createContact.isPending,
+    isUpdating: updateContact.isPending,
+    isDeleting: deleteContact.isPending,
+  };
 }
