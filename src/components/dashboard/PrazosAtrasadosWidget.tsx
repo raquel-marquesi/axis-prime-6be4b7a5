@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useOverdueDeadlines, type OverdueDeadline } from '@/hooks/useOverdueDeadlines';
-import { useProcesses, type Process } from '@/hooks/useProcesses';
+import { useProcessById } from '@/hooks/useProcesses';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ProcessDetailsDialog } from '@/components/processes/ProcessDetailsDialog';
@@ -23,8 +23,8 @@ export function PrazosAtrasadosWidget() {
   const navigate = useNavigate();
   const { isAdminOrManager, isCoordinatorOrAbove, isFinanceiro } = useAuth();
   const { data: deadlines, isLoading } = useOverdueDeadlines();
-  const { processes } = useProcesses();
-  const [selectedProcess, setSelectedProcess] = useState<Process | null>(null);
+  const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null);
+  const { data: selectedProcess } = useProcessById(selectedProcessId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [hideWithActivity, setHideWithActivity] = useState(true);
@@ -45,7 +45,7 @@ export function PrazosAtrasadosWidget() {
   const filteredGrouped = useMemo(() => hideWithActivity ? grouped.filter(g => !g.tem_atividade) : grouped, [grouped, hideWithActivity]);
   const hiddenCount = grouped.length - filteredGrouped.length;
 
-  const handleGroupClick = (group: GroupedDeadline) => { const process = processes.find(p => p.id === group.process_id) || null; if (process) { setSelectedProcess(process); setDialogOpen(true); } };
+  const handleGroupClick = (group: GroupedDeadline) => { setSelectedProcessId(group.process_id); setDialogOpen(true); };
   const toggleExpand = (processId: string, e: React.MouseEvent) => { e.stopPropagation(); setExpandedGroups(prev => { const next = new Set(prev); if (next.has(processId)) next.delete(processId); else next.add(processId); return next; }); };
 
   if (isLoading) return <Card className="border-destructive/50 bg-destructive/5"><CardHeader className="pb-3"><Skeleton className="h-6 w-48" /></CardHeader><CardContent><div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}</div></CardContent></Card>;
@@ -108,7 +108,7 @@ export function PrazosAtrasadosWidget() {
           <Button variant="outline" className="w-full mt-4 border-destructive/30 text-destructive hover:bg-destructive/10" onClick={() => navigate('/solicitacoes')}>Ver todos os prazos<ExternalLink className="ml-2 h-4 w-4" /></Button>
         </CardContent>
       </Card>
-      <ProcessDetailsDialog open={dialogOpen} onOpenChange={setDialogOpen} process={selectedProcess} onEdit={() => {}} defaultTab="deadlines" />
+      <ProcessDetailsDialog open={dialogOpen} onOpenChange={setDialogOpen} process={selectedProcess ?? null} onEdit={() => {}} defaultTab="deadlines" />
     </>
   );
 }
