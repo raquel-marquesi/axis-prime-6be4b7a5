@@ -1,130 +1,152 @@
 
 
-## Otimizar `get_produtividade_report` e adicionar índice em `user_roles`
+## Diagnóstico: por que sumiu o acesso de admin
 
-### Objetivo
+### Como o sistema define admin
 
-1. Adicionar índice composto `(user_id, role)` em `public.user_roles` para acelerar as funções `has_role`, `is_leader_or_above`, `is_financeiro`, etc., chamadas em quase toda RLS.
-2. Reescrever a função RPC `get_produtividade_report` substituindo o loop `FOR i IN REVERSE 5..0` (6 queries sequenciais) por **uma única agregação** com `GROUP BY date_trunc('month', e.data_atividade)`, gerando os 6 meses via `generate_series` para garantir meses zerados.
+1. **Atribuição da role**: linhas em `public.user_roles` com `role = 'admin'`. A tabela tem uma linha por `(user_id, role)`. Não existe coluna `is_admin` em `profiles` — o único caminho é `user_roles`.
+2. **Verificação no banco**: função `has_role(uid, 'admin')` (SQL `STABLE SECURITY DEFINER`), usada em RLS e em outras helpers (`is_admin_or_manager`, `is_coordinator_or_above`, `is_financeiro`, `is_leader_or_above`).
+3. **Verificação no frontend**: `AuthContext.fetchUserData` faz `supabase.from('user_roles').select('role').eq('user_id', userId)` e popula `realRoles`. Helpers `isAdmin()`, `hasRole('admin')`, etc. derivam disso.
 
-### Mudanças
+### O que quebrou
 
-**Migração única** via tool `supabase--migration` (nome sugerido: `optimize_produtividade_report_and_user_roles_index`):
+Olhei a migração mais recente — `supabase/migrations/20260424131919_remote_schema.sql` (2358 linhas, ~912 statements `REVOKE` e **zero** `GRANT`/`CREATE POLICY` compensatórios). Ela executa, entre outras coisas:
+
+- `revoke … on table "public"."user_roles" from "authenticated"` (references/trigger/truncate — ok, inofensivos) **mas também** drop de policies que davam visão a authenticated:
+  - `drop policy if exists "Authenticated users can view all roles" on "public"."user_roles"` (linha 35).
+  - `drop policy if exists "Admins can manage roles" on "public"."user_roles"` (linha 33).
+- `drop policy if exists "Authenticated users can view all active profiles" on "public"."profiles"` (linha 37).
+- `drop policy if exists "Users can insert own profile"` e `"Users can update own profile"` em `profiles` (linhas 25, 27).
+- Massivo `revoke … from service_role` em quase todas as tabelas (afeta Edge Functions que usam service role).
+- `drop view if exists "public"."profiles_safe"`.
+
+E **não há** `CREATE POLICY` recriando o equivalente. Resultado:
+
+1. **Frontend**: ao logar, `AuthContext.fetchUserData` faz `.select('role').eq('user_id', userId)` em `user_roles`. As policies remanescentes em `user_roles` são:
+   - `"Users can view own roles"` / `"Users can view their own roles"` — `USING (auth.uid() = user_id)` ✅
+   - `"Admins can view all roles"` — `USING (has_role(auth.uid(), 'admin'))` ✅
+
+   Em tese a Raquel deveria conseguir. Mas verifiquei diretamente no banco:
+   ```
+   SELECT * FROM user_roles WHERE user_id = 'a62e577b-9708-4a45-86a5-7e1212ecc9b5';
+   → 0 linhas
+   ```
+   **A Raquel não tem nenhuma role atribuída**. O admin documentado na memória (`mem://auth/admin-user`) sumiu de `user_roles`.
+
+   Os únicos admins restantes no banco são:
+   - `marcel@marquesi.com.br` (50dcc84c-…)
+   - `ti@marquesi.com.br` (e9d6e6e3-…)
+
+   Provavelmente uma migração anterior ou um `db pull` desalinhou o seed do admin.
+
+2. **Edge Functions**: os `revoke … from service_role` em massa quebraram funções que dependem do client com `SUPABASE_SERVICE_ROLE_KEY`. Erros típicos: "permission denied for table X". Os erros que você está vendo no build (`getClaims` ausente, etc.) são **ruído paralelo** de tipos, mas o `revoke` de service_role é um problema real de runtime.
+
+3. **Profiles**: o drop de `"Authenticated users can view all active profiles"` quebrou listagens de equipe / coordenador. Sobraram `"Users can view their own profile"`, `"Admins and managers can view all profiles"` (`is_admin_or_manager`), `"Coordinators can view team profiles"`. Quem não é admin/coord/manager passa a ver só o próprio. **Para a Raquel, como ela não está mais em `user_roles`, ela é tratada como usuário comum** → vê só o próprio profile, sem permissões.
+
+### Causa raiz
+
+A migração `20260424131919_remote_schema.sql` foi gerada por `supabase db pull` capturando um snapshot do remoto, mas **descartou** policies e `GRANT`s sem recriá-los, e eliminou a role admin da Raquel. É uma migração destrutiva inadvertida — regrediu o estado de RLS/grants para um schema mais restrito do que o app espera.
+
+### Plano de correção
+
+Tudo via uma **única migração nova** (não tocar a `20260424131919` para preservar o histórico), com as seguintes operações:
+
+#### 1. Restaurar admin da Raquel
 
 ```sql
--- 1. Índice composto para acelerar lookups de papel por usuário
-CREATE INDEX IF NOT EXISTS idx_user_roles_user_role
-  ON public.user_roles (user_id, role);
-
--- 2. Reescrever get_produtividade_report
-CREATE OR REPLACE FUNCTION public.get_produtividade_report(
-  p_month date,
-  p_area text DEFAULT NULL,
-  p_collaborator_id uuid DEFAULT NULL,
-  p_client_id uuid DEFAULT NULL,
-  p_coordinator_id uuid DEFAULT NULL,
-  p_user_id uuid DEFAULT NULL
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_month_start date := date_trunc('month', p_month)::date;
-  v_history_start date := (date_trunc('month', p_month) - interval '5 months')::date;
-  v_rows jsonb;
-  v_history jsonb;
-BEGIN
-  -- (a) Linhas do mês corrente: mesma lógica de hoje (resumida)
-  --     Mantém os filtros existentes: area, collaborator, client, coordinator, scope por p_user_id.
-  WITH base AS (
-    SELECT
-      p.user_id,
-      pr.full_name,
-      pr.area,
-      SUM(COALESCE(at.weight, 1) * e.quantidade) AS total_weighted,
-      COALESCE(ag.monthly_goal, 0) AS monthly_goal,
-      COALESCE(ag.extra_value_per_calculation, 0) AS extra_value
-    FROM timesheet_entries e
-    JOIN profiles p ON p.user_id = e.user_id
-    LEFT JOIN profiles pr ON pr.user_id = e.user_id
-    LEFT JOIN activity_types at ON at.id = e.activity_type_id
-    LEFT JOIN area_goals ag ON ag.area = pr.area
-    WHERE e.data_atividade >= v_month_start
-      AND e.data_atividade <  (v_month_start + interval '1 month')
-      AND (p_area IS NULL OR pr.area::text = p_area)
-      AND (p_collaborator_id IS NULL OR e.user_id = p_collaborator_id)
-      AND (p_client_id IS NULL OR e.client_id = p_client_id)
-      AND (p_coordinator_id IS NULL OR pr.reports_to = (
-        SELECT id FROM profiles WHERE user_id = p_coordinator_id
-      ))
-    GROUP BY p.user_id, pr.full_name, pr.area, ag.monthly_goal, ag.extra_value_per_calculation
-  )
-  SELECT COALESCE(jsonb_agg(jsonb_build_object(
-    'user_id', user_id,
-    'full_name', full_name,
-    'area', area,
-    'total_weighted', total_weighted,
-    'monthly_goal', monthly_goal,
-    'percentage', CASE WHEN monthly_goal > 0 THEN ROUND((total_weighted / monthly_goal) * 100, 2) ELSE 0 END,
-    'bonus_projected', GREATEST(total_weighted - monthly_goal, 0) * extra_value
-  )), '[]'::jsonb) INTO v_rows FROM base;
-
-  -- (b) Histórico de 6 meses em UMA query agregada
-  WITH months AS (
-    SELECT generate_series(v_history_start, v_month_start, interval '1 month')::date AS m
-  ),
-  agg AS (
-    SELECT
-      date_trunc('month', e.data_atividade)::date AS m,
-      SUM(COALESCE(at.weight, 1) * e.quantidade) AS total_weighted
-    FROM timesheet_entries e
-    LEFT JOIN profiles pr ON pr.user_id = e.user_id
-    LEFT JOIN activity_types at ON at.id = e.activity_type_id
-    WHERE e.data_atividade >= v_history_start
-      AND e.data_atividade <  (v_month_start + interval '1 month')
-      AND (p_area IS NULL OR pr.area::text = p_area)
-      AND (p_collaborator_id IS NULL OR e.user_id = p_collaborator_id)
-      AND (p_client_id IS NULL OR e.client_id = p_client_id)
-      AND (p_coordinator_id IS NULL OR pr.reports_to = (
-        SELECT id FROM profiles WHERE user_id = p_coordinator_id
-      ))
-    GROUP BY 1
-  )
-  SELECT COALESCE(jsonb_agg(jsonb_build_object(
-    'month', to_char(months.m, 'MM/YY'),
-    'total_weighted', COALESCE(agg.total_weighted, 0)
-  ) ORDER BY months.m), '[]'::jsonb)
-  INTO v_history
-  FROM months
-  LEFT JOIN agg ON agg.m = months.m;
-
-  RETURN jsonb_build_object('rows', v_rows, 'history', v_history);
-END;
-$$;
+INSERT INTO public.user_roles (user_id, role)
+VALUES ('a62e577b-9708-4a45-86a5-7e1212ecc9b5', 'admin')
+ON CONFLICT (user_id, role) DO NOTHING;
 ```
 
-### Detalhes técnicos
+#### 2. Restaurar GRANTs essenciais a `service_role` em todas as tabelas `public.*`
 
-- **Índice `(user_id, role)`**: as funções `has_role(uid, 'admin')` filtram por ambas as colunas; índice composto serve `WHERE user_id = ? AND role = ?` e também `WHERE user_id = ?`. `IF NOT EXISTS` evita falha se já criado antes.
-- **`generate_series` + `LEFT JOIN`**: garante 6 buckets mensais mesmo quando algum mês não tem lançamento (mantém comportamento do loop original que fazia 1 query por mês e exibia 0 quando vazio).
-- **Filtros consistentes**: o histórico aplica os **mesmos filtros** do mês corrente (`p_area`, `p_collaborator_id`, `p_client_id`, `p_coordinator_id`) — comportamento que o consumer (`useProdutividadeReport`) já espera.
-- **`p_user_id`**: parâmetro mantido na assinatura para compat com o frontend, mas só é usado se a versão atual da função aplicar filtro por escopo (verificarei o corpo atual antes de remover/manter — preservando o comportamento). Na implementação, se a função atual filtra por escopo do usuário (ex.: usuário comum vê só a si mesmo), essa cláusula será mantida igual.
-- **`SECURITY DEFINER` + `SET search_path = public`**: preservado conforme padrão do projeto (ver `mem://security/rls-recursion-prevention`).
-- **Performance esperada**: histórico cai de 6 round-trips para 1; combinado com mês corrente, função passa de ~7 queries para 2.
-- **Backward compat**: shape do retorno (`{ rows, history }`) **inalterado**. `history[i]` continua tendo `{ month: 'MM/YY', total_weighted: number }`. Frontend (`useReportData.ts → useProdutividadeReport`) não muda.
-- **Antes de escrever a migração**, leio a definição atual de `get_produtividade_report` no banco (via `supabase--read_query` em `pg_proc`) para garantir que filtros e escopo de `p_user_id` sejam preservados fielmente — qualquer divergência será incluída na migração final.
+Edge Functions que usam `SUPABASE_SERVICE_ROLE_KEY` precisam de acesso amplo:
+
+```sql
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT ALL ON TABLES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT ALL ON SEQUENCES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT EXECUTE ON FUNCTIONS TO service_role;
+```
+
+E garantir que `authenticated` mantém o que precisa (não dropar, só re-conceder por segurança):
+
+```sql
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated;
+```
+
+(RLS continua sendo o controle real — `GRANT` é apenas a camada de privilégio de tabela; sem ele as policies nem chegam a ser avaliadas.)
+
+#### 3. Recriar as policies derrubadas
+
+Em `profiles`:
+```sql
+CREATE POLICY "Authenticated users can view all active profiles"
+ON public.profiles FOR SELECT TO authenticated
+USING (is_active = true OR reports_to IS NOT NULL OR auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own profile"
+ON public.profiles FOR INSERT TO authenticated
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own profile"
+ON public.profiles FOR UPDATE TO authenticated
+USING (auth.uid() = user_id);
+```
+
+Em `user_roles` (já tem `"Admins can view all roles"`, mas a anterior `"Authenticated users can view all roles"` era usada por hooks como `useUsers` para montar o mapa user→roles — recriar):
+```sql
+CREATE POLICY "Authenticated users can view all roles"
+ON public.user_roles FOR SELECT TO authenticated
+USING (true);
+```
+
+(Alternativa segura: manter restrito a admins — mas isso quebra `useUsers.ts` que faz `select('*').from('user_roles')` para listar todos. A versão anterior era `USING (true)`. Manter compatível.)
+
+#### 4. Validação pós-migração
+
+Após aplicar, rodar via tool de leitura:
+```sql
+-- Confirmar Raquel admin
+SELECT * FROM public.user_roles WHERE user_id = 'a62e577b-9708-4a45-86a5-7e1212ecc9b5';
+
+-- Confirmar grants restaurados
+SELECT grantee, table_name, privilege_type FROM information_schema.role_table_grants
+WHERE table_schema='public' AND table_name IN ('user_roles','profiles')
+  AND grantee IN ('authenticated','service_role')
+ORDER BY table_name, grantee, privilege_type;
+
+-- Confirmar policies recriadas
+SELECT polname FROM pg_policy p JOIN pg_class c ON c.oid=p.polrelid
+WHERE c.relname IN ('profiles','user_roles')
+ORDER BY c.relname, polname;
+```
+
+#### 5. Memória
+
+Atualizar `mem://auth/admin-user` se a Raquel tiver mudado de status, ou manter — fica como referência de quem deve sempre ter `admin`.
 
 ### Arquivos afetados
 
-- Nova migração em `supabase/migrations/<timestamp>_optimize_produtividade_report_and_user_roles_index.sql`.
-- **Nenhum arquivo TS/TSX alterado** — `useReportData.ts` continua chamando `supabase.rpc('get_produtividade_report', {...})` com mesmos parâmetros.
+- **Nova migração** em `supabase/migrations/<timestamp>_restore_admin_access_and_grants.sql` (única alteração).
+- Nenhum código TS/TSX precisa mudar — `AuthContext`, `usePermissions`, `ProtectedRoute` estão corretos; o problema é puramente de dados/permissões no banco.
 
 ### Fora do escopo
 
-- Otimizar `get_prazos_summary` / `get_prazos_rows` (mesmo padrão poderia se aplicar, mas não foi pedido).
-- Criar índices adicionais em `timesheet_entries(data_atividade)` ou `(user_id, data_atividade)` — pode ser próxima iteração se profiling mostrar necessidade.
-- Materialized view para histórico — overkill nesta fase.
+- Reescrever a migração `20260424131919_remote_schema.sql` (preservar histórico do CI).
+- Erros de TypeScript em Edge Functions (`getClaims`, `Uint8Array`, etc.) — são problemas separados que aparecem no build mas não causam o "perdi acesso de admin". Tratar em iteração própria.
+- Auditoria completa de outras policies dropadas (custom_roles, expenses, invoices, solicitacoes, etc.) — listar quais precisam ser recriadas exigiria revisão coluna a coluna; nesta iteração foco no que destrava o acesso de admin (profiles + user_roles + grants).
+
+### Risco
+
+Baixo. A migração é aditiva: insere admin, recria policies que já existiam antes do snapshot, restaura grants padrão. Não altera schema nem dados de negócio.
 
