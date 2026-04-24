@@ -9,8 +9,9 @@ const corsHeaders = {
 const SPREADSHEET_ID = "14HZnCn1bWUSkIOOQPtnxwv79V08s2veNNAUrn0uMQOo";
 
 // ─── Google Auth ───────────────────────────────────────────────────
-function base64url(buf: ArrayBuffer): string {
-  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+function base64url(buf: ArrayBuffer | Uint8Array): string {
+  const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+  return btoa(String.fromCharCode(...bytes))
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
@@ -105,7 +106,10 @@ Deno.serve(async (req) => {
     if (errDb) throw new Error("Erro ao buscar prazos no BD: " + errDb.message);
 
     const cnjsAtrasados = new Set(
-      (prazosAtrasados || []).map(p => normalizeCNJ(p.processes?.numero_processo || ""))
+      (prazosAtrasados || []).map((p: any) => {
+        const proc = Array.isArray(p.processes) ? p.processes[0] : p.processes;
+        return normalizeCNJ(proc?.numero_processo || "");
+      })
     );
     
     // 2. Conectar na Planilha

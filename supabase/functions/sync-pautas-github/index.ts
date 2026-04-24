@@ -78,8 +78,9 @@ const corsHeaders = {
 
 // ─── Google Auth ─────────────────────────────────────────────────────
 
-function base64url(buf: ArrayBuffer): string {
-  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+function base64url(buf: ArrayBuffer | Uint8Array): string {
+  const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+  return btoa(String.fromCharCode(...bytes))
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
@@ -644,7 +645,7 @@ Deno.serve(async (req) => {
           const prioridade = sol?.prioridade ?? "media";
 
           const issueTitle = [
-            parsed.tipoPauta || parsed.titulo,
+            parsed.titulo,
             parsed.processoNumero ? `Proc. ${parsed.processoNumero}` : null,
             parsed.processoParte || parsed.processoParteContraria || null,
           ].filter(Boolean).join(" | ").substring(0, 200);

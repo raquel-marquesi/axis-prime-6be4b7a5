@@ -11,8 +11,9 @@ const SPREADSHEET_AGENDAMENTOS = "1WhIQS2W2Gkx1_Dh_untrLKuACTOmpqURnjx_aH3ik4I";
 
 // ─── Google Auth ───────────────────────────────────────────────────
 
-function base64url(buf: ArrayBuffer): string {
-  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+function base64url(buf: ArrayBuffer | Uint8Array): string {
+  const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+  return btoa(String.fromCharCode(...bytes))
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
@@ -272,7 +273,7 @@ function getVal(row: string[], headerMap: Record<string, number>, ...keys: strin
 
 async function processAtividadesSheet(
   accessToken: string, supabase: any, ref: RefData
-): Promise<{ found: number; processed: number; failed: number; errors: string[] }> {
+): Promise<{ found: number; processed: number; failed: number; deadlines_completed?: number; errors: string[] }> {
   console.log("[ATIVIDADES] Reading spreadsheet...");
   const rows = await readSheet(accessToken, SPREADSHEET_ATIVIDADES, "A:Z");
   console.log(`[ATIVIDADES] Got ${rows.length} total rows`);
@@ -374,7 +375,6 @@ async function processAtividadesSheet(
         }
       }
 
-      const processId = processIdRaw;
       const clientId = processId ? ref.processClientMap.get(numProcesso) : null;
 
       const { data: tsData, error: tsErr } = await supabase.from("timesheet_entries").insert({
