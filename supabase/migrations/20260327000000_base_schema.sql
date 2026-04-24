@@ -19,168 +19,196 @@ CREATE SCHEMA IF NOT EXISTS "public";
 ALTER SCHEMA "public" OWNER TO "postgres";
 
 
-CREATE TYPE "public"."agent_execution_status" AS ENUM (
-    'running',
-    'completed',
-    'failed'
-);
-
+DO $$ BEGIN
+    CREATE TYPE "public"."agent_execution_status" AS ENUM (
+        'running',
+        'completed',
+        'failed'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 ALTER TYPE "public"."agent_execution_status" OWNER TO "postgres";
 
 
-CREATE TYPE "public"."app_role" AS ENUM (
-    'admin',
-    'gerente',
-    'lider',
-    'calculista',
-    'financeiro',
-    'socio',
-    'coordenador',
-    'usuario',
-    'advogado',
-    'assistente',
-    'consultor',
-    'assistente_financeiro',
-    'convidado'
-);
-
+DO $$ BEGIN
+    CREATE TYPE "public"."app_role" AS ENUM (
+        'admin',
+        'gerente',
+        'lider',
+        'calculista',
+        'financeiro',
+        'socio',
+        'coordenador',
+        'usuario',
+        'advogado',
+        'assistente',
+        'consultor',
+        'assistente_financeiro',
+        'convidado'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 ALTER TYPE "public"."app_role" OWNER TO "postgres";
 
 
-CREATE TYPE "public"."area_processo" AS ENUM (
-    'trabalhista',
-    'civel'
-);
-
+DO $$ BEGIN
+    CREATE TYPE "public"."area_processo" AS ENUM (
+        'trabalhista',
+        'civel'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 ALTER TYPE "public"."area_processo" OWNER TO "postgres";
 
 
-CREATE TYPE "public"."area_setor" AS ENUM (
-    'execucao',
-    'contingencia',
-    'decisao',
-    'acoes_coletivas',
-    'administrativo',
-    'rh',
-    'financeiro_area',
-    'geral',
-    'agendamento',
-    'civel',
-    'digitacao',
-    'laudos'
-);
-
+DO $$ BEGIN
+    CREATE TYPE "public"."area_setor" AS ENUM (
+        'execucao',
+        'contingencia',
+        'decisao',
+        'acoes_coletivas',
+        'administrativo',
+        'rh',
+        'financeiro_area',
+        'geral',
+        'agendamento',
+        'civel',
+        'digitacao',
+        'laudos'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 ALTER TYPE "public"."area_setor" OWNER TO "postgres";
 
 
-CREATE TYPE "public"."bonus_status" AS ENUM (
-    'pending',
-    'approved',
-    'paid',
-    'cancelled'
-);
-
+DO $$ BEGIN
+    CREATE TYPE "public"."bonus_status" AS ENUM (
+        'pending',
+        'approved',
+        'paid',
+        'cancelled'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 ALTER TYPE "public"."bonus_status" OWNER TO "postgres";
 
 
-CREATE TYPE "public"."event_type" AS ENUM (
-    'prazo',
-    'reuniao',
-    'audiencia',
-    'lembrete',
-    'outro'
-);
-
+DO $$ BEGIN
+    CREATE TYPE "public"."event_type" AS ENUM (
+        'prazo',
+        'reuniao',
+        'audiencia',
+        'lembrete',
+        'outro'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 ALTER TYPE "public"."event_type" OWNER TO "postgres";
 
 
-CREATE TYPE "public"."extraction_status" AS ENUM (
-    'pending',
-    'processing',
-    'completed',
-    'failed'
-);
-
+DO $$ BEGIN
+    CREATE TYPE "public"."extraction_status" AS ENUM (
+        'pending',
+        'processing',
+        'completed',
+        'failed'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 ALTER TYPE "public"."extraction_status" OWNER TO "postgres";
 
 
-CREATE TYPE "public"."origem_solicitacao" AS ENUM (
-    'email',
-    'api',
-    'manual',
-    'email_sheet',
-    'planilha_5_clientes',
-    'planilha_pautas'
-);
-
+DO $$ BEGIN
+    CREATE TYPE "public"."origem_solicitacao" AS ENUM (
+        'email',
+        'api',
+        'manual',
+        'email_sheet',
+        'planilha_5_clientes',
+        'planilha_pautas'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 ALTER TYPE "public"."origem_solicitacao" OWNER TO "postgres";
 
 
-CREATE TYPE "public"."pessoa_tipo" AS ENUM (
-    'fisica',
-    'juridica'
-);
-
+DO $$ BEGIN
+    CREATE TYPE "public"."pessoa_tipo" AS ENUM (
+        'fisica',
+        'juridica'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 ALTER TYPE "public"."pessoa_tipo" OWNER TO "postgres";
 
 
-CREATE TYPE "public"."prioridade_solicitacao" AS ENUM (
-    'baixa',
-    'media',
-    'alta',
-    'urgente'
-);
-
+DO $$ BEGIN
+    CREATE TYPE "public"."prioridade_solicitacao" AS ENUM (
+        'baixa',
+        'media',
+        'alta',
+        'urgente'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 ALTER TYPE "public"."prioridade_solicitacao" OWNER TO "postgres";
 
 
-CREATE TYPE "public"."processed_file_status" AS ENUM (
-    'pending',
-    'processing',
-    'completed',
-    'failed',
-    'skipped'
-);
-
+DO $$ BEGIN
+    CREATE TYPE "public"."processed_file_status" AS ENUM (
+        'pending',
+        'processing',
+        'completed',
+        'failed',
+        'skipped'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 ALTER TYPE "public"."processed_file_status" OWNER TO "postgres";
 
 
-CREATE TYPE "public"."status_solicitacao" AS ENUM (
-    'pendente',
-    'em_andamento',
-    'concluida',
-    'cancelada'
-);
-
+DO $$ BEGIN
+    CREATE TYPE "public"."status_solicitacao" AS ENUM (
+        'pendente',
+        'em_andamento',
+        'concluida',
+        'cancelada'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 ALTER TYPE "public"."status_solicitacao" OWNER TO "postgres";
 
 
-CREATE TYPE "public"."tipo_acao" AS ENUM (
-    'individual',
-    'coletiva'
-);
-
+DO $$ BEGIN
+    CREATE TYPE "public"."tipo_acao" AS ENUM (
+        'individual',
+        'coletiva'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 ALTER TYPE "public"."tipo_acao" OWNER TO "postgres";
 
 
-CREATE TYPE "public"."tipo_cadastro" AS ENUM (
-    'cliente',
-    'fornecedor'
-);
-
+DO $$ BEGIN
+    CREATE TYPE "public"."tipo_cadastro" AS ENUM (
+        'cliente',
+        'fornecedor'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 ALTER TYPE "public"."tipo_cadastro" OWNER TO "postgres";
 
