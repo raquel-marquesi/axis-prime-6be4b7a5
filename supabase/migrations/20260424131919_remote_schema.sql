@@ -1,40 +1,40 @@
 create extension if not exists "unaccent" with schema "public";
 
-drop policy "Admins can manage clients" on "public"."clients";
+drop policy if exists "Admins can manage clients" on "public"."clients";
 
-drop policy "Authenticated users can view active clients" on "public"."clients";
+drop policy if exists "Authenticated users can view active clients" on "public"."clients";
 
-drop policy "Authenticated can read custom_roles" on "public"."custom_roles";
+drop policy if exists "Authenticated can read custom_roles" on "public"."custom_roles";
 
-drop policy "Allow authenticated users full access to expenses" on "public"."expenses";
+drop policy if exists "Allow authenticated users full access to expenses" on "public"."expenses";
 
-drop policy "Allow authenticated users full access to invoices" on "public"."invoices";
+drop policy if exists "Allow authenticated users full access to invoices" on "public"."invoices";
 
-drop policy "Authenticated finance leaders coordinators can view invoices" on "public"."invoices";
+drop policy if exists "Authenticated finance leaders coordinators can view invoices" on "public"."invoices";
 
-drop policy "Finance and leaders can insert invoices" on "public"."invoices";
+drop policy if exists "Finance and leaders can insert invoices" on "public"."invoices";
 
-drop policy "Finance and leaders can update invoices" on "public"."invoices";
+drop policy if exists "Finance and leaders can update invoices" on "public"."invoices";
 
-drop policy "Only admins can delete invoices" on "public"."invoices";
+drop policy if exists "Only admins can delete invoices" on "public"."invoices";
 
-drop policy "Authenticated can read permissions" on "public"."permissions";
+drop policy if exists "Authenticated can read permissions" on "public"."permissions";
 
-drop policy "Authenticated users can manage deadlines" on "public"."process_deadlines";
+drop policy if exists "Authenticated users can manage deadlines" on "public"."process_deadlines";
 
-drop policy "Users can insert own profile" on "public"."profiles";
+drop policy if exists "Users can insert own profile" on "public"."profiles";
 
-drop policy "Users can update own profile" on "public"."profiles";
+drop policy if exists "Users can update own profile" on "public"."profiles";
 
-drop policy "Authenticated can read role_permissions" on "public"."role_permissions";
+drop policy if exists "Authenticated can read role_permissions" on "public"."role_permissions";
 
-drop policy "Authenticated users can view solicitacoes" on "public"."solicitacoes";
+drop policy if exists "Authenticated users can view solicitacoes" on "public"."solicitacoes";
 
-drop policy "Admins can manage roles" on "public"."user_roles";
+drop policy if exists "Admins can manage roles" on "public"."user_roles";
 
-drop policy "Authenticated users can view all roles" on "public"."user_roles";
+drop policy if exists "Authenticated users can view all roles" on "public"."user_roles";
 
-drop policy "Authenticated users can view all active profiles" on "public"."profiles";
+drop policy if exists "Authenticated users can view all active profiles" on "public"."profiles";
 
 revoke delete on table "public"."access_logs" from "anon";
 
