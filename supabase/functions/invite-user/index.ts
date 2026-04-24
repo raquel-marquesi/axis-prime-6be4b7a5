@@ -40,15 +40,15 @@ Deno.serve(async (req) => {
 
     // Get the current user via getClaims (supports ES256 signing-keys)
     const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      console.error('Error getting claims:', claimsError);
+    const { data: userData, error: claimsError } = await userClient.auth.getUser(token);
+    if (claimsError || !userData?.user) {
+      console.error('Error getting user:', claimsError);
       return new Response(
         JSON.stringify({ error: 'Usuário não autenticado' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    const currentUser = { id: claimsData.claims.sub };
+    const currentUser = { id: userData.user.id };
 
     // Check if user is admin using the has_role function
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
       await adminClient.from('timesheet_entries').update({ user_id: newUserId }).eq('user_id', oldUserId);
       await adminClient.from('calendar_events').update({ user_id: newUserId }).eq('user_id', oldUserId);
       await adminClient.from('bonus_calculations').update({ user_id: newUserId }).eq('user_id', oldUserId);
-      await adminClient.rpc('execute_sql', { sql: '' }).catch(() => {}); // no-op, just in case
+      // no-op placeholder removed (was a leftover safety net)
 
       // Update process_deadlines assigned_to and completed_by
       await adminClient.from('process_deadlines').update({ assigned_to: newUserId }).eq('assigned_to', oldUserId);
