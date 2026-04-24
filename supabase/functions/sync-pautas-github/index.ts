@@ -645,7 +645,7 @@ Deno.serve(async (req) => {
           const prioridade = sol?.prioridade ?? "media";
 
           const issueTitle = [
-            parsed.tipoPauta || parsed.titulo,
+            parsed.titulo,
             parsed.processoNumero ? `Proc. ${parsed.processoNumero}` : null,
             parsed.processoParte || parsed.processoParteContraria || null,
           ].filter(Boolean).join(" | ").substring(0, 200);
