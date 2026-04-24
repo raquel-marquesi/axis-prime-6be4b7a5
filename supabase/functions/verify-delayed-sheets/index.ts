@@ -106,7 +106,10 @@ Deno.serve(async (req) => {
     if (errDb) throw new Error("Erro ao buscar prazos no BD: " + errDb.message);
 
     const cnjsAtrasados = new Set(
-      (prazosAtrasados || []).map(p => normalizeCNJ(p.processes?.numero_processo || ""))
+      (prazosAtrasados || []).map((p: any) => {
+        const proc = Array.isArray(p.processes) ? p.processes[0] : p.processes;
+        return normalizeCNJ(proc?.numero_processo || "");
+      })
     );
     
     // 2. Conectar na Planilha
