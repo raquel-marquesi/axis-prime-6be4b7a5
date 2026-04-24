@@ -7,18 +7,8 @@
 --     SET app.settings.service_role_key = '<sua service_role key>';
 -- ============================================================
 
--- Remove jobs existentes (idempotente)
-DO $$
-BEGIN
-  PERFORM cron.unschedule(jobname)
-  FROM cron.job
-  WHERE jobname IN (
-    'sync-email-agendamentos',
-    'sync-solicitacoes-sheet',
-    'sync-pautas-github',
-    'sync-sheets-atividades'
-  );
-END $$;
+-- Ensure private schema exists
+CREATE SCHEMA IF NOT EXISTS private;
 
 -- Helper: chama uma edge function via pg_net
 CREATE OR REPLACE FUNCTION private.invoke_edge_function(
@@ -56,30 +46,46 @@ BEGIN
 END;
 $$;
 
--- 1. Agendamentos via e-mail (planilha IA) — a cada 4 horas
-SELECT cron.schedule(
-  'sync-email-agendamentos',
-  '0 */4 * * *',
-  $$ SELECT private.invoke_edge_function('sync-email-agendamentos'); $$
-);
+-- Remove jobs existentes e agenda novos (tolerante a ausência do pg_cron)
+DO $$
+BEGIN
+  -- Remove jobs existentes (idempotente)
+  PERFORM cron.unschedule(jobname)
+  FROM cron.job
+  WHERE jobname IN (
+    'sync-email-agendamentos',
+    'sync-solicitacoes-sheet',
+    'sync-pautas-github',
+    'sync-sheets-atividades'
+  );
 
--- 2. Solicitações planilha 5 clientes — a cada 4 horas (30 min de offset)
-SELECT cron.schedule(
-  'sync-solicitacoes-sheet',
-  '30 */4 * * *',
-  $$ SELECT private.invoke_edge_function('sync-solicitacoes-sheet'); $$
-);
+  -- 1. Agendamentos via e-mail (planilha IA) — a cada 4 horas
+  PERFORM cron.schedule(
+    'sync-email-agendamentos',
+    '0 */4 * * *',
+    $inner$ SELECT private.invoke_edge_function('sync-email-agendamentos'); $inner$
+  );
 
--- 3. Pautas (ACHÉ / ASSAÍ / CARREFOUR / RAIA) — a cada 6 horas
-SELECT cron.schedule(
-  'sync-pautas-github',
-  '0 */6 * * *',
-  $$ SELECT private.invoke_edge_function('sync-pautas-github'); $$
-);
+  -- 2. Solicitações planilha 5 clientes — a cada 4 horas (30 min de offset)
+  PERFORM cron.schedule(
+    'sync-solicitacoes-sheet',
+    '30 */4 * * *',
+    $inner$ SELECT private.invoke_edge_function('sync-solicitacoes-sheet'); $inner$
+  );
 
--- 4. Atividades (timesheet) — a cada 2 horas, dias úteis, 8h–20h
-SELECT cron.schedule(
-  'sync-sheets-atividades',
-  '0 8-20/2 * * 1-5',
-  $$ SELECT private.invoke_edge_function('sync-sheets', '{"step":"atividades"}'::jsonb); $$
-);
+  -- 3. Pautas (ACHÉ / ASSAÍ / CARREFOUR / RAIA) — a cada 6 horas
+  PERFORM cron.schedule(
+    'sync-pautas-github',
+    '0 */6 * * *',
+    $inner$ SELECT private.invoke_edge_function('sync-pautas-github'); $inner$
+  );
+
+  -- 4. Atividades (timesheet) — a cada 2 horas, dias úteis, 8h–20h
+  PERFORM cron.schedule(
+    'sync-sheets-atividades',
+    '0 8-20/2 * * 1-5',
+    $inner$ SELECT private.invoke_edge_function('sync-sheets', '{"step":"atividades"}'::jsonb); $inner$
+  );
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'pg_cron não disponível no shadow DB — jobs ignorados: %', SQLERRM;
+END $$;

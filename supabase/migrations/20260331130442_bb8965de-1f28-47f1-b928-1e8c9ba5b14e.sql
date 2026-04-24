@@ -122,21 +122,25 @@ CREATE POLICY "Only admins can delete related processes" ON public.related_proce
 -- Fix 2: Enable RLS and add policies for historico_axis
 ALTER TABLE public.historico_axis ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Authenticated users can view historico_axis" ON public.historico_axis;
 CREATE POLICY "Authenticated users can view historico_axis"
 ON public.historico_axis FOR SELECT
 TO authenticated
 USING (true);
 
+DROP POLICY IF EXISTS "Leaders can insert historico_axis" ON public.historico_axis;
 CREATE POLICY "Leaders can insert historico_axis"
 ON public.historico_axis FOR INSERT
 TO authenticated
 WITH CHECK (is_leader_or_above(auth.uid()));
 
+DROP POLICY IF EXISTS "Leaders can update historico_axis" ON public.historico_axis;
 CREATE POLICY "Leaders can update historico_axis"
 ON public.historico_axis FOR UPDATE
 TO authenticated
 USING (is_leader_or_above(auth.uid()));
 
+DROP POLICY IF EXISTS "Only admins can delete historico_axis" ON public.historico_axis;
 CREATE POLICY "Only admins can delete historico_axis"
 ON public.historico_axis FOR DELETE
 TO authenticated

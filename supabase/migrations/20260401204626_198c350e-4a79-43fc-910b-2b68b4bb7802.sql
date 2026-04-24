@@ -12,6 +12,7 @@ DROP POLICY IF EXISTS "Authenticated users can view all profiles" ON public.prof
 -- policies already exist and cover the needed access.
 
 -- Also allow coordinators to view their team members' profiles
+DROP POLICY IF EXISTS "Coordinators can view team profiles" ON public.profiles;
 CREATE POLICY "Coordinators can view team profiles" ON public.profiles
   FOR SELECT TO authenticated
   USING (
@@ -29,6 +30,7 @@ GRANT SELECT ON public.profiles_safe TO authenticated;
 -- 2. FIX: sync_logs policy - restrict to authenticated admins/leaders
 -- ============================================================
 DROP POLICY IF EXISTS "Authenticated users can view sync_logs" ON public.sync_logs;
+DROP POLICY IF EXISTS "Admins and leaders can view sync_logs" ON public.sync_logs;
 
 CREATE POLICY "Admins and leaders can view sync_logs" ON public.sync_logs
   FOR SELECT TO authenticated
@@ -39,34 +41,44 @@ CREATE POLICY "Admins and leaders can view sync_logs" ON public.sync_logs
 -- Set search_path on all functions missing it
 -- ============================================================
 
--- Trigger functions (non-security-definer)
-ALTER FUNCTION public.update_updated_at_column() SET search_path = 'public';
-ALTER FUNCTION public.uppercase_accounts() SET search_path = 'public';
-ALTER FUNCTION public.uppercase_billing_contacts() SET search_path = 'public';
-ALTER FUNCTION public.uppercase_client_contacts() SET search_path = 'public';
-ALTER FUNCTION public.uppercase_clients() SET search_path = 'public';
-ALTER FUNCTION public.uppercase_company_entities() SET search_path = 'public';
-ALTER FUNCTION public.uppercase_contract_keys() SET search_path = 'public';
-ALTER FUNCTION public.uppercase_economic_groups() SET search_path = 'public';
-ALTER FUNCTION public.uppercase_processes() SET search_path = 'public';
-ALTER FUNCTION public.uppercase_profiles() SET search_path = 'public';
-
--- Security definer functions
-ALTER FUNCTION public.calculate_monthly_bonus(date) SET search_path = 'public';
-ALTER FUNCTION public.create_timesheet_unique_index() SET search_path = 'public';
-ALTER FUNCTION public.delete_timesheet_duplicates_batch(integer) SET search_path = 'public';
-ALTER FUNCTION public.delete_timesheet_duplicates_v2(integer) SET search_path = 'public';
-ALTER FUNCTION public.get_coordinator_for_client(uuid) SET search_path = 'public';
-ALTER FUNCTION public.get_goal_progress_data(date, date, uuid[]) SET search_path = 'public';
-ALTER FUNCTION public.get_producao_aggregated(date, date, uuid, boolean, text) SET search_path = 'public';
-ALTER FUNCTION public.reconcile_open_deadlines() SET search_path = 'public';
-ALTER FUNCTION public.relink_orphan_timesheet_entries() SET search_path = 'public';
-ALTER FUNCTION public.smart_assign_deadline(uuid) SET search_path = 'public';
-
--- get_prazos_rows has two overloads
-ALTER FUNCTION public.get_prazos_rows(text, uuid, integer, integer, text, text[]) SET search_path = 'public';
-ALTER FUNCTION public.get_prazos_rows(date, uuid, integer, integer, text, text[]) SET search_path = 'public';
-
--- get_prazos_summary has two overloads
-ALTER FUNCTION public.get_prazos_summary(text, uuid) SET search_path = 'public';
-ALTER FUNCTION public.get_prazos_summary(date, uuid) SET search_path = 'public';
+DO $$
+DECLARE
+  fn text;
+BEGIN
+  -- Trigger functions (non-security-definer)
+  FOR fn IN VALUES
+    ('public.update_updated_at_column()'),
+    ('public.uppercase_accounts()'),
+    ('public.uppercase_billing_contacts()'),
+    ('public.uppercase_client_contacts()'),
+    ('public.uppercase_clients()'),
+    ('public.uppercase_company_entities()'),
+    ('public.uppercase_contract_keys()'),
+    ('public.uppercase_economic_groups()'),
+    ('public.uppercase_processes()'),
+    ('public.uppercase_profiles()'),
+    -- Security definer functions
+    ('public.calculate_monthly_bonus(date)'),
+    ('public.create_timesheet_unique_index()'),
+    ('public.delete_timesheet_duplicates_batch(integer)'),
+    ('public.delete_timesheet_duplicates_v2(integer)'),
+    ('public.get_coordinator_for_client(uuid)'),
+    ('public.get_goal_progress_data(date, date, uuid[])'),
+    ('public.get_producao_aggregated(date, date, uuid, boolean, text)'),
+    ('public.reconcile_open_deadlines()'),
+    ('public.relink_orphan_timesheet_entries()'),
+    ('public.smart_assign_deadline(uuid)'),
+    -- get_prazos_rows overloads
+    ('public.get_prazos_rows(text, uuid, integer, integer, text, text[])'),
+    ('public.get_prazos_rows(date, uuid, integer, integer, text, text[])'),
+    -- get_prazos_summary overloads
+    ('public.get_prazos_summary(text, uuid)'),
+    ('public.get_prazos_summary(date, uuid)')
+  LOOP
+    BEGIN
+      EXECUTE 'ALTER FUNCTION ' || fn || ' SET search_path = ''public''';
+    EXCEPTION WHEN undefined_function OR undefined_object THEN
+      NULL;
+    END;
+  END LOOP;
+END $$;

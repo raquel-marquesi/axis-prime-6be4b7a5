@@ -7,6 +7,7 @@ CREATE POLICY "Authenticated users can view all deadlines"
 
 -- 2. Fix user_permission_overrides: restrict SELECT to admins + own user
 DROP POLICY IF EXISTS "Authenticated users can view overrides" ON user_permission_overrides;
+DROP POLICY IF EXISTS "Users can view own overrides or admins view all" ON user_permission_overrides;
 CREATE POLICY "Users can view own overrides or admins view all"
   ON user_permission_overrides FOR SELECT
   TO authenticated
