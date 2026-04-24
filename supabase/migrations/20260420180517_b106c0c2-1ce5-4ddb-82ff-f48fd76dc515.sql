@@ -10,21 +10,25 @@ CREATE TABLE IF NOT EXISTS public.authorized_email_domains (
 ALTER TABLE public.authorized_email_domains ENABLE ROW LEVEL SECURITY;
 
 -- Apenas admins gerenciam
+DROP POLICY IF EXISTS "Admins can view authorized domains" ON public.authorized_email_domains;
 CREATE POLICY "Admins can view authorized domains"
 ON public.authorized_email_domains FOR SELECT
 TO authenticated
 USING (public.has_role(auth.uid(), 'admin'));
 
+DROP POLICY IF EXISTS "Admins can insert authorized domains" ON public.authorized_email_domains;
 CREATE POLICY "Admins can insert authorized domains"
 ON public.authorized_email_domains FOR INSERT
 TO authenticated
 WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
+DROP POLICY IF EXISTS "Admins can delete authorized domains" ON public.authorized_email_domains;
 CREATE POLICY "Admins can delete authorized domains"
 ON public.authorized_email_domains FOR DELETE
 TO authenticated
 USING (public.has_role(auth.uid(), 'admin'));
 
+DROP POLICY IF EXISTS "Admins can update authorized domains" ON public.authorized_email_domains;
 CREATE POLICY "Admins can update authorized domains"
 ON public.authorized_email_domains FOR UPDATE
 TO authenticated
