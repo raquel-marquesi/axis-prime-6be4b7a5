@@ -37,7 +37,7 @@ const menuItems: MenuItem[] = [
 
 export function Sidebar() {
   const location = useLocation();
-  const { profile, roles, signOut, isAdmin, isAdminOrManager, can, hasRole, permissionsLoaded } = useAuth();
+  const { profile, roles, signOut, can } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
   const { data: customRoles = [] } = useQuery({
@@ -56,11 +56,10 @@ export function Sidebar() {
   };
 
   const filteredMenuItems = menuItems.filter((item) => {
-    if (item.adminOnly) return isAdmin() || hasRole('socio');
-    if (item.managerAndAdmin) return isAdmin() || hasRole('gerente') || hasRole('socio');
+    if (item.adminOnly) return can('usuarios', 'configurar');
+    if (item.managerAndAdmin) return can('usuarios', 'editar');
     if (item.showAlways) return true;
-    // While permissions are still loading, show all module items to avoid flash of empty sidebar
-    if (item.module) return !permissionsLoaded || can(item.module, 'visualizar');
+    if (item.module) return can(item.module, 'visualizar');
     return true;
   });
 

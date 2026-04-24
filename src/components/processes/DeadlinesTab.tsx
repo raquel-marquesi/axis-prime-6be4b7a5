@@ -34,7 +34,7 @@ interface DeadlinesTabProps {
 }
 
 export function DeadlinesTab({ processId, processInfo, driveFolderUrl }: DeadlinesTabProps) {
-  const { isLeaderOrAbove } = useAuth();
+  const { can } = useAuth();
   const { profiles, getInitials, getName } = useProfiles();
   const { deadlines } = useProcessDeadlines(processId);
   const { createDeadlineWithCalendar, deleteDeadlineWithCalendar } = useDeadlineWithCalendar(processInfo);
@@ -134,7 +134,7 @@ export function DeadlinesTab({ processId, processInfo, driveFolderUrl }: Deadlin
                         <CheckCircle2 className="w-3 h-3 mr-1" />Concluir
                       </Button>
                     )}
-                    {isLeaderOrAbove() && (
+                    {can('processos', 'editar') && (
                       <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive"
                         onClick={() => setDeleteDeadlineData({ id: deadline.id, calendar_event_id: deadline.calendar_event_id })}>
                         <Trash2 className="w-3 h-3" />
@@ -147,7 +147,7 @@ export function DeadlinesTab({ processId, processInfo, driveFolderUrl }: Deadlin
           </div>
         ) : <div className="text-center py-8 text-muted-foreground text-sm">Nenhum prazo ou ocorrência registrada.</div>}
 
-        {isLeaderOrAbove() && (
+        {can('processos', 'editar') && (
           <div className="border-t pt-4 space-y-3">
             <Label className="text-sm font-medium">Adicionar Prazo / Ocorrência</Label>
             <div className="grid gap-3">

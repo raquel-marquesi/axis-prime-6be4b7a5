@@ -31,7 +31,7 @@ const STATUS_CONFIG: Record<DeadlineStatus, { label: string; variant: 'destructi
 };
 
 export function PrazosProcessuaisTab() {
-  const { isCoordinatorOrAbove, isAdminOrManager, isFinanceiro } = useAuth();
+  const { can } = useAuth();
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<DeadlineStatus | 'all'>('all');
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
@@ -62,7 +62,7 @@ export function PrazosProcessuaisTab() {
   }, [allDeadlines, effectiveStatusFilter]);
   const { profiles } = useProfiles();
   const { toast } = useToast();
-  const showResponsavel = isCoordinatorOrAbove() || isAdminOrManager() || isFinanceiro();
+  const showResponsavel = can('solicitacoes', 'visualizar');
 
   const overdueProcessIds = useMemo(() => [...new Set(deadlines.filter(d => d.status === 'atrasado').map(d => d.process_id))], [deadlines]);
   const earliestOverduePrazo = useMemo(() => { const overdue = deadlines.filter(d => d.status === 'atrasado'); if (overdue.length === 0) return undefined; return overdue.reduce((min, d) => d.data_prazo < min ? d.data_prazo : min, overdue[0].data_prazo); }, [deadlines]);

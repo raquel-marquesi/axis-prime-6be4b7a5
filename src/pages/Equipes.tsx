@@ -30,7 +30,7 @@ interface ProfileRow {
 }
 
 const Equipes = () => {
-  const { isCoordinatorOrAbove } = useAuth();
+  const { can } = useAuth();
   const { teamClients, isLoading: loadingTC, addClient, removeClient } = useTeamClients();
   const { clients } = useClients();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -148,7 +148,7 @@ const Equipes = () => {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Equipes</h1>
-        {isCoordinatorOrAbove() && (
+        {can('usuarios', 'editar') && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button><Plus className="mr-2 h-4 w-4" /> Vincular Cliente</Button>
@@ -267,7 +267,7 @@ const Equipes = () => {
                           {tcs.map((tc) => (
                             <li key={tc.id} className="flex items-center justify-between text-sm pl-5">
                               <span className="truncate">{getClientName(tc.client_id)}</span>
-                              {isCoordinatorOrAbove() && (
+                              {can('usuarios', 'editar') && (
                                 <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeClient.mutate(tc.id)}>
                                   <Trash2 className="h-3.5 w-3.5 text-destructive" />
                                 </Button>

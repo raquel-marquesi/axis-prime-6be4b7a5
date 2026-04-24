@@ -26,14 +26,13 @@ interface ClientsTableProps {
 }
 
 export function ClientsTable({ clients, onViewDetails, onEdit }: ClientsTableProps) {
-  const { isLeaderOrAbove, hasRole } = useAuth();
+  const { can } = useAuth();
   const { deleteClient, updateClient } = useClients();
   const { toast } = useToast();
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [linkedProcesses, setLinkedProcesses] = useState<number | null>(null);
   const [checkingProcesses, setCheckingProcesses] = useState(false);
   const { getInitials, getName } = useProfiles();
-  const isAdmin = hasRole('admin');
 
   const getDisplayName = (client: Client) => client.tipo === 'fisica' ? client.nome : client.razao_social;
   const getDocument = (client: Client) => {
@@ -135,8 +134,8 @@ export function ClientsTable({ clients, onViewDetails, onEdit }: ClientsTablePro
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="icon" onClick={() => onViewDetails(client)}><Eye className="w-4 h-4" /></Button>
-                      {isLeaderOrAbove() && <Button variant="ghost" size="icon" onClick={() => onEdit(client)}><Pencil className="w-4 h-4" /></Button>}
-                      {isAdmin && <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleRequestDelete(client)}><Trash2 className="w-4 h-4" /></Button>}
+                      {can('crm', 'editar') && <Button variant="ghost" size="icon" onClick={() => onEdit(client)}><Pencil className="w-4 h-4" /></Button>}
+                      {can('crm', 'deletar') && <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleRequestDelete(client)}><Trash2 className="w-4 h-4" /></Button>}
                     </div>
                   </TableCell>
                 </TableRow>

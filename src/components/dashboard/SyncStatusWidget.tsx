@@ -43,7 +43,7 @@ export function SyncStatusWidget() {
   const [errorsOpen, setErrorsOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const queryClient = useQueryClient();
-  const { isAdminOrManager } = useAuth();
+  const { can } = useAuth();
 
   if (isLoading) return null;
   const hasAnyData = lastAtividades || lastExternal || lastSolicitacoes;
@@ -67,7 +67,7 @@ export function SyncStatusWidget() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-medium flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Sincronização Google Sheets</CardTitle>
             <div className="flex items-center gap-1">
-              {isAdminOrManager() && <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" disabled={syncing} onClick={handleSyncAll}><RefreshCw className={`h-3 w-3 ${syncing ? 'animate-spin' : ''}`} />{syncing ? 'Sincronizando...' : 'Sincronizar Tudo'}</Button>}
+              {can('crm', 'configurar') && <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" disabled={syncing} onClick={handleSyncAll}><RefreshCw className={`h-3 w-3 ${syncing ? 'animate-spin' : ''}`} />{syncing ? 'Sincronizando...' : 'Sincronizar Tudo'}</Button>}
               <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => setErrorsOpen(true)}><Eye className="h-3 w-3" />Ver detalhes</Button>
             </div>
           </div>

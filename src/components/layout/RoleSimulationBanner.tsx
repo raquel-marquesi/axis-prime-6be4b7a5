@@ -8,9 +8,6 @@ export function RoleSimulationBanner() {
   const { realRoles, isSimulating, simulatedRole, startSimulation, stopSimulation } = useAuth();
   const { roles, isLoading } = useCustomRoles();
 
-  const isPreview = window.location.hostname.includes('preview') || window.location.hostname === 'localhost';
-  if (!isPreview) return null;
-
   const isRealAdmin = realRoles.some(r => ['admin', 'socio', 'gerente'].includes(r));
   if (!isRealAdmin) return null;
 

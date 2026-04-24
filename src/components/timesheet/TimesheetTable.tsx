@@ -15,7 +15,7 @@ interface TimesheetTableProps {
 }
 
 export function TimesheetTable({ entries, onEdit, onDelete }: TimesheetTableProps) {
-  const { isLeaderOrAbove } = useAuth();
+  const { can } = useAuth();
 
   const formatDate = (dateStr: string) => {
     try { return format(parseISO(dateStr), 'dd/MM/yyyy', { locale: ptBR }); } catch { return dateStr; }
@@ -77,7 +77,7 @@ export function TimesheetTable({ entries, onEdit, onDelete }: TimesheetTableProp
                       <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDriveFolder(entry.process?.drive_folder_id)}><ExternalLink className="w-4 h-4" /></Button></TooltipTrigger><TooltipContent>Abrir pasta no Drive</TooltipContent></Tooltip>
                     )}
                     <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(entry)}><Edit2 className="w-4 h-4" /></Button></TooltipTrigger><TooltipContent>Editar</TooltipContent></Tooltip>
-                    {isLeaderOrAbove() && (
+                    {can('timesheet', 'editar') && (
                       <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => onDelete(entry)}><Trash2 className="w-4 h-4" /></Button></TooltipTrigger><TooltipContent>Excluir</TooltipContent></Tooltip>
                     )}
                   </div>

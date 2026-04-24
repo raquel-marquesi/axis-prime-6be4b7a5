@@ -22,8 +22,8 @@ export default function Processes() {
   const [page, setPage] = useState(0);
   const { processes, totalCount, isLoading } = useProcesses({ page, pageSize: PAGE_SIZE });
   const navigate = useNavigate();
-  const { isAdmin, hasRole } = useAuth();
-  const canEditProcesses = isAdmin() || hasRole('socio') || hasRole('coordenador') || hasRole('lider');
+  const { can } = useAuth();
+  const canEditProcesses = can('processos', 'editar');
 
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<FilterType>('all');

@@ -54,7 +54,7 @@ function ProgressBar({ percentage, size = 'md' }: { percentage: number; size?: '
 }
 
 function useGoalProgress() {
-  const { session, profile, isCoordinatorOrAbove, isAdminOrManager } = useAuth();
+  const { session, profile, can } = useAuth();
   const userId = session?.user?.id;
 
   const today = new Date();
@@ -94,7 +94,7 @@ function useGoalProgress() {
 
       let teamProfileIds: string[] = [];
       
-      if (isCoordinatorOrAbove() && profile?.id) {
+      if (can('relatorios', 'visualizar') && profile?.id) {
         const { data: teamProfiles } = await supabase
           .from('profiles_safe' as any)
           .select('user_id, full_name, area')
@@ -110,7 +110,7 @@ function useGoalProgress() {
         }
       }
 
-      if (isAdminOrManager()) {
+      if (can('relatorios', 'visualizar')) {
         const { data: allProfiles } = await supabase
           .from('profiles_safe' as any)
           .select('user_id, full_name, area')
@@ -162,7 +162,7 @@ function useGoalProgress() {
         result.team = teamProfileIds.filter(id => usersWithGoals.has(id)).map(buildGoalData).sort((a, b) => b.percentage - a.percentage);
       }
 
-      if (isAdminOrManager()) {
+      if (can('relatorios', 'visualizar')) {
         const allUserIds = [...profilesMap.keys()].filter(id => usersWithGoals.has(id));
         result.all = allUserIds.map(buildGoalData).sort((a, b) => b.percentage - a.percentage);
       }

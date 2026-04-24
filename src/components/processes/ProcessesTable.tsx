@@ -24,8 +24,8 @@ interface ProcessesTableProps {
 }
 
 export function ProcessesTable({ processes, onViewDetails, onEdit }: ProcessesTableProps) {
-  const { isAdmin, hasRole } = useAuth();
-  const canEditProcesses = isAdmin() || hasRole('socio') || hasRole('coordenador') || hasRole('lider');
+  const { can } = useAuth();
+  const canEditProcesses = can('processos', 'editar');
   const { deleteProcess } = useProcesses();
   const { getInitials, getName } = useProfiles();
   const [processToDelete, setProcessToDelete] = useState<Process | null>(null);
@@ -126,7 +126,7 @@ export function ProcessesTable({ processes, onViewDetails, onEdit }: ProcessesTa
                         <Pencil className="w-4 h-4" />
                       </Button>
                     )}
-                    {hasRole('admin') && (
+                    {can('processos', 'deletar') && (
                       <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setProcessToDelete(process); }}
                         className="text-destructive hover:text-destructive hover:bg-destructive/10">
                         <Trash2 className="w-4 h-4" />

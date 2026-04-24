@@ -29,7 +29,7 @@ interface ProcessDetailsDialogProps {
 }
 
 export function ProcessDetailsDialog({ open, onOpenChange, process, onEdit, defaultTab = 'info' }: ProcessDetailsDialogProps) {
-  const { isLeaderOrAbove } = useAuth();
+  const { can } = useAuth();
   const { getInitials, getName } = useProfiles();
   const { linkFolderToProcess } = useProcessWithFolder();
   const { relatedProcesses, createRelatedProcess, deleteRelatedProcess } = useRelatedProcesses(process?.id);
@@ -69,7 +69,7 @@ export function ProcessDetailsDialog({ open, onOpenChange, process, onEdit, defa
                   <Button variant="outline" size="sm" onClick={() => window.open(`https://drive.google.com/drive/folders/${process.drive_folder_id}`, '_blank')}>
                     <ExternalLink className="w-4 h-4 mr-1" />Abrir Pasta
                   </Button>
-                ) : isLeaderOrAbove() && (
+                ) : can('processos', 'editar') && (
                   <Button variant="outline" size="sm" onClick={async () => {
                     const clientName = process.client?.tipo === 'juridica' ? process.client.razao_social || 'Cliente' : process.client?.nome || 'Cliente';
                     await linkFolderToProcess.mutateAsync({ processId: process.id, clientName, processNumber: process.numero_processo, folderNumber: process.numero_pasta });
@@ -77,7 +77,7 @@ export function ProcessDetailsDialog({ open, onOpenChange, process, onEdit, defa
                     <FolderOpen className="w-4 h-4 mr-1" />{linkFolderToProcess.isPending ? 'Criando...' : 'Criar Pasta'}
                   </Button>
                 )}
-                {isLeaderOrAbove() && (
+                {can('processos', 'editar') && (
                   <Button variant="outline" size="sm" onClick={() => { onOpenChange(false); onEdit(process); }}>
                     <Pencil className="w-4 h-4 mr-1" />Editar
                   </Button>
@@ -130,12 +130,12 @@ export function ProcessDetailsDialog({ open, onOpenChange, process, onEdit, defa
                   <div key={rel.id} className="flex items-center justify-between bg-muted/50 rounded px-3 py-2">
                     <div className="flex-1"><p className="tabular-nums tracking-wide text-sm">{rel.numero_processo_relacionado}</p>{rel.observacoes && <p className="text-xs text-muted-foreground">{rel.observacoes}</p>}</div>
                     <div className="flex items-center gap-2">
-                      {isLeaderOrAbove() && <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setDeleteRelatedId(rel.id)}><Trash2 className="w-3 h-3" /></Button>}
+                      {can('processos', 'editar') && <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setDeleteRelatedId(rel.id)}><Trash2 className="w-3 h-3" /></Button>}
                     </div>
                   </div>
                 ))}</div>
               ) : <div className="text-center py-8 text-muted-foreground text-sm">Nenhum processo relacionado.</div>}
-              {isLeaderOrAbove() && (
+              {can('processos', 'editar') && (
                 <div className="border-t pt-4 space-y-3">
                   <Label className="text-sm font-medium">Adicionar Processo Relacionado</Label>
                   <div className="grid gap-3">

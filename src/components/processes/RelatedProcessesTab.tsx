@@ -19,7 +19,7 @@ interface RelatedProcessesTabProps {
 }
 
 export function RelatedProcessesTab({ processId }: RelatedProcessesTabProps) {
-  const { isLeaderOrAbove } = useAuth();
+  const { can } = useAuth();
   const { getInitials, getName } = useProfiles();
   const { relatedProcesses, createRelatedProcess, deleteRelatedProcess } = useRelatedProcesses(processId);
   
@@ -72,7 +72,7 @@ export function RelatedProcessesTab({ processId }: RelatedProcessesTabProps) {
                       </TooltipTrigger>
                       <TooltipContent><p>Adicionado por: {relCreatorName}</p></TooltipContent>
                     </Tooltip>
-                    {isLeaderOrAbove() && (
+                    {can('processos', 'editar') && (
                       <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive"
                         onClick={() => setDeleteRelatedId(rel.id)}>
                         <Trash2 className="w-3 h-3" />
@@ -87,7 +87,7 @@ export function RelatedProcessesTab({ processId }: RelatedProcessesTabProps) {
           <div className="text-center py-8 text-muted-foreground text-sm">Nenhum processo relacionado vinculado.</div>
         )}
 
-        {isLeaderOrAbove() && (
+        {can('processos', 'editar') && (
           <div className="border-t pt-4 space-y-3">
             <Label className="text-sm font-medium">Adicionar Processo Relacionado</Label>
             <div className="grid gap-3">

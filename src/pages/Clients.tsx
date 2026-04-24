@@ -46,7 +46,7 @@ export default function Clients() {
   const { clients, isLoading } = useClients();
   const { branches } = useBranches();
   const { groups, contractKeys } = useEconomicGroups();
-  const { isLeaderOrAbove } = useAuth();
+  const { can } = useAuth();
   const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
   
@@ -162,7 +162,7 @@ export default function Clients() {
           <div className="space-y-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div></div>
-          {isLeaderOrAbove() && (
+          {can('crm', 'exportar') && (
             <div className="flex gap-2">
               <ClientDataExportButton clients={filteredClients} />
               <Button variant="outline" onClick={handleSyncSheet} disabled={isSyncing}>

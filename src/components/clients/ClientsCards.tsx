@@ -24,10 +24,9 @@ interface ClientsCardsProps {
 }
 
 export function ClientsCards({ clients, onViewDetails, onEdit }: ClientsCardsProps) {
-  const { isLeaderOrAbove, hasRole } = useAuth();
+  const { can } = useAuth();
   const { deleteClient } = useClients();
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
-  const isAdmin = hasRole('admin');
 
   const getDisplayName = (client: Client) => {
     return client.tipo === 'fisica' ? client.nome : client.razao_social;
@@ -143,7 +142,7 @@ export function ClientsCards({ clients, onViewDetails, onEdit }: ClientsCardsPro
                   <Eye className="w-3.5 h-3.5 mr-1" />
                   Detalhes
                 </Button>
-                {isLeaderOrAbove() && (
+                {can('crm', 'editar') && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -152,7 +151,7 @@ export function ClientsCards({ clients, onViewDetails, onEdit }: ClientsCardsPro
                     <Pencil className="w-3.5 h-3.5" />
                   </Button>
                 )}
-                {isAdmin && (
+                {can('crm', 'deletar') && (
                   <Button
                     variant="outline"
                     size="sm"

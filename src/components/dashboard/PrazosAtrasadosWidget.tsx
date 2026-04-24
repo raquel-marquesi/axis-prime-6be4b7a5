@@ -21,15 +21,15 @@ interface GroupedDeadline {
 
 export function PrazosAtrasadosWidget() {
   const navigate = useNavigate();
-  const { isAdminOrManager, isCoordinatorOrAbove, isFinanceiro } = useAuth();
+  const { can } = useAuth();
   const { data: deadlines, isLoading } = useOverdueDeadlines();
   const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null);
   const { data: selectedProcess } = useProcessById(selectedProcessId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [hideWithActivity, setHideWithActivity] = useState(true);
-  const showResponsavel = isCoordinatorOrAbove() || isAdminOrManager() || isFinanceiro();
-  const showArea = isAdminOrManager() || isFinanceiro();
+  const showResponsavel = can('solicitacoes', 'visualizar');
+  const showArea = can('relatorios', 'visualizar');
 
   const grouped = useMemo(() => {
     if (!deadlines) return [];
