@@ -9,18 +9,20 @@ import { Input } from '@/components/ui/input';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Plus, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AreaProcesso } from '@/hooks/useProcesses';
+import { TablePagination } from '@/components/processes/TablePagination';
 
 type FilterType = 'all' | 'individual' | 'coletiva';
 type FilterArea = 'all' | AreaProcesso;
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE_OPTIONS = [20, 50, 100];
 
 export default function Processes() {
   const [page, setPage] = useState(0);
-  const { processes, totalCount, isLoading } = useProcesses({ page, pageSize: PAGE_SIZE });
+  const [pageSize, setPageSize] = useState<number>(50);
+  const { processes, totalCount, isLoading } = useProcesses({ page, pageSize });
   const navigate = useNavigate();
   const { can } = useAuth();
   const canEditProcesses = can('processos', 'editar');
