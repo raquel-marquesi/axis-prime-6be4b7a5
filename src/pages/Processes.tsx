@@ -59,9 +59,7 @@ export default function Processes() {
   const handleViewDetails = (process: Process) => { setSelectedProcess(process); setIsDetailsOpen(true); };
   const handleEdit = (process: Process) => { navigate(`/processos/${process.id}`); };
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const canPrev = page > 0;
-  const canNext = page < totalPages - 1;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   return (
     <>
