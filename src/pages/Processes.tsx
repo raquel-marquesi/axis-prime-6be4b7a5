@@ -9,18 +9,20 @@ import { Input } from '@/components/ui/input';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Plus, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AreaProcesso } from '@/hooks/useProcesses';
+import { TablePagination } from '@/components/processes/TablePagination';
 
 type FilterType = 'all' | 'individual' | 'coletiva';
 type FilterArea = 'all' | AreaProcesso;
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE_OPTIONS = [20, 50, 100];
 
 export default function Processes() {
   const [page, setPage] = useState(0);
-  const { processes, totalCount, isLoading } = useProcesses({ page, pageSize: PAGE_SIZE });
+  const [pageSize, setPageSize] = useState<number>(50);
+  const { processes, totalCount, isLoading } = useProcesses({ page, pageSize });
   const navigate = useNavigate();
   const { can } = useAuth();
   const canEditProcesses = can('processos', 'editar');
@@ -57,9 +59,7 @@ export default function Processes() {
   const handleViewDetails = (process: Process) => { setSelectedProcess(process); setIsDetailsOpen(true); };
   const handleEdit = (process: Process) => { navigate(`/processos/${process.id}`); };
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const canPrev = page > 0;
-  const canNext = page < totalPages - 1;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   return (
     <>
@@ -106,19 +106,16 @@ export default function Processes() {
         ) : (
           <>
             <ProcessesTable processes={filteredProcesses} onViewDetails={handleViewDetails} onEdit={handleEdit} />
-            <div className="flex items-center justify-between pt-2">
-              <p className="text-xs text-muted-foreground">
-                Página {page + 1} de {totalPages} · {totalCount} processo{totalCount === 1 ? '' : 's'}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={!canPrev}>
-                  <ChevronLeft className="w-4 h-4 mr-1" />Anterior
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} disabled={!canNext}>
-                  Próxima<ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
-            </div>
+            <TablePagination
+              page={page}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              totalCount={totalCount}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => { setPageSize(size); setPage(0); }}
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
+              itemLabel={{ singular: 'processo', plural: 'processos' }}
+            />
           </>
         )}
       </div>
