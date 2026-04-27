@@ -106,19 +106,16 @@ export default function Processes() {
         ) : (
           <>
             <ProcessesTable processes={filteredProcesses} onViewDetails={handleViewDetails} onEdit={handleEdit} />
-            <div className="flex items-center justify-between pt-2">
-              <p className="text-xs text-muted-foreground">
-                Página {page + 1} de {totalPages} · {totalCount} processo{totalCount === 1 ? '' : 's'}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={!canPrev}>
-                  <ChevronLeft className="w-4 h-4 mr-1" />Anterior
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} disabled={!canNext}>
-                  Próxima<ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
-            </div>
+            <TablePagination
+              page={page}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              totalCount={totalCount}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => { setPageSize(size); setPage(0); }}
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
+              itemLabel={{ singular: 'processo', plural: 'processos' }}
+            />
           </>
         )}
       </div>
